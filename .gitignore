@@ -24,10 +24,20 @@ yarn-error.log*
 start-server.ps1
 open-browser.bat
 
-# Node modules (if you add npm later)
+# Node modules
 node_modules/
 
 # Environment variables (contains secrets)
 .env
 .env.local
 !.env.example
+
+# Local MongoDB data
+Data/db/
+mongodb/
+
+# Test artifacts
+pos-e2e-test.js
+saas-e2e-test.js
+check-pw.js
+_prods.json
