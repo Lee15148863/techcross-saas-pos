@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Panel - Tech Cross</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #f5f5f7; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1d1d1f; }
+
+.admin-wrap { display: none; min-height: 100vh; flex-direction: column; }
+.admin-wrap.show { display: flex; }
+
+.topbar { background: #fff; border-bottom: 1px solid #e5e5ea; padding: 12px 24px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+.topbar h2 { font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+.topbar-right { display: flex; gap: 10px; align-items: center; }
+.save-status { font-size: 13px; color: #86868b; }
+
+.admin-body { display: flex; flex: 1; overflow: hidden; }
+
+/* Sidebar */
+.sidebar { width: 220px; background: #fff; border-right: 1px solid #e5e5ea; overflow-y: auto; flex-shrink: 0; padding: 12px; }
+.sidebar h4 { font-size: 11px; font-weight: 700; color: #86868b; text-transform: uppercase; letter-spacing: .5px; margin: 8px 4px 6px; }
+.nav-item { padding: 9px 12px; border-radius: 10px; cursor: pointer; font-size: 14px; font-weight: 500; margin-bottom: 2px; display: flex; align-items: center; justify-content: space-between; }
+.nav-item:hover { background: #f5f5f7; }
+.nav-item.active { background: #e8f0fe; color: #0071e3; }
+.nav-badge { font-size: 11px; background: #f0f0f5; color: #86868b; padding: 2px 7px; border-radius: 20px; }
+
+/* Main */
+.main { flex: 1; overflow-y: auto; padding: 24px 28px; min-width: 0; }
+.empty-state { text-align: center; padding: 60px 20px; color: #86868b; font-size: 15px; }
+
+/* Tabs */
+.tabs { display: flex; gap: 0; border-bottom: 1px solid #d2d2d7; margin-bottom: 20px; }
+.tab-btn { padding: 10px 20px; background: none; border: none; font-size: 14px; font-weight: 500; cursor: pointer; color: #86868b; border-bottom: 2px solid transparent; transition: all .2s; }
+.tab-btn:hover { color: #1d1d1f; }
+.tab-btn.active { color: #0071e3; border-bottom-color: #0071e3; }
+
+/* Device type tabs */
+.device-tabs { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+.device-btn { padding: 8px 18px; border: 1.5px solid #d2d2d7; border-radius: 20px; background: #fff; cursor: pointer; font-size: 13px; font-weight: 500; transition: all .2s; }
+.device-btn:hover { border-color: #0071e3; }
+.device-btn.active { border-color: #0071e3; background: #0071e3; color: #fff; }
+
+/* Table */
+.pricing-table { overflow-x: auto; background: #fff; border-radius: 14px; box-shadow: 0 1px 6px rgba(0,0,0,.06); }
+.pricing-table table { width: 100%; border-collapse: collapse; min-width: 600px; }
+.pricing-table th { background: #f5f5f7; padding: 11px 14px; text-align: left; font-size: 12px; font-weight: 700; color: #86868b; text-transform: uppercase; letter-spacing: .3px; border-bottom: 1px solid #e5e5ea; white-space: nowrap; }
+.pricing-table th:first-child { position: sticky; left: 0; z-index: 3; background: #f5f5f7; }
+.pricing-table td { padding: 8px 14px; border-bottom: 1px solid #f0f0f5; font-size: 13px; vertical-align: middle; }
+.pricing-table tr:last-child td { border-bottom: none; }
+.pricing-table .td-name { position: sticky; left: 0; z-index: 2; background: #fff; font-weight: 600; cursor: pointer; min-width: 180px; box-shadow: 2px 0 6px rgba(0,0,0,.06); }
+.pricing-table .td-name:hover { color: #0071e3; }
+.pricing-table input[type="number"] { width: 72px; padding: 6px 8px; border: 1px solid #d2d2d7; border-radius: 6px; font-size: 13px; text-align: right; }
+.pricing-table input[type="number"]:focus { outline: none; border-color: #0071e3; box-shadow: 0 0 0 2px rgba(0,113,227,.15); }
+.pricing-table .btn-del { background: none; border: none; cursor: pointer; color: #ff3b30; font-size: 16px; padding: 2px 6px; border-radius: 4px; }
+.pricing-table .btn-del:hover { background: #fff0f0; }
+
+/* Model/Service editor tables */
+.editor-table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 14px; overflow: hidden; box-shadow: 0 1px 6px rgba(0,0,0,.06); }
+.editor-table th { background: #f5f5f7; padding: 11px 16px; text-align: left; font-size: 12px; font-weight: 700; color: #86868b; text-transform: uppercase; letter-spacing: .3px; border-bottom: 1px solid #e5e5ea; }
+.editor-table td { padding: 10px 16px; border-bottom: 1px solid #f0f0f5; font-size: 14px; }
+.editor-table tr:last-child td { border-bottom: none; }
+.editor-table code { background: #f0f0f5; padding: 2px 6px; border-radius: 4px; font-size: 12px; }
+.editor-table input[type="text"] { width: 100%; padding: 8px 10px; border: 1px solid #d2d2d7; border-radius: 6px; font-size: 14px; }
+.editor-table input[type="text"]:focus { outline: none; border-color: #0071e3; }
+.editor-table textarea { width: 100%; padding: 8px 10px; border: 1px solid #d2d2d7; border-radius: 6px; font-size: 13px; resize: vertical; min-height: 50px; }
+
+/* Buttons */
+.btn { display: inline-flex; align-items: center; gap: 4px; padding: 8px 18px; border: none; border-radius: 980px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all .2s; }
+.btn-primary { background: #0071e3; color: #fff; }
+.btn-primary:hover { background: #0077ed; }
+.btn-primary:disabled { background: #86868b; cursor: not-allowed; }
+.btn-secondary { background: #f5f5f7; color: #1d1d1f; border: 1px solid #d2d2d7; }
+.btn-secondary:hover { background: #e5e5ea; }
+.btn-danger { background: none; border: 1px solid #ff3b30; color: #ff3b30; padding: 5px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; }
+.btn-danger:hover { background: #ff3b30; color: #fff; }
+.btn-ghost { background: none; border: none; cursor: pointer; padding: 4px 8px; border-radius: 6px; color: #86868b; }
+.btn-ghost:hover { background: #f0f0f5; color: #1d1d1f; }
+.btn-add { margin-bottom: 14px; }
+
+/* Modal */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 1000; align-items: center; justify-content: center; }
+.modal-overlay.show { display: flex; }
+.modal { background: #fff; border-radius: 20px; padding: 28px; width: 100%; max-width: 440px; box-shadow: 0 20px 60px rgba(0,0,0,.2); }
+.modal h3 { font-size: 18px; font-weight: 700; margin-bottom: 18px; }
+.modal label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px; color: #555; }
+.modal input,.modal textarea { width: 100%; padding: 10px 12px; border: 1px solid #d2d2d7; border-radius: 8px; font-size: 14px; margin-bottom: 12px; box-sizing: border-box; }
+.modal textarea { resize: vertical; min-height: 50px; }
+.modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 4px; }
+
+/* Toast */
+.toast { position: fixed; bottom: 28px; right: 28px; background: #1d1d1f; color: #fff; padding: 12px 22px; border-radius: 12px; font-size: 14px; font-weight: 500; z-index: 2000; transform: translateY(60px); opacity: 0; transition: all .3s; }
+.toast.show { transform: translateY(0); opacity: 1; }
+.toast.success { background: #34c759; }
+.toast.error { background: #ff3b30; }
+
+/* Batch editor */
+.batch-panel { background: #fff; padding: 28px; border-radius: 14px; box-shadow: 0 1px 6px rgba(0,0,0,.06); max-width: 500px; }
+.batch-panel label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px; color: #555; }
+.batch-panel select,.batch-panel input { width: 100%; padding: 10px 12px; border: 1px solid #d2d2d7; border-radius: 8px; font-size: 14px; margin-bottom: 16px; background: #fff; }
+
+/* Loading spinner */
+.loading { display: flex; align-items: center; justify-content: center; padding: 60px; color: #86868b; gap: 10px; }
+.spinner { width: 20px; height: 20px; border: 2.5px solid #e5e5ea; border-top-color: #0071e3; border-radius: 50%; animation: spin .6s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<div class="admin-wrap" id="adminWrap">
+  <div class="topbar">
+    <h2>🔧 Tech Cross Admin</h2>
+    <div class="topbar-right">
+      <span class="save-status" id="saveStatus"></span>
+      <button class="btn btn-primary" id="globalSaveBtn" onclick="saveCurrent()" disabled>Save Changes</button>
+      <button class="btn btn-secondary" onclick="Auth.logout()">Logout</button>
+    </div>
+  </div>
+  <div class="admin-body">
+    <div class="sidebar">
+      <h4>Brands</h4>
+      <div id="brandList"></div>
+    </div>
+    <div class="main" id="mainArea">
+      <div class="empty-state">Select a brand from the sidebar</div>
+    </div>
+  </div>
+</div>
+
+<!-- Add Model Modal -->
+<div class="modal-overlay" id="addModelModal">
+  <div class="modal">
+    <h3>Add Model</h3>
+    <label>Model ID</label>
+    <input id="mModelId" placeholder="e.g. galaxy-s25">
+    <p style="font-size:11px;color:#86868b;margin:-8px 0 12px 2px;">Lowercase, hyphens ok</p>
+    <label>Display Name</label>
+    <input id="mModelName" placeholder="e.g. Galaxy S25">
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('addModelModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="addModel()">Add</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Service Modal -->
+<div class="modal-overlay" id="addServiceModal">
+  <div class="modal">
+    <h3>Add Service</h3>
+    <label>Service ID</label>
+    <input id="mServiceId" placeholder="e.g. screen_compatible">
+    <p style="font-size:11px;color:#86868b;margin:-8px 0 12px 2px;">Lowercase, underscores ok</p>
+    <label>Display Name</label>
+    <input id="mServiceName" placeholder="e.g. Screen (Compatible)">
+    <label>Description</label>
+    <textarea id="mServiceDesc" placeholder="Optional description"></textarea>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('addServiceModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="addService()">Add</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Confirm Modal -->
+<div class="modal-overlay" id="confirmModal">
+  <div class="modal" style="max-width:380px;">
+    <h3 id="confirmTitle">Confirm</h3>
+    <p id="confirmMsg" style="margin-bottom:18px;color:#555;"></p>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('confirmModal')">Cancel</button>
+      <button class="btn btn-danger" id="confirmBtn" onclick="">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script src="auth-guard.js"></script>
+<script>
+(function() {
+  'use strict';
+
+  if (!Auth.isRoot()) { window.location.href = 'inv-login.html'; return; }
+
+  // ─── State ─────────────────────────────────────────────────
+  const state = {
+    brands: [],           // [{ brand, updatedAt }]
+    currentBrand: null,   // brand ID string
+    data: null,           // full pricing data for current brand
+    deviceType: null,     // current device type key (or null for flat)
+    dirty: false,
+    _dataBackup: null,    // for detecting changes
+  };
+
+  // ─── Helpers ───────────────────────────────────────────────
+  function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+
+  function showToast(msg, type) {
+    var t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'toast show' + (type ? ' ' + type : '');
+    setTimeout(function(){ t.className = 'toast'; }, 3000);
+  }
+
+  function markDirty() {
+    if (!state.dirty) {
+      state.dirty = true;
+      document.getElementById('globalSaveBtn').disabled = false;
+      document.getElementById('saveStatus').textContent = '● Unsaved';
+    }
+  }
+
+  function openModal(id) { var el = document.getElementById(id); if (el) el.classList.add('show'); }
+  function closeModal(id) { var el = document.getElementById(id); if (el) el.classList.remove('show'); }
+  document.querySelectorAll('.modal-overlay').forEach(function(m) {
+    m.addEventListener('click', function(e) { if (e.target === m) m.classList.remove('show'); });
+  });
+
+  // Detect if data has device types (e.g. { phone: {models, serviceTypes}, tablet: {...} })
+  function detectDeviceTypes(data) {
+    if (!data || typeof data !== 'object') return null;
+    var keys = Object.keys(data).filter(function(k) {
+      return data[k] && typeof data[k] === 'object' && 'models' in data[k] && 'serviceTypes' in data[k];
+    });
+    return keys.length > 0 ? keys : null;
+  }
+
+  // Check if the first model's screen service is an object {compatible, original}
+  function screenIsObject(svcTypes, models) {
+    if (!svcTypes || !models) return false;
+    var hasScreenKey = 'screen' in svcTypes;
+    if (!hasScreenKey) return false;
+    var firstModel = Object.values(models)[0];
+    return firstModel && firstModel.services && typeof firstModel.services.screen === 'object';
+  }
+
+  function getServiceList(svcTypes, screenObj) {
+    var list = [];
+    Object.keys(svcTypes).forEach(function(key) {
+      if (key === 'screen' && screenObj) {
+        list.push({ key: 'screen.compatible', name: svcTypes.screen.name + ' (Compatible)', baseKey: 'screen', subKey: 'compatible' });
+        list.push({ key: 'screen.original', name: svcTypes.screen.name + ' (Original)', baseKey: 'screen', subKey: 'original' });
+      } else {
+        list.push({ key: key, name: svcTypes[key].name, baseKey: key, subKey: null });
+      }
+    });
+    return list;
+  }
+
+  function getServiceValue(model, baseKey, subKey) {
+    var val = model.services ? model.services[baseKey] : undefined;
+    if (subKey) {
+      return (val && typeof val === 'object') ? (val[subKey] ?? 0) : 0;
+    }
+    return (typeof val === 'number') ? val : 0;
+  }
+
+  function setServiceValue(model, baseKey, subKey, price) {
+    if (!model.services) model.services = {};
+    if (subKey) {
+      if (typeof model.services[baseKey] !== 'object') model.services[baseKey] = {};
+      model.services[baseKey][subKey] = price;
+    } else {
+      model.services[baseKey] = price;
+    }
+    if (!model.serviceUpdates) model.serviceUpdates = {};
+    model.serviceUpdates[baseKey] = new Date().toISOString();
+  }
+
+  // Get current data object (device type or flat)
+  function getCurrentData() {
+    if (state.deviceType && state.data[state.deviceType]) {
+      return state.data[state.deviceType];
+    }
+    return state.data;
+  }
+
+  // ─── Brand List ────────────────────────────────────────────
+  function init() {
+    document.getElementById('adminWrap').classList.add('show');
+    fetchBrands();
+  }
+
+  async function fetchBrands() {
+    var list = document.getElementById('brandList');
+    list.innerHTML = '<div class="loading"><div class="spinner"></div>Loading...</div>';
+    try {
+      var res = await fetch('/api/pricing/');
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      state.brands = await res.json();
+      // Filter out 'multi' (combined wrapper)
+      state.brands = state.brands.filter(function(b) { return b.brand !== 'multi'; });
+      renderSidebar();
+      if (state.currentBrand) {
+        selectBrand(state.currentBrand);
+      } else if (state.brands.length > 0) {
+        selectBrand(state.brands[0].brand);
+      }
+    } catch(e) {
+      list.innerHTML = '<div style="padding:20px;color:#ff3b30;text-align:center;">Failed to load brands: ' + esc(e.message) + '</div>';
+    }
+  }
+
+  function renderSidebar() {
+    var list = document.getElementById('brandList');
+    list.innerHTML = '';
+    if (state.brands.length === 0) {
+      list.innerHTML = '<div style="padding:12px;color:#86868b;font-size:13px;">No brands found</div>';
+      return;
+    }
+    state.brands.forEach(function(b) {
+      var div = document.createElement('div');
+      div.className = 'nav-item' + (state.currentBrand === b.brand ? ' active' : '');
+      div.textContent = b.brand.charAt(0).toUpperCase() + b.brand.slice(1);
+      div.onclick = function() { selectBrand(b.brand); };
+      list.appendChild(div);
+    });
+  }
+
+  // ─── Brand Selection ───────────────────────────────────────
+  async function selectBrand(brandId) {
+    if (state.dirty && !confirm('Unsaved changes. Discard?')) return;
+    state.currentBrand = brandId;
+    state.dirty = false;
+    document.getElementById('globalSaveBtn').disabled = true;
+    document.getElementById('saveStatus').textContent = '';
+    renderSidebar();
+
+    var main = document.getElementById('mainArea');
+    main.innerHTML = '<div class="loading"><div class="spinner"></div>Loading ' + esc(brandId) + '...</div>';
+
+    try {
+      var res = await fetch('/api/pricing/' + encodeURIComponent(brandId));
+      if (!res.ok) throw new Error(res.status === 404 ? 'Brand not found' : 'HTTP ' + res.status);
+      state.data = await res.json();
+      // Detect structure
+      var dtKeys = detectDeviceTypes(state.data);
+      if (dtKeys && dtKeys.length > 0) {
+        state.deviceType = dtKeys[0]; // default to first device type
+      } else {
+        state.deviceType = null;
+      }
+      state._dataBackup = JSON.stringify(state.data);
+      renderMain();
+    } catch(e) {
+      main.innerHTML = '<div class="empty-state" style="color:#ff3b30;">Error: ' + esc(e.message) + '</div>';
+    }
+  }
+
+  // ─── Main Render ───────────────────────────────────────────
+  var currentTab = 'pricing';
+
+  function renderMain() {
+    var main = document.getElementById('mainArea');
+    var brandName = state.currentBrand.charAt(0).toUpperCase() + state.currentBrand.slice(1);
+    var dtKeys = detectDeviceTypes(state.data);
+
+    var html = '';
+    // Header
+    html += '<div style="display:flex;align-items:center;gap:12px;margin-bottom:4px;">';
+    html += '<h2 style="font-size:22px;font-weight:700;">' + esc(brandName) + '</h2>';
+    html += '</div>';
+
+    // Device type tabs
+    if (dtKeys) {
+      html += '<div class="device-tabs">';
+      dtKeys.forEach(function(dt) {
+        var label = dt.charAt(0).toUpperCase() + dt.slice(1);
+        html += '<button class="device-btn' + (state.deviceType === dt ? ' active' : '') + '" onclick="window.selectDeviceType(\'' + dt + '\')">' + esc(label) + '</button>';
+      });
+      html += '</div>';
+    }
+
+    // Tab bar
+    html += '<div class="tabs">';
+    ['pricing','models','services','batch'].forEach(function(tab) {
+      var labels = { pricing:'Pricing Editor', models:'Manage Models', services:'Manage Services', batch:'Batch Update' };
+      html += '<button class="tab-btn' + (currentTab === tab ? ' active' : '') + '" onclick="window.switchTab(\'' + tab + '\')">' + labels[tab] + '</button>';
+    });
+    html += '</div>';
+
+    // Tab content
+    html += '<div id="tabContent">';
+    main.innerHTML = html + '</div>';
+
+    renderTabContent();
+  }
+
+  function renderTabContent() {
+    var container = document.getElementById('tabContent');
+    if (!container) return;
+    try {
+      switch (currentTab) {
+        case 'pricing': renderPricingTab(container); break;
+        case 'models': renderModelsTab(container); break;
+        case 'services': renderServicesTab(container); break;
+        case 'batch': renderBatchTab(container); break;
+      }
+    } catch(e) {
+      container.innerHTML = '<div style="padding:20px;color:#ff3b30;">Render error: ' + esc(e.message) + '</div>';
+    }
+  }
+
+  // ─── Pricing Tab ───────────────────────────────────────────
+  function renderPricingTab(container) {
+    var data = getCurrentData();
+    if (!data) {
+      container.innerHTML = '<div class="empty-state">No data for this brand</div>';
+      return;
+    }
+    var models = data.models || {};
+    var svcTypes = data.serviceTypes || {};
+    var sIsObj = screenIsObject(svcTypes, models);
+    var svcList = getServiceList(svcTypes, sIsObj);
+    var modelKeys = Object.keys(models);
+
+    if (modelKeys.length === 0) {
+      container.innerHTML = '<div class="empty-state">No models yet. Switch to "Manage Models" tab to add one.</div>';
+      return;
+    }
+
+    var html = '<div class="pricing-table"><table><thead><tr>';
+    html += '<th style="min-width:200px;">Model</th>';
+    svcList.forEach(function(svc) {
+      html += '<th>' + esc(svc.name) + '</th>';
+    });
+    html += '<th style="width:40px;"></th>';
+    html += '</tr></thead><tbody>';
+
+    modelKeys.forEach(function(mid) {
+      var model = models[mid];
+      if (!model) return;
+      html += '<tr>';
+      html += '<td class="td-name">' + esc(model.name) + '<br><code style="font-size:10px;color:#aaa;">' + esc(mid) + '</code></td>';
+      svcList.forEach(function(svc) {
+        var price = getServiceValue(model, svc.baseKey, svc.subKey);
+        html += '<td><input type="number" value="' + price + '" min="-1"';
+        html += ' data-model="' + esc(mid) + '" data-base="' + esc(svc.baseKey) + '"';
+        if (svc.subKey) html += ' data-sub="' + esc(svc.subKey) + '"';
+        html += ' oninput="window.onPriceChange(this)"></td>';
+      });
+      html += '<td><button class="btn-del" onclick="window.deleteModel(\'' + esc(mid) + '\')" title="Delete model">×</button></td>';
+      html += '</tr>';
+    });
+    html += '</tbody></table></div>';
+
+    container.innerHTML = html;
+  }
+
+  // ─── Models Tab ────────────────────────────────────────────
+  function renderModelsTab(container) {
+    var data = getCurrentData();
+    if (!data) { container.innerHTML = '<div class="empty-state">No data</div>'; return; }
+    var models = data.models || {};
+    var modelKeys = Object.keys(models);
+
+    var html = '<button class="btn btn-secondary btn-add" onclick="openModal(\'addModelModal\')">+ Add Model</button>';
+    html += '<table class="editor-table"><thead><tr><th style="width:160px;">Model ID</th><th>Name</th><th style="width:80px;"></th></tr></thead><tbody>';
+
+    if (modelKeys.length === 0) {
+      html += '<tr><td colspan="3" style="text-align:center;color:#86868b;padding:24px;">No models yet</td></tr>';
+    } else {
+      modelKeys.forEach(function(mid) {
+        html += '<tr>';
+        html += '<td><code>' + esc(mid) + '</code></td>';
+        html += '<td><input type="text" value="' + esc(models[mid].name) + '" data-mid="' + esc(mid) + '" class="model-name-input" oninput="window.onModelNameChange(this)"></td>';
+        html += '<td><button class="btn-danger" onclick="window.deleteModel(\'' + esc(mid) + '\')">Delete</button></td>';
+        html += '</tr>';
+      });
+    }
+    html += '</tbody></table>';
+
+    container.innerHTML = html;
+  }
+
+  // ─── Services Tab ──────────────────────────────────────────
+  function renderServicesTab(container) {
+    var data = getCurrentData();
+    if (!data) { container.innerHTML = '<div class="empty-state">No data</div>'; return; }
+    var svcTypes = data.serviceTypes || {};
+    var svcKeys = Object.keys(svcTypes);
+
+    var html = '<button class="btn btn-secondary btn-add" onclick="openModal(\'addServiceModal\')">+ Add Service</button>';
+    html += '<table class="editor-table"><thead><tr><th style="width:160px;">Service ID</th><th>Name</th><th>Description</th><th style="width:80px;"></th></tr></thead><tbody>';
+
+    if (svcKeys.length === 0) {
+      html += '<tr><td colspan="4" style="text-align:center;color:#86868b;padding:24px;">No services yet</td></tr>';
+    } else {
+      svcKeys.forEach(function(skey) {
+        var svc = svcTypes[skey];
+        html += '<tr>';
+        html += '<td><code>' + esc(skey) + '</code></td>';
+        html += '<td><input type="text" value="' + esc(svc.name) + '" data-skey="' + esc(skey) + '" data-field="name" class="svc-input" oninput="window.onSvcChange(this)"></td>';
+        html += '<td><textarea data-skey="' + esc(skey) + '" data-field="description" class="svc-input" oninput="window.onSvcChange(this)">' + esc(svc.description || '') + '</textarea></td>';
+        html += '<td><button class="btn-danger" onclick="window.deleteService(\'' + esc(skey) + '\')">Delete</button></td>';
+        html += '</tr>';
+      });
+    }
+    html += '</tbody></table>';
+
+    container.innerHTML = html;
+  }
+
+  // ─── Batch Tab ─────────────────────────────────────────────
+  function renderBatchTab(container) {
+    var data = getCurrentData();
+    if (!data) { container.innerHTML = '<div class="empty-state">No data</div>'; return; }
+    var svcTypes = data.serviceTypes || {};
+    var svcKeys = Object.keys(svcTypes);
+    var sIsObj = screenIsObject(svcTypes, data.models);
+
+    if (svcKeys.length === 0) {
+      container.innerHTML = '<div class="empty-state">No services configured yet</div>';
+      return;
+    }
+
+    var html = '<div class="batch-panel">';
+    html += '<h3 style="margin-bottom:20px;font-size:18px;">Batch Price Update</h3>';
+    html += '<label>Service</label><select id="batchSvc">';
+    html += '<option value="">-- Select --</option>';
+    svcKeys.forEach(function(skey) {
+      if (skey === 'screen' && sIsObj) {
+        html += '<option value="screen.compatible">' + esc(svcTypes[skey].name) + ' (Compatible)</option>';
+        html += '<option value="screen.original">' + esc(svcTypes[skey].name) + ' (Original)</option>';
+      } else {
+        html += '<option value="' + esc(skey) + '">' + esc(svcTypes[skey].name) + '</option>';
+      }
+    });
+    html += '</select>';
+
+    html += '<label>Operation</label><select id="batchOp">';
+    html += '<option value="set">Set to value</option>';
+    html += '<option value="increase">Increase by</option>';
+    html += '<option value="decrease">Decrease by</option>';
+    html += '</select>';
+
+    html += '<label>Value</label><input type="number" id="batchVal" placeholder="0" min="0">';
+    html += '<button class="btn btn-primary" onclick="window.applyBatch()">Apply to All Models</button>';
+    html += '</div>';
+
+    container.innerHTML = html;
+  }
+
+  // ─── Event Handlers (exposed to inline onclick) ────────────
+  window.onPriceChange = function(input) {
+    var mid = input.dataset.model;
+    var baseKey = input.dataset.base;
+    var subKey = input.dataset.sub || null;
+    var price = parseInt(input.value);
+    if (isNaN(price)) return;
+    var data = getCurrentData();
+    var model = data.models[mid];
+    if (!model) return;
+    setServiceValue(model, baseKey, subKey, price);
+    markDirty();
+  };
+
+  window.onModelNameChange = function(input) {
+    var data = getCurrentData();
+    var model = data.models[input.dataset.mid];
+    if (model) { model.name = input.value; markDirty(); }
+  };
+
+  window.onSvcChange = function(input) {
+    var data = getCurrentData();
+    var svc = data.serviceTypes[input.dataset.skey];
+    if (svc) { svc[input.dataset.field] = input.value; markDirty(); }
+  };
+
+  window.selectDeviceType = function(dt) {
+    state.deviceType = dt;
+    renderMain();
+  };
+
+  window.switchTab = function(tab) {
+    currentTab = tab;
+    renderMain();
+  };
+
+  // ─── CRUD Operations ───────────────────────────────────────
+  window.addModel = function() {
+    var idEl = document.getElementById('mModelId');
+    var nameEl = document.getElementById('mModelName');
+    var mid = idEl.value.trim().replace(/\s+/g, '-').toLowerCase();
+    var name = nameEl.value.trim();
+    if (!mid || !name) { showToast('Fill in all fields', 'error'); return; }
+
+    var data = getCurrentData();
+    if (data.models[mid]) { showToast('Model ID already exists', 'error'); return; }
+
+    var now = new Date().toISOString();
+    var services = {};
+    var updates = {};
+    Object.keys(data.serviceTypes).forEach(function(skey) {
+      services[skey] = 0;
+      updates[skey] = now;
+    });
+    data.models[mid] = { name: name, services: services, serviceUpdates: updates, lastUpdated: now };
+
+    idEl.value = ''; nameEl.value = '';
+    closeModal('addModelModal');
+    markDirty();
+    renderTabContent();
+    showToast('Model added', 'success');
+  };
+
+  window.deleteModel = function(mid) {
+    var data = getCurrentData();
+    if (!data.models[mid]) return;
+    document.getElementById('confirmTitle').textContent = 'Delete Model';
+    document.getElementById('confirmMsg').textContent = 'Delete "' + data.models[mid].name + '"? This cannot be undone.';
+    document.getElementById('confirmBtn').onclick = function() {
+      delete data.models[mid];
+      closeModal('confirmModal');
+      markDirty();
+      renderTabContent();
+      showToast('Model deleted', 'success');
+    };
+    openModal('confirmModal');
+  };
+
+  window.addService = function() {
+    var idEl = document.getElementById('mServiceId');
+    var nameEl = document.getElementById('mServiceName');
+    var descEl = document.getElementById('mServiceDesc');
+    var sid = idEl.value.trim().replace(/\s+/g, '_').toLowerCase();
+    var name = nameEl.value.trim();
+    if (!sid || !name) { showToast('Fill in ID and Name', 'error'); return; }
+
+    var data = getCurrentData();
+    if (data.serviceTypes[sid]) { showToast('Service ID already exists', 'error'); return; }
+
+    data.serviceTypes[sid] = { name: name, description: descEl.value.trim() || name };
+
+    var now = new Date().toISOString();
+    Object.keys(data.models).forEach(function(mid) {
+      data.models[mid].services[sid] = 0;
+      if (!data.models[mid].serviceUpdates) data.models[mid].serviceUpdates = {};
+      data.models[mid].serviceUpdates[sid] = now;
+    });
+
+    idEl.value = ''; nameEl.value = ''; descEl.value = '';
+    closeModal('addServiceModal');
+    markDirty();
+    renderTabContent();
+    showToast('Service added', 'success');
+  };
+
+  window.deleteService = function(skey) {
+    var data = getCurrentData();
+    if (!data.serviceTypes[skey]) return;
+    document.getElementById('confirmTitle').textContent = 'Delete Service';
+    document.getElementById('confirmMsg').textContent = 'Delete "' + data.serviceTypes[skey].name + '"? This removes it from ALL models.';
+    document.getElementById('confirmBtn').onclick = function() {
+      delete data.serviceTypes[skey];
+      Object.keys(data.models).forEach(function(mid) {
+        delete data.models[mid].services[skey];
+        if (data.models[mid].serviceUpdates) delete data.models[mid].serviceUpdates[skey];
+      });
+      closeModal('confirmModal');
+      markDirty();
+      renderTabContent();
+      showToast('Service deleted', 'success');
+    };
+    openModal('confirmModal');
+  };
+
+  // ─── Batch ─────────────────────────────────────────────────
+  window.applyBatch = function() {
+    var svcVal = document.getElementById('batchSvc').value;
+    var op = document.getElementById('batchOp').value;
+    var val = parseFloat(document.getElementById('batchVal').value);
+    if (!svcVal) { showToast('Select a service', 'error'); return; }
+    if (isNaN(val)) { showToast('Enter a value', 'error'); return; }
+
+    var baseKey = svcVal.split('.')[0];
+    var subKey = svcVal.indexOf('.') > 0 ? svcVal.split('.')[1] : null;
+
+    var data = getCurrentData();
+    var now = new Date().toISOString();
+    var count = 0;
+
+    Object.keys(data.models).forEach(function(mid) {
+      var current = getServiceValue(data.models[mid], baseKey, subKey);
+      var newPrice = current;
+      switch (op) {
+        case 'set': newPrice = val; break;
+        case 'increase': newPrice = current + val; break;
+        case 'decrease': newPrice = Math.max(-1, current - val); break;
+      }
+      if (newPrice !== current) {
+        setServiceValue(data.models[mid], baseKey, subKey, newPrice);
+        count++;
+      }
+    });
+
+    markDirty();
+    renderTabContent();
+    showToast('Updated ' + count + ' models', 'success');
+  };
+
+  // ─── Save ──────────────────────────────────────────────────
+  window.saveCurrent = async function() {
+    if (!state.currentBrand || !state.data) return;
+    var btn = document.getElementById('globalSaveBtn');
+    var status = document.getElementById('saveStatus');
+    btn.disabled = true; btn.textContent = 'Saving…';
+
+    try {
+      var user = Auth.getUser();
+      var token = Auth.getToken();
+      if (!user || user.role !== 'root' || !token) {
+        throw new Error('Authentication required');
+      }
+      var res = await fetch('/api/pricing/' + encodeURIComponent(state.currentBrand), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify(state.data)
+      });
+      if (!res.ok) throw new Error((await res.json()).error || 'Save failed');
+      state.dirty = false;
+      state._dataBackup = JSON.stringify(state.data);
+      status.textContent = '✓ Saved';
+      showToast('Saved successfully', 'success');
+      setTimeout(function(){ status.textContent = ''; }, 3000);
+    } catch(e) {
+      showToast('Save failed: ' + e.message, 'error');
+      btn.disabled = false;
+    }
+    btn.textContent = 'Save Changes';
+    btn.disabled = state.dirty;
+  };
+
+  // ─── Init ──────────────────────────────────────────────────
+  init();
+
+})();
+</script>
+</body>
+</html>

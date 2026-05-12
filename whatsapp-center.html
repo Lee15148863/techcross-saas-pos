@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>WhatsApp Center — TechCross</title>
+<style>
+/* ─── Reset ─────────────────────────────────────────────── */
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:antialiased;background:#f5f5f7;color:#1d1d1f;min-height:100vh;}
+
+/* ─── Layout ────────────────────────────────────────────── */
+.wc-wrap{max-width:520px;margin:0 auto;padding:0;min-height:100vh;display:flex;flex-direction:column;background:#fff;box-shadow:0 0 24px rgba(0,0,0,.04);}
+
+/* ─── Header ────────────────────────────────────────────── */
+.wc-header{position:sticky;top:0;z-index:100;background:rgba(255,255,255,.92);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);border-bottom:1px solid #e5e5ea;padding:12px 16px 0;}
+.wc-header .wc-title{font-size:20px;font-weight:700;text-align:center;margin-bottom:4px;}
+.wc-header-tabs{display:flex;gap:2px;margin-top:4px;}
+.wc-tab{flex:1;padding:10px 8px;border:none;background:none;font-size:14px;font-weight:500;color:#86868b;cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;-webkit-tap-highlight-color:transparent;}
+.wc-tab.active{color:#075E54;border-bottom-color:#075E54;font-weight:600;}
+.wc-tab:hover{color:#1d1d1f;}
+.wc-back{font-size:28px;background:none;border:none;cursor:pointer;padding:0 4px;color:#075E54;position:absolute;left:16px;top:8px;}
+
+/* ─── Body ──────────────────────────────────────────────── */
+.wc-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+.wc-view{display:none;padding:16px;}
+.wc-view.active{display:block;}
+
+/* ─── Search ────────────────────────────────────────────── */
+.wc-search-bar{display:flex;gap:8px;margin-bottom:12px;}
+.wc-input{width:100%;padding:14px 16px;border:1.5px solid #d2d2d7;border-radius:12px;font-size:16px;outline:none;transition:border-color .2s;background:#fff;-webkit-appearance:none;}
+.wc-input:focus{border-color:#075E54;box-shadow:0 0 0 3px rgba(7,94,84,.1);}
+.wc-input-search{flex:1;font-size:17px;}
+.wc-btn{background:#075E54;color:#fff;border:none;border-radius:12px;padding:14px 20px;font-size:16px;font-weight:600;cursor:pointer;transition:opacity .15s;white-space:nowrap;-webkit-tap-highlight-color:transparent;}
+.wc-btn:active{opacity:.8;}
+.wc-btn-search{padding:14px 18px;font-size:18px;}
+
+/* ─── Chips / Recents ───────────────────────────────────── */
+.wc-section-label{font-size:12px;color:#86868b;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin:12px 0 6px;}
+.wc-chip-list{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;}
+.wc-chip{background:#f0f0f5;border:none;border-radius:980px;padding:8px 16px;font-size:14px;font-weight:500;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:6px;-webkit-tap-highlight-color:transparent;}
+.wc-chip:active{background:#e0e0e5;}
+.wc-chip-sub{font-size:11px;color:#86868b;font-weight:400;}
+
+/* ─── Search Results ────────────────────────────────────── */
+.wc-empty{text-align:center;padding:32px 16px;color:#86868b;font-size:15px;}
+.wc-empty-notes{padding:12px;font-size:13px;}
+.wc-error{color:#ff3b30;}
+.wc-result-item{display:block;width:100%;text-align:left;background:#f9f9fb;border:1px solid #e5e5ea;border-radius:14px;padding:14px 16px;margin-bottom:8px;cursor:pointer;transition:all .15s;-webkit-tap-highlight-color:transparent;}
+.wc-result-item:active{background:#f0f0f5;border-color:#d2d2d7;}
+.wc-result-name{font-size:16px;font-weight:600;margin-bottom:2px;}
+.wc-result-contact{font-size:14px;color:#6e6e73;}
+.wc-result-source{font-size:11px;background:#e8f5e9;color:#1E7F5C;padding:1px 6px;border-radius:4px;margin-left:6px;}
+.wc-result-meta{font-size:11px;color:#aeaeb2;margin-top:4px;}
+
+/* ─── Customer Detail ───────────────────────────────────── */
+.wc-customer-section{}
+.wc-customer-header{display:flex;align-items:center;gap:12px;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid #e5e5ea;}
+.wc-btn-back{background:none;border:none;font-size:16px;color:#075E54;font-weight:600;cursor:pointer;padding:4px 0;-webkit-tap-highlight-color:transparent;}
+.wc-customer-info{flex:1;}
+.wc-customer-info strong{font-size:18px;font-weight:700;display:block;}
+.wc-customer-phone{font-size:14px;color:#6e6e73;}
+
+/* ─── Notes ─────────────────────────────────────────────── */
+.wc-internal-badge{display:inline-block;background:#fff3e0;color:#e65100;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;margin-left:6px;text-transform:uppercase;}
+.wc-notes-list{max-height:180px;overflow-y:auto;margin-bottom:8px;}
+.wc-note-item{background:#f9f9fb;border-radius:10px;padding:10px 12px;margin-bottom:6px;border-left:3px solid #FFB300;}
+.wc-note-text{font-size:14px;line-height:1.5;margin-bottom:4px;}
+.wc-note-meta{font-size:11px;color:#aeaeb2;display:flex;align-items:center;gap:8px;}
+.wc-note-del{background:none;border:none;color:#ff3b30;cursor:pointer;font-size:13px;padding:2px 4px;margin-left:auto;}
+.wc-add-note{display:flex;gap:8px;margin-bottom:16px;}
+.wc-textarea-sm{flex:1;padding:10px 14px;font-size:14px;border-radius:10px;resize:none;font-family:inherit;}
+.wc-btn-sm{padding:10px 16px;font-size:14px;border-radius:10px;align-self:flex-end;}
+
+/* ─── Compose ───────────────────────────────────────────── */
+.wc-compose-section{border-top:1px solid #e5e5ea;padding-top:12px;}
+.wc-templates-bar{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding-bottom:8px;}
+.wc-tpl-chip{background:#f0f0f5;border:1px solid #e5e5ea;border-radius:10px;padding:8px 12px;font-size:12px;font-weight:500;cursor:pointer;transition:all .15s;-webkit-tap-highlight-color:transparent;text-align:center;word-break:break-word;line-height:1.3;}
+.wc-tpl-chip.active{background:#075E54;color:#fff;border-color:#075E54;}
+.wc-tpl-chip:active{opacity:.8;}
+.wc-textarea-msg{font-size:15px;line-height:1.6;resize:vertical;min-height:100px;font-family:inherit;margin-bottom:8px;}
+.wc-phone-row{display:flex;gap:8px;align-items:center;}
+.wc-input-phone{flex:1;font-size:16px;}
+.wc-btn-send{padding:14px 24px;font-size:17px;border-radius:12px;}
+.wc-phone-hint{font-size:12px;color:#34c759;margin-top:4px;min-height:18px;}
+
+/* ─── Templates Editor ──────────────────────────────────── */
+.wc-tpl-desc{font-size:14px;color:#6e6e73;margin-bottom:16px;line-height:1.5;}
+.wc-tpl-card{background:#f9f9fb;border:1px solid #e5e5ea;border-radius:14px;padding:14px;margin-bottom:12px;}
+.wc-tpl-card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
+.wc-tpl-label{font-size:13px;font-weight:600;color:#1d1d1f;}
+.wc-tpl-textarea{font-size:13px;line-height:1.5;padding:10px 12px;border-radius:10px;resize:vertical;min-height:60px;font-family:inherit;}
+.wc-btn-ghost{background:none;border:none;color:#86868b;cursor:pointer;font-size:16px;padding:4px 8px;border-radius:8px;}
+.wc-btn-ghost:hover{background:#f0f0f5;}
+.wc-btn-secondary{background:#f0f0f5;color:#1d1d1f;border:none;border-radius:12px;padding:12px 20px;font-size:14px;font-weight:600;cursor:pointer;width:100%;margin-top:8px;}
+
+/* ─── Settings ──────────────────────────────────────────── */
+.wc-settings{padding-bottom:32px;}
+.wc-settings-card{background:#f9f9fb;border:1px solid #e5e5ea;border-radius:14px;padding:16px;margin-bottom:12px;}
+.wc-settings-card h3{font-size:15px;font-weight:600;margin-bottom:8px;}
+.wc-settings-card p{font-size:14px;color:#6e6e73;line-height:1.5;}
+.wc-settings-list{list-style:none;padding:0;}
+.wc-settings-list li{font-size:13px;padding:4px 0;color:#6e6e73;}
+.wc-settings-list li code{background:#f0f0f5;padding:2px 6px;border-radius:4px;font-size:12px;color:#1d1d1f;}
+.wc-btn-danger{background:#ff3b30;color:#fff;border:none;border-radius:12px;padding:12px 20px;font-size:14px;font-weight:600;cursor:pointer;width:100%;margin-top:8px;}
+
+/* ─── No Customer Notice ─────────────────────────────────── */
+.wc-no-customer-notice{background:#fff8e1;border:1px solid #ffe082;border-radius:10px;padding:10px 14px;font-size:13px;color:#e65100;margin-bottom:12px;line-height:1.5;}
+
+/* ─── Responsive ────────────────────────────────────────── */
+@media(min-width:521px){.wc-wrap{border-radius:20px;margin:20px auto;min-height:auto;}}
+@media(max-width:420px){
+  .wc-header{padding:8px 12px 0;}
+  .wc-view{padding:12px;}
+  .wc-input{padding:12px 14px;font-size:15px;}
+  .wc-btn{padding:12px 16px;font-size:15px;}
+}
+</style>
+</head>
+<body>
+<div class="wc-wrap" id="wcApp"></div>
+
+<script src="auth-guard.js"></script>
+<script src="whatsapp-center.js?v=2"></script>
+</body>
+</html>

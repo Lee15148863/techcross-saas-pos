@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>支出管理 / Expenses - Tech Cross 进销存</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;}
+        html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:antialiased;background:#f5f5f7;color:#1d1d1f;}
+        .layout{display:flex;height:100vh;}
+        .sidebar{width:220px;background:#1d1d1f;color:#f5f5f7;display:flex;flex-direction:column;flex-shrink:0;}
+        .sidebar .logo{padding:20px;text-align:center;border-bottom:1px solid #333;}.sidebar .logo img{height:36px;}.sidebar .logo span{display:block;font-size:12px;color:#86868b;margin-top:4px;}
+        .sidebar nav{flex:1;overflow-y:auto;padding:12px 0;}
+        .sidebar nav a{display:flex;align-items:center;gap:10px;padding:10px 20px;color:#b0b0b5;text-decoration:none;font-size:14px;transition:all .15s;border-left:3px solid transparent;}
+        .sidebar nav a:hover{background:#2a2a2d;color:#f5f5f7;}.sidebar nav a.active{background:#2a2a2d;color:#D4E157;border-left-color:#D4E157;font-weight:600;}
+        .sidebar nav a .icon{width:20px;text-align:center;font-size:16px;}
+        .sidebar .nav-section{padding:16px 20px 6px;font-size:11px;color:#6e6e73;text-transform:uppercase;letter-spacing:1px;}
+        .main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+        .topbar{height:56px;background:#fff;border-bottom:1px solid #e5e5e7;display:flex;align-items:center;justify-content:space-between;padding:0 24px;flex-shrink:0;}
+        .topbar h2{font-size:18px;font-weight:600;}.topbar .user-info{display:flex;align-items:center;gap:12px;font-size:14px;color:#6e6e73;}.topbar .user-info strong{color:#1d1d1f;}
+        .btn-logout{padding:6px 14px;border-radius:980px;border:1px solid #d2d2d7;background:#fff;font-size:13px;cursor:pointer;transition:all .2s;}.btn-logout:hover{background:#ff3b30;color:#fff;border-color:#ff3b30;}
+        .content{flex:1;overflow-y:auto;padding:24px;}
+        .card{background:#fff;border-radius:14px;box-shadow:0 2px 12px rgba(0,0,0,.06);padding:24px;margin-bottom:20px;}
+        .toolbar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:16px;}
+        .toolbar input,.toolbar select{padding:8px 14px;border:1px solid #d2d2d7;border-radius:10px;font-size:14px;background:#fff;}
+        .toolbar input:focus,.toolbar select:focus{outline:none;border-color:#D4E157;}
+        .btn{padding:8px 18px;border:none;border-radius:10px;font-size:14px;font-weight:500;cursor:pointer;transition:all .2s;}
+        .btn-primary{background:#D4E157;color:#000;}.btn-primary:hover{background:#c5d148;}
+        .btn-secondary{background:#f5f5f7;border:1px solid #d2d2d7;color:#1d1d1f;}.btn-secondary:hover{background:#e5e5e7;}
+        .btn-danger{background:#ff3b30;color:#fff;}.btn-danger:hover{background:#e0342d;}
+        .btn-sm{padding:5px 12px;font-size:13px;}
+        table{width:100%;border-collapse:collapse;font-size:14px;}
+        thead th{background:#f5f5f7;padding:10px 12px;text-align:left;font-weight:600;font-size:12px;color:#6e6e73;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #e5e5e7;}
+        tbody td{padding:10px 12px;border-bottom:1px solid #f0f0f2;vertical-align:middle;}
+        tbody tr:hover{background:#fafafa;}
+        .badge{display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;}
+        .badge-active{background:#e8f5e9;color:#2e7d32;}
+        .summary-cards{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:20px;}
+        .summary-card{flex:1;min-width:140px;background:#fff;border-radius:14px;box-shadow:0 2px 12px rgba(0,0,0,.06);padding:20px;text-align:center;}
+        .summary-card .sc-label{font-size:13px;color:#6e6e73;margin-bottom:6px;}
+        .summary-card .sc-value{font-size:24px;font-weight:700;}
+        .summary-card .sc-value.cash{color:#34c759;}.summary-card .sc-value.card{color:#0071e3;}.summary-card .sc-value.total{color:#1d1d1f;}
+        .form-row{display:flex;gap:12px;margin-bottom:12px;flex-wrap:wrap;}
+        .form-group{flex:1;min-width:160px;}
+        .form-group label{display:block;font-size:13px;font-weight:500;color:#6e6e73;margin-bottom:4px;}
+        .form-group input,.form-group select,.form-group textarea{width:100%;padding:10px 14px;border:1px solid #d2d2d7;border-radius:10px;font-size:14px;background:#fff;}
+        .form-group input:focus,.form-group select:focus,.form-group textarea:focus{outline:none;border-color:#D4E157;}
+        .form-group textarea{resize:vertical;min-height:60px;}
+        .cat-summary{display:flex;gap:12px;flex-wrap:wrap;margin-top:12px;}
+        .cat-item{background:#f5f5f7;border-radius:10px;padding:10px 16px;font-size:13px;}
+        .cat-item strong{display:block;font-size:16px;margin-top:2px;}
+        .toast{position:fixed;top:20px;right:20px;z-index:10000;padding:14px 22px;border-radius:12px;font-size:14px;font-weight:500;box-shadow:0 8px 32px rgba(0,0,0,.15);transform:translateX(120%);transition:transform .3s ease;max-width:400px;}
+        .toast.show{transform:translateX(0);}.toast.success{background:#34c759;color:#fff;}.toast.error{background:#ff3b30;color:#fff;}
+    </style>
+</head>
+<body>
+<div class="toast" id="toast"></div>
+<div class="layout">
+    <aside class="sidebar">
+        <div class="logo"><img src="logo.png" alt="Tech Cross"><span>进销存管理系统</span></div>
+        <nav>
+            <div class="nav-section">业务管理 / Business</div>
+            <a href="inv-pos.html" data-perm="pos"><span class="icon">💰</span>POS 收银 / Checkout</a>
+            <a href="inv-products.html" data-perm="products"><span class="icon">📦</span>商品管理 / Products</a>
+            <a href="inv-stock.html" data-perm="stock"><span class="icon">🏭</span>库存管理 / Stock</a>
+            <a href="inv-suppliers.html" data-perm="suppliers"><span class="icon">🤝</span>供应商 / Suppliers</a>
+            <a href="inv-purchases.html" data-perm="purchases"><span class="icon">🛒</span>采购管理 / Purchases</a>
+            <a href="inv-transactions.html" data-perm="transactions"><span class="icon">📋</span>交易记录 / Transactions</a>
+            <div class="nav-section">报表与发票 / Reports</div>
+            <a href="inv-reports.html" data-perm="reports"><span class="icon">📊</span>报表中心 / Reports</a>
+            <a href="inv-invoices.html" data-perm="invoices"><span class="icon">🧾</span>发票管理 / VAT Invoice</a>
+            <a href="inv-expenses.html" class="active" data-perm="expenses"><span class="icon">💸</span>支出管理 / Expenses</a>
+            <div class="nav-section" id="adminSection" style="display:none;">系统管理 / System</div>
+            <a href="inv-settings.html" class="admin-only" style="display:none;" data-perm="settings"><span class="icon">⚙️</span>系统设置 / Settings</a>
+            <a href="inv-users.html" class="admin-only" style="display:none;" data-perm="users"><span class="icon">👥</span>用户管理 / Users</a>
+        </nav>
+    </aside>
+    <div class="main">
+        <div class="topbar">
+            <h2>支出管理 / Expenses</h2>
+            <div class="user-info"><span>欢迎, <strong id="displayName">-</strong></span><span class="badge badge-active" id="roleBadge">-</span><button class="btn-logout" id="btnLogout">退出登录 / Logout</button></div>
+        </div>
+        <div class="content">
+            <!-- Summary Cards -->
+            <div class="summary-cards" id="summaryCards">
+                <div class="summary-card"><div class="sc-label">总支出 / Total</div><div class="sc-value total" id="scTotal">€0.00</div></div>
+                <div class="summary-card"><div class="sc-label">💵 现金 / Cash</div><div class="sc-value cash" id="scCash">€0.00</div></div>
+                <div class="summary-card"><div class="sc-label">💳 卡 / Card</div><div class="sc-value card" id="scCard">€0.00</div></div>
+                <div class="summary-card"><div class="sc-label">笔数 / Count</div><div class="sc-value" id="scCount">0</div></div>
+            </div>
+
+            <!-- Add Expense Form -->
+            <div class="card">
+                <h3 style="font-size:16px;margin-bottom:16px;">新增支出 / Add Expense</h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>分类 / Category *</label>
+                        <select id="expCategory">
+                            <option value="Lyca Credit">Lyca Credit</option>
+                            <option value="收购客人商品">收购客人商品 / Customer Purchase</option>
+                            <option value="店铺杂费">店铺杂费 / Shop Misc</option>
+                            <option value="其他">其他 / Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>金额 / Amount (€) *</label>
+                        <input type="number" id="expAmount" step="0.01" min="0" placeholder="0.00">
+                    </div>
+                    <div class="form-group">
+                        <label>支付方式 / Payment</label>
+                        <select id="expPayment">
+                            <option value="cash">💵 现金 / Cash</option>
+                            <option value="card">💳 卡 / Card</option>
+                            <option value="bankTransfer">🏦 转账 / Transfer</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>日期 / Date</label>
+                        <input type="date" id="expDate">
+                    </div>
+                    <div class="form-group" style="flex:2;">
+                        <label>描述 / Description</label>
+                        <input type="text" id="expDescription" placeholder="Optional description...">
+                    </div>
+                </div>
+                <div id="expError" style="display:none;background:#fef2f2;color:#991b1b;padding:10px 14px;border-radius:10px;font-size:13px;margin-bottom:12px;"></div>
+                <button class="btn btn-primary" id="btnAddExpense">➕ 添加支出 / Add Expense</button>
+            </div>
+
+            <!-- Expense List -->
+            <div class="card">
+                <div class="toolbar">
+                    <input type="date" id="filterStart">
+                    <span style="color:#86868b;">to</span>
+                    <input type="date" id="filterEnd">
+                    <select id="filterCategory">
+                        <option value="">全部分类 / All Categories</option>
+                        <option value="Lyca Credit">Lyca Credit</option>
+                        <option value="收购客人商品">收购客人商品</option>
+                        <option value="店铺杂费">店铺杂费</option>
+                        <option value="其他">其他</option>
+                    </select>
+                    <button class="btn btn-primary" id="btnSearch">搜索 / Search</button>
+                    <button class="btn btn-secondary" id="btnToday">今天 / Today</button>
+                    <button class="btn btn-secondary" id="btnThisMonth">本月 / This Month</button>
+                </div>
+
+                <!-- Category Summary -->
+                <div class="cat-summary" id="catSummary"></div>
+
+                <table>
+                    <thead><tr>
+                        <th>日期 / Date</th>
+                        <th>分类 / Category</th>
+                        <th>金额 / Amount</th>
+                        <th>支付 / Payment</th>
+                        <th>描述 / Description</th>
+                        <th>操作员 / Operator</th>
+                        <th>操作 / Actions</th>
+                    </tr></thead>
+                    <tbody id="expTable"><tr><td colspan="7" style="text-align:center;color:#86868b;padding:40px;">加载中 / Loading...</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="auth-guard.js"></script>
+<script>
+(function(){
+'use strict';
+const user = Auth.requireAuth(); if (!user) return;
+// Expenses is admin-only on the API side, but we show the page to admins
+document.getElementById('displayName').textContent = Auth.getDisplayName();
+document.getElementById('roleBadge').textContent = Auth.isRoot() ? '店主':'员工';
+const isAdmin = Auth.isRoot();
+if(isAdmin){document.getElementById('adminSection').style.display='';document.querySelectorAll('.admin-only').forEach(el=>el.style.display='');}
+
+// Hide sidebar items based on permissions
+var perms=user.permissions||{};
+if(isAdmin){document.querySelectorAll('nav a[data-perm]').forEach(function(a){a.style.display='';});}
+else{document.querySelectorAll('nav a[data-perm]').forEach(function(a){if(!perms[a.dataset.perm])a.style.display='none';});}
+
+const API='/api/inv';
+const headers=()=>Auth.getHeaders();
+function showToast(msg,type){const t=document.getElementById('toast');t.textContent=msg;t.className='toast '+(type||'success');setTimeout(()=>t.classList.add('show'),10);setTimeout(()=>t.classList.remove('show'),3000);}
+function logout(){Auth.logout();}
+document.getElementById('btnLogout').addEventListener('click',logout);
+async function apiFetch(url,opts){opts=opts||{};opts.headers=headers();const r=await fetch(API+url,opts);if(r.status===401){logout();return null;}return r;}
+function esc(s){if(!s)return'';const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+
+// Set default dates
+const today=new Date();
+document.getElementById('expDate').value=today.toISOString().split('T')[0];
+document.getElementById('filterEnd').value=today.toISOString().split('T')[0];
+const monthStart=new Date(today.getFullYear(),today.getMonth(),1);
+document.getElementById('filterStart').value=monthStart.toISOString().split('T')[0];
+
+// ─── Add Expense ────────────────────────────────────────────
+document.getElementById('btnAddExpense').addEventListener('click', async function(){
+    var errEl=document.getElementById('expError');
+    errEl.style.display='none';
+    var category=document.getElementById('expCategory').value;
+    var amount=parseFloat(document.getElementById('expAmount').value);
+    var paymentMethod=document.getElementById('expPayment').value;
+    var date=document.getElementById('expDate').value;
+    var description=document.getElementById('expDescription').value.trim();
+
+    if(!category||isNaN(amount)||amount<=0){
+        errEl.textContent='请填写分类和金额 / Category and amount required';
+        errEl.style.display='block';return;
+    }
+
+    try{
+        var r=await apiFetch('/expenses',{method:'POST',body:JSON.stringify({category,amount,paymentMethod,date,description})});
+        if(!r)return;
+        var data=await r.json();
+        if(!r.ok){errEl.textContent=data.error||'Failed';errEl.style.display='block';return;}
+        showToast('支出已添加 / Expense added: €'+amount.toFixed(2));
+        document.getElementById('expAmount').value='';
+        document.getElementById('expDescription').value='';
+        loadExpenses();
+        loadSummary();
+    }catch(e){errEl.textContent=e.message;errEl.style.display='block';}
+});
+
+// ─── Load Expenses ──────────────────────────────────────────
+async function loadExpenses(){
+    var start=document.getElementById('filterStart').value;
+    var end=document.getElementById('filterEnd').value;
+    var cat=document.getElementById('filterCategory').value;
+    var url='/expenses?';
+    if(start)url+='startDate='+start+'&';
+    if(end)url+='endDate='+end+'&';
+    if(cat)url+='category='+encodeURIComponent(cat)+'&';
+    try{
+        var r=await apiFetch(url);if(!r)return;
+        var data=await r.json();
+        var list=data.data||[];
+        var tb=document.getElementById('expTable');
+        if(!list.length){tb.innerHTML='<tr><td colspan="7" style="text-align:center;color:#86868b;padding:40px;">暂无支出记录 / No expenses found</td></tr>';return;}
+        // Clear existing content
+        tb.innerHTML = '';
+
+        // Build DOM elements safely
+        list.forEach(function(e){
+            const tr = document.createElement('tr');
+
+            // Date cell
+            const td1 = document.createElement('td');
+            td1.textContent = new Date(e.date).toLocaleDateString('en-IE');
+            tr.appendChild(td1);
+
+            // Category cell
+            const td2 = document.createElement('td');
+            td2.textContent = e.category;
+            tr.appendChild(td2);
+
+            // Amount cell
+            const td3 = document.createElement('td');
+            td3.style.fontWeight = '600';
+            td3.textContent = '€' + Number(e.amount).toFixed(2);
+            tr.appendChild(td3);
+
+            // Payment method cell
+            const td4 = document.createElement('td');
+            if (e.paymentMethod === 'cash') {
+                td4.textContent = '💵 Cash';
+            } else if (e.paymentMethod === 'card') {
+                td4.textContent = '💳 Card';
+            } else {
+                td4.textContent = '🏦 Transfer';
+            }
+            tr.appendChild(td4);
+
+            // Description cell
+            const td5 = document.createElement('td');
+            td5.style.color = '#6e6e73';
+            td5.textContent = e.description || '—';
+            tr.appendChild(td5);
+
+            // Operator cell
+            const td6 = document.createElement('td');
+            td6.textContent = e.operator ? (e.operator.displayName || e.operator.username) : '—';
+            tr.appendChild(td6);
+
+            // Actions cell
+            const td7 = document.createElement('td');
+            if (isAdmin) {
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'btn btn-danger btn-sm exp-delete';
+                deleteBtn.setAttribute('data-id', e._id);
+                deleteBtn.textContent = '删除 / Delete';
+                td7.appendChild(deleteBtn);
+            }
+            tr.appendChild(td7);
+
+            tb.appendChild(tr);
+        });
+    }catch(e){showToast('加载失败 / Load failed','error');}
+}
+
+// ─── Load Summary ───────────────────────────────────────────
+async function loadSummary(){
+    var start=document.getElementById('filterStart').value;
+    var end=document.getElementById('filterEnd').value;
+    var url='/expenses/summary?';
+    if(start)url+='startDate='+start+'&';
+    if(end)url+='endDate='+end+'&';
+    try{
+        var r=await apiFetch(url);if(!r)return;
+        var resp=await r.json();
+        var d=resp.data||{};
+        document.getElementById('scTotal').textContent='€'+(d.total||0).toFixed(2);
+        document.getElementById('scCash').textContent='€'+(d.cash||0).toFixed(2);
+        document.getElementById('scCard').textContent='€'+(d.card||0).toFixed(2);
+        document.getElementById('scCount').textContent=d.count||0;
+        // Category summary
+        var catEl=document.getElementById('catSummary');
+        catEl.innerHTML = '';
+        var cats=d.byCategory||{};
+        Object.keys(cats).forEach(function(k){
+            var item=document.createElement('div');
+            item.className='cat-item';
+            item.textContent = k + ' ';
+            var strong=document.createElement('strong');
+            strong.textContent = '€' + cats[k].toFixed(2);
+            item.appendChild(strong);
+            catEl.appendChild(item);
+        });
+    }catch(e){}
+}
+
+// ─── Delete Expense ─────────────────────────────────────────
+document.getElementById('expTable').addEventListener('click', async function(e){
+    var btn=e.target.closest('.exp-delete');
+    if(!btn)return;
+    if(!confirm('确定删除此支出记录？/ Delete this expense?'))return;
+    try{
+        var r=await apiFetch('/expenses/'+btn.dataset.id,{method:'DELETE'});
+        if(!r)return;
+        if(!r.ok){var data=await r.json();showToast(data.error,'error');return;}
+        showToast('已删除 / Deleted');
+        loadExpenses();
+        loadSummary();
+    }catch(e){showToast('删除失败 / Delete failed','error');}
+});
+
+// ─── Filter Buttons ─────────────────────────────────────────
+document.getElementById('btnSearch').addEventListener('click',function(){loadExpenses();loadSummary();});
+document.getElementById('btnToday').addEventListener('click',function(){
+    var t=new Date().toISOString().split('T')[0];
+    document.getElementById('filterStart').value=t;
+    document.getElementById('filterEnd').value=t;
+    document.getElementById('filterCategory').value='';
+    loadExpenses();loadSummary();
+});
+document.getElementById('btnThisMonth').addEventListener('click',function(){
+    var now=new Date();
+    document.getElementById('filterStart').value=new Date(now.getFullYear(),now.getMonth(),1).toISOString().split('T')[0];
+    document.getElementById('filterEnd').value=now.toISOString().split('T')[0];
+    document.getElementById('filterCategory').value='';
+    loadExpenses();loadSummary();
+});
+
+// Init
+loadExpenses();
+loadSummary();
+})();
+</script>
+</body>
+</html>

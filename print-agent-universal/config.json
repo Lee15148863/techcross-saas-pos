@@ -1,0 +1,11 @@
+{
+  "port": 9100,
+  "printer": {
+    "ip": "AUTO",
+    "port": 9100,
+    "scanRanges": ["192.168.1", "192.168.0"],
+    "scanTimeout": 300,
+    "rescanInterval": 60000
+  },
+  "paperWidth": 54
+}

@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Boss Control — Tech Cross</title>
+<style>
+  /* ─── Reset & Base ──────────────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif; font-size: 16px; -webkit-font-smoothing: antialiased; }
+  body { background: #f2f2f7; color: #1d1d1f; min-height: 100vh; padding-bottom: 80px; }
+  button { font-family: inherit; cursor: pointer; border: none; outline: none; }
+  input, select { font-family: inherit; font-size: 16px; }
+
+  /* ─── Login ─────────────────────────────────────────────────── */
+  .login-screen { position: fixed; inset: 0; background: #fff; display: flex; align-items: center; justify-content: center; z-index: 1000; }
+  .login-box { width: 100%; max-width: 360px; padding: 32px 24px; }
+  .login-box h1 { font-size: 28px; font-weight: 700; margin-bottom: 4px; }
+  .login-box p { color: #6e6e73; font-size: 15px; margin-bottom: 24px; }
+  .login-box input { width: 100%; padding: 14px 16px; border: 1.5px solid #d2d2d7; border-radius: 12px; margin-bottom: 12px; background: #f9f9fb; }
+  .login-box input:focus { border-color: #0071e3; box-shadow: 0 0 0 3px rgba(0,113,227,0.15); }
+  .login-error { background: #fef2f2; color: #dc2626; padding: 12px; border-radius: 10px; font-size: 14px; margin-bottom: 12px; display: none; }
+  .login-error.show { display: block; }
+
+  /* ─── Header ────────────────────────────────────────────────── */
+  .header { position: sticky; top: 0; z-index: 100; background: rgba(255,255,255,0.92); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-bottom: 1px solid #e5e5ea; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; }
+  .header h1 { font-size: 20px; font-weight: 700; }
+  .header-sub { font-size: 12px; color: #8e8e93; }
+  .header-right { display: flex; gap: 8px; align-items: center; }
+  .btn-lang { font-size: 13px; font-weight: 600; background: #f2f2f7; padding: 6px 12px; border-radius: 8px; color: #1d1d1f; min-width: 36px; text-align: center; }
+  .btn-lang:active { opacity: 0.7; }
+  .btn-logout { font-size: 14px; color: #0071e3; background: none; padding: 8px 12px; border-radius: 8px; font-weight: 500; }
+
+  /* ─── Tab Bar ───────────────────────────────────────────────── */
+  .tab-bar { position: sticky; top: 52px; z-index: 99; background: rgba(255,255,255,0.92); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-bottom: 1px solid #e5e5ea; display: flex; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .tab-bar::-webkit-scrollbar { display: none; }
+  .tab-btn { flex: 1; min-width: 72px; padding: 12px 8px; font-size: 13px; font-weight: 500; color: #8e8e93; background: none; border-bottom: 2.5px solid transparent; transition: all 0.2s; white-space: nowrap; }
+  .tab-btn.active { color: #0071e3; border-bottom-color: #0071e3; }
+
+  /* ─── Content ───────────────────────────────────────────────── */
+  .content { display: none; padding: 16px; max-width: 640px; margin: 0 auto; }
+  .content.active { display: block; }
+
+  /* ─── Cards ─────────────────────────────────────────────────── */
+  .card { background: #fff; border-radius: 16px; padding: 16px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+  .card-title { font-size: 13px; font-weight: 600; color: #8e8e93; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; }
+  .card-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #f2f2f7; }
+  .card-row:last-child { border-bottom: none; }
+  .card-label { font-size: 15px; color: #3a3a3c; }
+  .card-value { font-size: 17px; font-weight: 600; }
+  .card-value.green { color: #34c759; }
+  .card-value.red { color: #ff3b30; }
+  .card-value.blue { color: #0071e3; }
+
+  /* ─── Overview Grid ─────────────────────────────────────────── */
+  .overview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+  .stat-card { background: #fff; border-radius: 14px; padding: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); text-align: center; }
+  .stat-card .stat-value { font-size: 24px; font-weight: 700; line-height: 1.2; }
+  .stat-card .stat-label { font-size: 12px; color: #8e8e93; margin-top: 4px; }
+  .stat-card .stat-sub { font-size: 11px; color: #aeaeb2; margin-top: 2px; }
+
+  /* ─── Buttons ───────────────────────────────────────────────── */
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 12px 20px; border-radius: 12px; font-size: 15px; font-weight: 600; min-height: 44px; min-width: 44px; transition: opacity 0.15s; }
+  .btn:active { opacity: 0.7; }
+  .btn-primary { background: #0071e3; color: #fff; }
+  .btn-danger { background: #ff3b30; color: #fff; }
+  .btn-secondary { background: #f2f2f7; color: #1d1d1f; }
+  .btn-success { background: #34c759; color: #fff; }
+  .btn-warning { background: #ff9500; color: #fff; }
+  .btn-block { width: 100%; }
+  .btn-sm { padding: 8px 14px; font-size: 13px; min-height: 36px; }
+  .btn-group { display: flex; gap: 8px; }
+
+  /* ─── Inputs ────────────────────────────────────────────────── */
+  .input-group { margin-bottom: 12px; }
+  .input-group label { display: block; font-size: 13px; font-weight: 600; color: #3a3a3c; margin-bottom: 6px; }
+  .input-group input, .input-group select { width: 100%; padding: 12px 14px; border: 1.5px solid #d2d2d7; border-radius: 10px; background: #f9f9fb; }
+  .input-group input:focus, .input-group select:focus { border-color: #0071e3; box-shadow: 0 0 0 3px rgba(0,113,227,0.15); }
+
+  /* ─── Modal ─────────────────────────────────────────────────── */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 500; display: none; align-items: flex-end; justify-content: center; }
+  .modal-overlay.show { display: flex; }
+  .modal-sheet { background: #fff; border-radius: 20px 20px 0 0; width: 100%; max-width: 500px; padding: 24px 20px 32px; max-height: 85vh; overflow-y: auto; animation: sheetUp 0.25s ease; }
+  @keyframes sheetUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+  .modal-sheet h2 { font-size: 20px; font-weight: 700; margin-bottom: 16px; }
+  .modal-sheet .btn-group { margin-top: 16px; }
+  .modal-close { position: absolute; top: 12px; right: 16px; font-size: 24px; background: none; color: #8e8e93; padding: 8px; }
+
+  /* ─── Lists ─────────────────────────────────────────────────── */
+  .list-item { display: flex; justify-content: space-between; align-items: center; padding: 14px 0; border-bottom: 1px solid #f2f2f7; }
+  .list-item:last-child { border-bottom: none; }
+  .list-item .item-title { font-size: 15px; font-weight: 500; }
+  .list-item .item-sub { font-size: 13px; color: #8e8e93; margin-top: 2px; }
+  .list-item .item-right { text-align: right; font-size: 14px; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 12px; font-weight: 600; }
+  .badge-green { background: #e8f5e9; color: #2e7d32; }
+  .badge-red { background: #fef2f2; color: #dc2626; }
+  .badge-blue { background: #e3f2fd; color: #1565c0; }
+  .badge-gray { background: #f2f2f7; color: #636366; }
+  .badge-orange { background: #fff3e0; color: #e65100; }
+
+  /* ─── Status Indicator ──────────────────────────────────────── */
+  .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+  .status-dot.green { background: #34c759; }
+  .status-dot.red { background: #ff3b30; }
+  .status-dot.orange { background: #ff9500; }
+
+  /* ─── Toast ─────────────────────────────────────────────────── */
+  .toast { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.85); color: #fff; padding: 12px 24px; border-radius: 14px; font-size: 14px; font-weight: 500; z-index: 999; display: none; backdrop-filter: blur(10px); max-width: 90%; text-align: center; }
+  .toast.show { display: block; animation: fadeIn 0.2s; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateX(-50%) translateY(10px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+
+  /* ─── Filter Bar ────────────────────────────────────────────── */
+  .filter-bar { display: flex; gap: 8px; margin-bottom: 12px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .filter-bar::-webkit-scrollbar { display: none; }
+  .filter-chip { padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 500; background: #f2f2f7; color: #3a3a3c; white-space: nowrap; border: 1.5px solid transparent; }
+  .filter-chip.active { background: #e3f2fd; color: #0071e3; border-color: #0071e3; }
+
+  /* ─── Empty State ───────────────────────────────────────────── */
+  .empty-state { text-align: center; padding: 40px 20px; color: #8e8e93; }
+  .empty-state .empty-icon { font-size: 40px; margin-bottom: 12px; }
+  .empty-state p { font-size: 15px; }
+
+  /* ─── Loading ───────────────────────────────────────────────── */
+  .loading { text-align: center; padding: 20px; color: #8e8e93; font-size: 14px; }
+  .spinner { display: inline-block; width: 20px; height: 20px; border: 2.5px solid #e5e5ea; border-top-color: #0071e3; border-radius: 50%; animation: spin 0.6s linear infinite; margin-right: 8px; vertical-align: middle; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ─── Responsive ────────────────────────────────────────────── */
+  @media (min-width: 640px) {
+    .content { padding: 24px; }
+    .overview-grid { grid-template-columns: 1fr 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ─── Header ───────────────────────────────────────────────── -->
+<div class="header" id="appHeader" style="display:none">
+  <div>
+    <h1 data-i18n="app.title">Boss Control</h1>
+    <div class="header-sub" id="headerDate"></div>
+  </div>
+  <div class="header-right">
+    <button class="btn-lang" id="langToggle" onclick="toggleLang()" title="Switch language / 切换语言">中</button>
+    <span id="userBadge" style="font-size:13px;color:#8e8e93;font-weight:500;"></span>
+    <button class="btn-logout" onclick="doLogout()" data-i18n="app.logout">Logout</button>
+  </div>
+</div>
+
+<!-- ─── Tab Bar ──────────────────────────────────────────────── -->
+<div class="tab-bar" id="tabBar" style="display:none">
+  <button class="tab-btn active" data-tab="overview" onclick="switchTab('overview')" data-i18n="tab.overview">Overview</button>
+  <button class="tab-btn" data-tab="users" onclick="switchTab('users')" data-i18n="tab.users">Users</button>
+  <button class="tab-btn" data-tab="ledger" onclick="switchTab('ledger')" data-i18n="tab.ledger">Ledger</button>
+  <button class="tab-btn" data-tab="refund" onclick="switchTab('refund')" data-i18n="tab.refund">Refund</button>
+  <button class="tab-btn" data-tab="devices" onclick="switchTab('devices')" data-i18n="tab.devices">Devices</button>
+  <button class="tab-btn" data-tab="system" onclick="switchTab('system')" data-i18n="tab.system">System</button>
+</div>
+
+<!-- ═════════════════════════════════════════════════════════════ -->
+<!-- OVERVIEW TAB -->
+<!-- ═════════════════════════════════════════════════════════════ -->
+<div class="content active" id="tab-overview">
+  <div class="overview-grid" id="overviewGrid">
+    <div class="stat-card"><div class="stat-value blue" id="ovCash">—</div><div class="stat-label" data-i18n="ov.cashToday">Cash Today</div><div class="stat-sub" id="ovCashTxns"></div></div>
+    <div class="stat-card"><div class="stat-value blue" id="ovCard">—</div><div class="stat-label" data-i18n="ov.cardToday">Card Today</div><div class="stat-sub" id="ovCardTxns"></div></div>
+    <div class="stat-card"><div class="stat-value" id="ovVat">—</div><div class="stat-label" data-i18n="ov.vatCollected">VAT Collected</div><div class="stat-sub" id="ovVatDetail"></div></div>
+    <div class="stat-card"><div class="stat-value green" id="ovProfit">—</div><div class="stat-label" data-i18n="ov.netSales">Net Sales</div><div class="stat-sub" id="ovGross"></div></div>
+    <div class="stat-card"><div class="stat-value" id="ovSalesCount">—</div><div class="stat-label" data-i18n="ov.salesCount">Sales Count</div><div class="stat-sub" id="ovRefundCount"></div></div>
+    <div class="stat-card"><div class="stat-value red" id="ovRefunds">—</div><div class="stat-label" data-i18n="ov.refunds">Refunds</div><div class="stat-sub" id="ovCloseStatus"></div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title" data-i18n="ov.devicePL">Device Profit / Loss</div>
+    <div class="card-row"><span class="card-label" data-i18n="ov.soldDevices">Sold Devices</span><span class="card-value" id="ovDevSold">—</span></div>
+    <div class="card-row"><span class="card-label" data-i18n="ov.grossProfit">Gross Profit</span><span class="card-value green" id="ovDevProfit">—</span></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title" data-i18n="ov.quickActions">Quick Actions</div>
+    <div class="btn-group" style="flex-wrap:wrap;gap:6px">
+      <button class="btn btn-primary btn-sm" onclick="location.href='inv-pos.html'" data-i18n="nav.posTill" style="flex:1;min-width:calc(50% - 6px);font-size:14px">🛒 POS / Till</button>
+      <button class="btn btn-secondary btn-sm" onclick="location.href='inv-products.html'" data-i18n="nav.inventory" style="flex:1;min-width:calc(50% - 6px);font-size:14px">📦 Inventory</button>
+      <button class="btn btn-secondary btn-sm" onclick="switchTab('refund')" data-i18n="nav.refunds" style="flex:1;min-width:calc(50% - 6px);font-size:14px">💰 Refunds</button>
+      <button class="btn btn-secondary btn-sm" onclick="location.href='inv-reports.html'" data-i18n="nav.reports" style="flex:1;min-width:calc(50% - 6px);font-size:14px">📊 Reports</button>
+      <button class="btn btn-secondary btn-sm" onclick="location.href='admin-reviews.html'" data-i18n="nav.websiteAdmin" style="flex:1;min-width:calc(50% - 6px);font-size:14px">🌐 网站管理</button>
+    </div>
+    <div style="margin-top:8px;display:flex;gap:6px">
+      <button class="btn btn-warning btn-sm" onclick="location.href='admin-brands.html'" style="flex:1;font-size:14px">🔧 Repair Pricing</button>
+	      <button class="btn btn-success btn-sm" onclick="location.href='whatsapp-center.html'" style="flex:1;font-size:14px">💬 WhatsApp</button>
+    </div>
+    <div style="margin-top:8px;display:flex;gap:6px">
+      <button class="btn btn-secondary btn-sm" onclick="refreshOverview()" data-i18n="ov.refresh" style="flex:1">Refresh</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═════════════════════════════════════════════════════════════ -->
+<!-- USERS TAB -->
+<!-- ═════════════════════════════════════════════════════════════ -->
+<div class="content" id="tab-users">
+  <div class="card">
+    <div class="card-title" data-i18n="users.title">User Management</div>
+    <button class="btn btn-primary btn-block btn-sm" onclick="showCreateUser()" data-i18n="users.create">+ Create User</button>
+  </div>
+  <div id="userList"></div>
+</div>
+
+<!-- ═════════════════════════════════════════════════════════════ -->
+<!-- LEDGER TAB -->
+<!-- ═════════════════════════════════════════════════════════════ -->
+<div class="content" id="tab-ledger">
+  <div class="card">
+    <div class="card-title" data-i18n="ledger.title">Cash Ledger</div>
+    <div class="filter-bar" id="ledgerFilters">
+      <button class="filter-chip active" data-filter="all" onclick="filterLedger('all')" data-i18n="ledger.all">All</button>
+      <button class="filter-chip" data-filter="sale" onclick="filterLedger('sale')" data-i18n="ledger.sales">Sales</button>
+      <button class="filter-chip" data-filter="refund" onclick="filterLedger('refund')" data-i18n="ledger.refunds">Refunds</button>
+      <button class="filter-chip" data-filter="expense" onclick="filterLedger('expense')" data-i18n="ledger.expenses">Expenses</button>
+    </div>
+    <div class="input-group">
+      <input type="date" id="ledgerDate" onchange="loadLedger()">
+    </div>
+    <div class="card-row" style="font-weight:600"><span data-i18n="ledger.netFlow">Net Flow</span><span id="ledgerNet">—</span></div>
+  </div>
+  <div id="ledgerEntries"><div class="loading"><span class="spinner"></span>Loading...</div></div>
+</div>
+
+<!-- ═════════════════════════════════════════════════════════════ -->
+<!-- REFUND TAB -->
+<!-- ═════════════════════════════════════════════════════════════ -->
+<div class="content" id="tab-refund">
+  <div class="card">
+    <div class="card-title" data-i18n="refund.forceTitle">Force Refund</div>
+    <div class="input-group">
+      <label data-i18n="refund.receipt">Receipt Number</label>
+      <input type="text" id="refundReceipt" data-i18n-placeholder="refund.receiptPlaceholder" placeholder="e.g. S-20260507-001">
+    </div>
+    <div class="input-group">
+      <label data-i18n="refund.method">Refund Method</label>
+      <select id="refundMethod">
+        <option value="cash" data-i18n="refund.cash">Cash</option>
+        <option value="card" data-i18n="refund.card">Card</option>
+      </select>
+    </div>
+    <div class="input-group">
+      <label data-i18n="refund.reason">Reason</label>
+      <input type="text" id="refundReason" data-i18n-placeholder="refund.reasonPlaceholder" placeholder="Root forced refund">
+    </div>
+    <button class="btn btn-danger btn-block" onclick="doForceRefund()" data-i18n="refund.execute">Execute Refund</button>
+  </div>
+
+  <div class="card">
+    <div class="card-title" data-i18n="refund.reverseTitle">Reverse Refund</div>
+    <div class="input-group">
+      <label data-i18n="refund.reverseReceipt">Refund Receipt Number</label>
+      <input type="text" id="reverseReceipt" data-i18n-placeholder="refund.reverseReceiptPlaceholder" placeholder="e.g. R-20260507-001">
+    </div>
+    <button class="btn btn-warning btn-block" onclick="doReverseRefund()" data-i18n="refund.reverseBtn">Reverse Refund</button>
+  </div>
+
+  <div class="card">
+    <div class="card-title" data-i18n="refund.recent">Recent Refunds</div>
+    <div id="refundHistory"><div class="loading"><span class="spinner"></span>Loading...</div></div>
+  </div>
+</div>
+
+<!-- ═════════════════════════════════════════════════════════════ -->
+<!-- DEVICES TAB -->
+<!-- ═════════════════════════════════════════════════════════════ -->
+<div class="content" id="tab-devices">
+  <div class="card">
+    <div class="card-title" data-i18n="devices.title">Device Inventory</div>
+    <div class="filter-bar" id="deviceFilters">
+      <button class="filter-chip active" data-filter="" onclick="filterDevices('')" data-i18n="devices.all">All</button>
+      <button class="filter-chip" data-filter="SOLD" onclick="filterDevices('SOLD')" data-i18n="devices.sold">Sold</button>
+      <button class="filter-chip" data-filter="TESTED" onclick="filterDevices('TESTED')" data-i18n="devices.tested">Tested</button>
+      <button class="filter-chip" data-filter="PENDING" onclick="filterDevices('PENDING')" data-i18n="devices.pending">Pending</button>
+      <button class="filter-chip" data-filter="BUY_IN" onclick="filterDevices('BUY_IN')" data-i18n="devices.buyIn">Buy In</button>
+    </div>
+  </div>
+  <div id="deviceSummary"></div>
+  <div id="deviceList"><div class="loading"><span class="spinner"></span>Loading...</div></div>
+</div>
+
+<!-- ═════════════════════════════════════════════════════════════ -->
+<!-- SYSTEM TAB -->
+<!-- ═════════════════════════════════════════════════════════════ -->
+<div class="content" id="tab-system">
+  <div class="card" id="sysStatusCard">
+    <div class="card-title" data-i18n="sys.status">System Status</div>
+    <div class="card-row"><span class="card-label" data-i18n="sys.serverTime">Server Time</span><span class="card-value" id="sysTime">—</span></div>
+    <div class="card-row"><span class="card-label" data-i18n="sys.activeUsers">Active Users</span><span class="card-value" id="sysUsers">—</span></div>
+    <div class="card-row"><span class="card-label" data-i18n="sys.posStatus">POS Status</span><span class="card-value" id="sysPaused">—</span></div>
+    <div class="card-row"><span class="card-label" data-i18n="sys.txnLocked">Transactions Locked</span><span class="card-value" id="sysLocked">—</span></div>
+    <div class="card-row"><span class="card-label" data-i18n="sys.lastClose">Last Daily Close</span><span class="card-value" id="sysLastClose">—</span></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title" data-i18n="sys.dailyClose">Daily Close</div>
+    <div class="input-group">
+      <label data-i18n="sys.date">Date</label>
+      <input type="date" id="closeDate">
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-primary btn-block" onclick="doForceClose()" data-i18n="sys.forceClose">Force Close</button>
+      <button class="btn btn-warning btn-block" onclick="doReopenClose()" data-i18n="sys.reopen">Reopen</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title" style="color:#ff3b30;" data-i18n="sys.emergency">⚠ Emergency Controls</div>
+    <div class="btn-group" style="flex-direction:column;gap:8px">
+      <button class="btn btn-danger btn-block" onclick="doSystemPause()" data-i18n="sys.pausePos">⏸ Pause POS</button>
+      <button class="btn btn-success btn-block" onclick="doSystemResume()" data-i18n="sys.resumePos">▶ Resume POS</button>
+      <button class="btn btn-danger btn-block" onclick="doLockTransactions()" data-i18n="sys.lockTxns">🔒 Lock All Transactions</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title" data-i18n="sys.auditLog">Audit Log</div>
+    <div id="auditLog"><button class="btn btn-secondary btn-block btn-sm" onclick="loadAuditLog()" data-i18n="sys.loadAudit">Load Recent Actions</button></div>
+    <div style="margin-top:8px"><button class="btn btn-primary btn-block btn-sm" onclick="location.href='boss-audit.html'" data-i18n="sys.openAudit">Open Audit Dashboard</button></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title" data-i18n="sys.export">📊 Export & Tax Preparation</div>
+    <div class="input-group">
+      <label data-i18n="sys.startDate">Start Date</label>
+      <input type="date" id="exportStart">
+    </div>
+    <div class="input-group">
+      <label data-i18n="sys.endDate">End Date</label>
+      <input type="date" id="exportEnd">
+    </div>
+    <div class="btn-group" style="flex-wrap:wrap;gap:6px">
+      <button class="btn btn-secondary btn-sm" style="flex:1;min-width:calc(50% - 6px)" onclick="exportCsv('transactions')" data-i18n="export.transactions">📦 Transactions</button>
+      <button class="btn btn-secondary btn-sm" style="flex:1;min-width:calc(50% - 6px)" onclick="exportCsv('ledger')" data-i18n="export.ledger">💰 Ledger</button>
+      <button class="btn btn-secondary btn-sm" style="flex:1;min-width:calc(50% - 6px)" onclick="exportCsv('audit')" data-i18n="export.audit">🧾 Audit</button>
+      <button class="btn btn-secondary btn-sm" style="flex:1;min-width:calc(50% - 6px)" onclick="exportCsv('daily-close')" data-i18n="export.dailyClose">📅 Daily Close</button>
+      <button class="btn btn-primary btn-sm" style="flex:1;min-width:100%;margin-top:4px" onclick="exportCsv('vat-summary')" data-i18n="export.vatSummary">📊 VAT Summary</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── Toast ────────────────────────────────────────────────── -->
+<div class="toast" id="toast"></div>
+
+<!-- ─── Modal ────────────────────────────────────────────────── -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal-sheet" id="modalSheet">
+    <h2 id="modalTitle" data-i18n="modal.confirm">Confirm</h2>
+    <div id="modalBody"></div>
+    <div class="btn-group" id="modalActions">
+      <button class="btn btn-secondary btn-block" onclick="closeModal()" data-i18n="modal.cancel">Cancel</button>
+      <button class="btn btn-danger btn-block" id="modalConfirmBtn" onclick="confirmModal()">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<script src="auth-guard.js"></script>
+<script src="lang.js"></script>
+<script src="boss.js"></script>
+</body>
+</html>

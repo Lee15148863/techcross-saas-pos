@@ -1,0 +1,12 @@
+{
+  "name": "Tech Cross Repair Centre",
+  "short_name": "Tech Cross",
+  "description": "Professional phone, tablet, laptop and gaming console repair in Navan",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#D4E157",
+  "icons": [
+    { "src": "/logo.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

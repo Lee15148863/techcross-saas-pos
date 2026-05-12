@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard — TechCross SaaS</title>
+  <link rel="icon" type="image/png" href="../logo-sm.png">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'SF Pro Display', sans-serif; font-size: 14px; -webkit-font-smoothing: antialiased; }
+    body { background: #f2f2f7; min-height: 100vh; padding: 24px; display: flex; flex-direction: column; align-items: center; }
+
+    .card { background: #fff; border-radius: 20px; padding: 32px; width: 100%; max-width: 620px; box-shadow: 0 1px 10px rgba(0,0,0,.05); position: relative; margin-bottom: 20px; }
+    .logo-header { display: flex; align-items: center; gap: 10px; justify-content: center; margin-bottom: 20px; }
+    .logo-header img { height: 36px; }
+    .logo-header span { font-size: 22px; font-weight: 700; color: #1d1d1f; }
+
+    .lang-btn { position: absolute; top: 16px; right: 16px; padding: 6px 12px; border: 1.5px solid #d2d2d7; background: #fff; color: #1d1d1f; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; }
+    .lang-btn:hover { background: #f2f2f7; }
+
+    h1 { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+    .sub { color: #8e8e93; font-size: 14px; margin-bottom: 24px; }
+
+    .admin-banner { background: linear-gradient(135deg, #1d1d1f, #3a3a3c); color: #fff; padding: 20px; border-radius: 14px; margin-bottom: 20px; text-align: center; }
+    .admin-banner h2 { font-size: 18px; margin-bottom: 4px; }
+    .admin-banner p { font-size: 13px; opacity: .8; margin-bottom: 12px; }
+    .admin-banner a { display: inline-block; padding: 8px 20px; background: #0071e3; color: #fff; border-radius: 8px; text-decoration: none; font-weight: 500; font-size: 13px; }
+
+    .info-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f2f2f7; font-size: 14px; }
+    .info-row .label { color: #8e8e93; }
+    .info-row .value { font-weight: 500; }
+
+    .section-title { font-size: 16px; font-weight: 600; margin: 24px 0 16px; color: #1d1d1f; }
+
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; font-size: 13px; font-weight: 600; color: #6e6e73; margin-bottom: 4px; }
+    .form-group input, .form-group textarea { width: 100%; padding: 10px 12px; border: 1.5px solid #d2d2d7; border-radius: 10px; font-size: 14px; font-family: inherit; outline: none; transition: border .2s; }
+    .form-group input:focus, .form-group textarea:focus { border-color: #0071e3; }
+    .form-group textarea { min-height: 80px; resize: vertical; }
+
+    .logo-preview { width: 80px; height: 80px; object-fit: contain; border-radius: 8px; border: 1px solid #e5e5ea; margin-top: 8px; display: none; }
+    .logo-upload-btn { display: inline-block; padding: 8px 16px; background: #f2f2f7; border: 1.5px solid #d2d2d7; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 500; margin-top: 8px; }
+    .logo-upload-btn:hover { background: #e5e5ea; }
+
+    .btn-primary { display: inline-block; padding: 12px 24px; background: #0071e3; color: #fff; border: none; border-radius: 12px; font-size: 15px; font-weight: 600; cursor: pointer; text-decoration: none; }
+    .btn-primary:hover { background: #0077ed; }
+    .btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+    .btn-outline { display: inline-block; padding: 8px 16px; background: transparent; color: #0071e3; border: 1.5px solid #0071e3; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; text-decoration: none; }
+    .btn-outline:hover { background: #f0f7ff; }
+    .btn-danger { padding: 8px 16px; background: #ff3b30; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: 13px; margin-top: 20px; }
+
+    .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #1d1d1f; color: #fff; padding: 12px 24px; border-radius: 12px; font-size: 14px; font-weight: 500; opacity: 0; transition: opacity .3s; pointer-events: none; z-index: 100; }
+    .toast.show { opacity: 1; }
+    .toast.error { background: #ff3b30; }
+    .toast.success { background: #34c759; }
+
+    .btn-row { display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
+
+    @media (max-width: 480px) {
+      .card { padding: 20px 16px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <button class="lang-btn" id="langToggle" onclick="toggleLang()">中</button>
+
+    <div class="logo-header">
+      <img src="../logo-sm.png" alt="TechCross">
+      <span>TechCross SaaS</span>
+    </div>
+
+    <!-- Super admin banner -->
+    <div id="adminBanner" style="display:none;" class="admin-banner">
+      <h2 data-i18n="saas.dash.adminBanner.title">Welcome, Super Admin</h2>
+      <p data-i18n="saas.dash.adminBanner.desc">You have full access to all stores and the management console.</p>
+      <a href="/saas/admin.html" data-i18n="saas.dash.adminBanner.btn">Open Admin Console</a>
+    </div>
+
+    <h1 id="greeting" data-i18n="saas.dash.welcome">Welcome!</h1>
+    <p class="sub" data-i18n="saas.dash.subtitle">You are signed in to the SaaS platform.</p>
+
+    <!-- User info -->
+    <div>
+      <div class="info-row"><span class="label" data-i18n="saas.dash.username">Username</span><span class="value" id="dispUsername">-</span></div>
+      <div class="info-row"><span class="label" data-i18n="saas.dash.name">Name</span><span class="value" id="dispName">-</span></div>
+      <div class="info-row"><span class="label" data-i18n="saas.dash.role">Role</span><span class="value" id="dispRole">-</span></div>
+      <div class="info-row"><span class="label" data-i18n="saas.dash.storeId">Store ID</span><span class="value" id="dispStore">-</span></div>
+    </div>
+  </div>
+
+  <!-- Store settings card (hidden for super_admin without impersonation) -->
+  <div id="settingsCard" class="card" style="display:none;">
+    <h2 class="section-title" data-i18n="saas.dash.settings.title">Store Settings</h2>
+
+    <div class="form-group">
+      <label data-i18n="saas.dash.settings.logo">Store Logo</label>
+      <input type="file" id="logoInput" accept="image/png,image/jpeg,image/webp" style="display:none;">
+      <img id="logoPreview" class="logo-preview" alt="Logo preview">
+      <button class="logo-upload-btn" onclick="document.getElementById('logoInput').click()" data-i18n="saas.dash.settings.uploadLogo">Upload Logo</button>
+    </div>
+
+    <div class="form-group">
+      <label data-i18n="saas.dash.settings.storeName">Store Name</label>
+      <input type="text" id="inputName" data-i18n-placeholder="saas.dash.settings.storeNamePlaceholder" placeholder="Your store name">
+    </div>
+
+    <div class="form-group">
+      <label data-i18n="saas.dash.settings.address">Address</label>
+      <textarea id="inputAddress" data-i18n-placeholder="saas.dash.settings.addressPlaceholder" placeholder="Store address"></textarea>
+    </div>
+
+    <div class="form-group">
+      <label data-i18n="saas.dash.settings.phone">Phone</label>
+      <input type="text" id="inputPhone" data-i18n-placeholder="saas.dash.settings.phonePlaceholder" placeholder="Phone number">
+    </div>
+
+    <div class="form-group">
+      <label data-i18n="saas.dash.settings.email">Email</label>
+      <input type="email" id="inputEmail" data-i18n-placeholder="saas.dash.settings.emailPlaceholder" placeholder="Email address">
+    </div>
+
+    <div class="form-group">
+      <label data-i18n="saas.dash.settings.vatNumber">VAT Number</label>
+      <input type="text" id="inputVat" data-i18n-placeholder="saas.dash.settings.vatPlaceholder" placeholder="IE1234567X">
+    </div>
+
+    <div class="form-group">
+      <label data-i18n="saas.dash.settings.receiptTC">Receipt Terms & Conditions</label>
+      <textarea id="inputTC" data-i18n-placeholder="saas.dash.settings.tcPlaceholder" placeholder="e.g. No refund after 14 days..." rows="4"></textarea>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn-primary" onclick="saveSettings()" data-i18n="saas.dash.settings.save">Save Settings</button>
+      <button class="btn-outline" onclick="loadSettings()" data-i18n="saas.dash.settings.reset">Reset</button>
+    </div>
+  </div>
+
+  <!-- View store info card (for super_admin viewing store settings) -->
+  <div id="storeInfoCard" class="card" style="display:none;">
+    <h2 class="section-title" data-i18n="saas.dash.storeInfo">Store Information</h2>
+    <div id="storeInfoContent"></div>
+  </div>
+
+  <!-- Password change card (store owners only) -->
+  <div id="pwCard" class="card" style="display:none;">
+    <h2 class="section-title" data-i18n="saas.dash.password.title">Change Password</h2>
+    <div class="form-group">
+      <label data-i18n="saas.dash.password.current">Current Password</label>
+      <input type="password" id="pwCurrent" autocomplete="current-password">
+    </div>
+    <div class="form-group">
+      <label data-i18n="saas.dash.password.new">New Password</label>
+      <input type="password" id="pwNew" autocomplete="new-password" minlength="6">
+    </div>
+    <div class="form-group">
+      <label data-i18n="saas.dash.password.confirm">Confirm New Password</label>
+      <input type="password" id="pwConfirm" autocomplete="new-password">
+    </div>
+    <button class="btn-primary" onclick="changePassword()" data-i18n="saas.dash.password.btn">Update Password</button>
+  </div>
+
+  <div class="card" style="text-align:center;">
+    <button class="btn-danger" onclick="logout()" data-i18n="saas.dash.signOut">Sign Out</button>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script src="../lang.js"></script>
+  <script>
+    var token = localStorage.getItem('saas_token');
+    var user = JSON.parse(localStorage.getItem('saas_user') || '{}');
+
+    if (!token) { window.location.href = '/saas/login.html'; }
+
+    document.getElementById('dispUsername').textContent = user.username || '-';
+    document.getElementById('dispName').textContent = user.displayName || '-';
+    document.getElementById('dispRole').textContent = user.role || '-';
+    document.getElementById('dispStore').textContent = user.storeId || __('saas.dash.storeNone');
+
+    var isSuperAdmin = user.role === 'super_admin';
+
+    if (isSuperAdmin) {
+      document.getElementById('adminBanner').style.display = 'block';
+      document.getElementById('greeting').textContent = __('saas.dash.greeting.super');
+    } else if (user.role === 'store_root') {
+      document.getElementById('greeting').textContent = __('saas.dash.greeting.owner');
+    } else {
+      document.getElementById('greeting').textContent = __('saas.dash.greeting.staff');
+    }
+
+    // Show store settings card only for store owners
+    if (!isSuperAdmin && user.storeId) {
+      document.getElementById('settingsCard').style.display = 'block';
+      document.getElementById('pwCard').style.display = 'block';
+      loadSettings();
+    } else if (isSuperAdmin && user.storeId) {
+      // Super admin impersonating a store — show read-only info
+      document.getElementById('storeInfoCard').style.display = 'block';
+      loadSettings();
+    }
+
+    // Logo file upload handler
+    document.getElementById('logoInput').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      if (file.size > 2 * 1024 * 1024) {
+        showToast(__('saas.dash.settings.logoTooBig') || 'Logo must be under 2MB', true);
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = function(ev) {
+        document.getElementById('logoPreview').src = ev.target.result;
+        document.getElementById('logoPreview').style.display = 'block';
+      };
+      reader.readAsDataURL(file);
+    });
+
+    // Load store settings
+    function loadSettings() {
+      var storeId = user.storeId;
+      if (!storeId) return;
+
+      var headers = { 'Authorization': 'Bearer ' + token };
+
+      fetch('/api/saas/stores/' + storeId + '/settings', { headers: headers })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (data.error) { showToast(data.error, true); return; }
+
+          if (isSuperAdmin) {
+            // Read-only display
+            var html = '';
+            html += '<div class="info-row"><span class="label">Name</span><span class="value">' + escHtml(data.name || '-') + '</span></div>';
+            html += '<div class="info-row"><span class="label">Address</span><span class="value">' + escHtml(data.address || '-') + '</span></div>';
+            html += '<div class="info-row"><span class="label">Phone</span><span class="value">' + escHtml(data.phone || '-') + '</span></div>';
+            html += '<div class="info-row"><span class="label">VAT</span><span class="value">' + escHtml(data.vatNumber || '-') + '</span></div>';
+            html += '<div class="info-row"><span class="label">T&amp;C</span><span class="value">' + escHtml((data.receiptTC || '-').slice(0,100)) + '</span></div>';
+            if (data.logo) {
+              html += '<div style="margin-top:12px;"><img src="' + data.logo + '" style="max-height:60px;max-width:200px;border-radius:6px;"></div>';
+            }
+            document.getElementById('storeInfoContent').innerHTML = html;
+            return;
+          }
+
+          // Editable form
+          document.getElementById('inputName').value = data.name || '';
+          document.getElementById('inputAddress').value = data.address || '';
+          document.getElementById('inputPhone').value = data.phone || '';
+          document.getElementById('inputEmail').value = data.email || '';
+          document.getElementById('inputVat').value = data.vatNumber || '';
+          document.getElementById('inputTC').value = data.receiptTC || '';
+          if (data.logo) {
+            document.getElementById('logoPreview').src = data.logo;
+            document.getElementById('logoPreview').style.display = 'block';
+          }
+        })
+        .catch(function(err) { showToast('Failed to load settings', true); });
+    }
+
+    // Save store settings
+    function saveSettings() {
+      var storeId = user.storeId;
+      if (!storeId) return;
+
+      var btn = document.querySelector('.btn-primary');
+      btn.disabled = true;
+      btn.textContent = __('saas.dash.settings.saving') || 'Saving...';
+
+      var body = {
+        name: document.getElementById('inputName').value,
+        address: document.getElementById('inputAddress').value,
+        phone: document.getElementById('inputPhone').value,
+        email: document.getElementById('inputEmail').value,
+        vatNumber: document.getElementById('inputVat').value,
+        receiptTC: document.getElementById('inputTC').value
+      };
+      var logoImg = document.getElementById('logoPreview');
+      if (logoImg.src && logoImg.style.display !== 'none' && logoImg.src.startsWith('data:')) {
+        body.logo = logoImg.src;
+      }
+
+      fetch('/api/saas/stores/' + storeId + '/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify(body)
+      })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          btn.disabled = false;
+          btn.textContent = __('saas.dash.settings.save') || 'Save Settings';
+          if (data.success) {
+            showToast(__('saas.dash.settings.saved') || 'Settings saved!', false);
+          } else {
+            showToast(data.error || 'Failed to save', true);
+          }
+        })
+        .catch(function(err) {
+          btn.disabled = false;
+          btn.textContent = __('saas.dash.settings.save') || 'Save Settings';
+          showToast('Network error', true);
+        });
+    }
+
+    function escHtml(s) {
+      var d = document.createElement('div');
+      d.textContent = s;
+      return d.innerHTML;
+    }
+
+    function showToast(msg, isError) {
+      var t = document.getElementById('toast');
+      t.textContent = msg;
+      t.className = 'toast show' + (isError ? ' error' : ' success');
+      clearTimeout(t._hide);
+      t._hide = setTimeout(function() { t.classList.remove('show'); }, 3000);
+    }
+
+    function changePassword() {
+      var current = document.getElementById('pwCurrent').value;
+      var newPw = document.getElementById('pwNew').value;
+      var confirm = document.getElementById('pwConfirm').value;
+      if (!current || !newPw) { showToast(__('saas.dash.password.errorRequired'), true); return; }
+      if (newPw.length < 6) { showToast(__('saas.dash.password.errorLength'), true); return; }
+      if (newPw !== confirm) { showToast(__('saas.dash.password.errorMismatch'), true); return; }
+
+      var btn = document.querySelector('#pwCard .btn-primary');
+      btn.disabled = true; btn.textContent = __('saas.dash.password.saving');
+
+      fetch('/api/saas/stores/' + user.storeId + '/password', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify({ currentPassword: current, newPassword: newPw })
+      })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          btn.disabled = false; btn.textContent = __('saas.dash.password.btn');
+          if (data.success) {
+            showToast(__('saas.dash.password.saved'), false);
+            document.getElementById('pwCurrent').value = '';
+            document.getElementById('pwNew').value = '';
+            document.getElementById('pwConfirm').value = '';
+          } else {
+            showToast(data.error || __('saas.dash.password.errorGeneric'), true);
+          }
+        })
+        .catch(function() { btn.disabled = false; btn.textContent = __('saas.dash.password.btn'); showToast('Network error', true); });
+    }
+
+    function logout() {
+      localStorage.removeItem('saas_token');
+      localStorage.removeItem('saas_user');
+      window.location.href = '/saas/login.html';
+    }
+
+    applyLang();
+  </script>
+</body>
+</html>

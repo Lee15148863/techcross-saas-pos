@@ -1,0 +1,3180 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>POS 收银 - Till v2</title>
+    <style>
+        /* ─── Reset & Base ─────────────────────────────────────────── */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body {
+            height: 100%; overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+            -webkit-font-smoothing: antialiased;
+            background: #f5f5f7; color: #1d1d1f;
+        }
+
+        /* ─── Full-screen Layout ───────────────────────────────────── */
+        .pos-container {
+            display: flex; height: 100vh; width: 100vw;
+        }
+
+        /* ─── LEFT PANEL: Product Search (35%) ─────────────────────── */
+        .left-panel {
+            width: 35%; min-width: 320px;
+            display: flex; flex-direction: column;
+            background: #fff; border-right: 1px solid #e5e5e7;
+        }
+        .left-header {
+            padding: 16px 20px; border-bottom: 1px solid #e5e5e7;
+            display: flex; align-items: center; gap: 12px;
+            background: #fafafa;
+        }
+        .left-header .logo { height: 36px; }
+        .left-header h1 { font-size: 20px; font-weight: 600; flex: 1; }
+        .lang-toggle {
+            padding: 6px 14px; border-radius: 980px; border: 1px solid #d2d2d7;
+            background: #fff; font-size: 13px; font-weight: 500; cursor: pointer;
+            transition: all 0.2s;
+        }
+        .lang-toggle:hover { background: #D4E157; border-color: #D4E157; }
+
+        .search-area { padding: 16px 20px; }
+        .search-input-wrap {
+            position: relative; display: flex; align-items: center;
+        }
+        .search-input-wrap input {
+            width: 100%; padding: 14px 44px 14px 16px;
+            border: 2px solid #d2d2d7; border-radius: 14px;
+            font-size: 18px; background: #f5f5f7;
+            transition: all 0.2s; color: #1d1d1f;
+        }
+        .search-input-wrap input:focus {
+            outline: none; border-color: #D4E157;
+            background: #fff; box-shadow: 0 0 0 4px rgba(212,225,87,0.15);
+        }
+        .search-input-wrap input::placeholder { color: #86868b; }
+        .search-icon {
+            position: absolute; right: 14px; color: #86868b;
+            pointer-events: none; width: 22px; height: 22px;
+        }
+
+        .product-results {
+            flex: 1; overflow-y: auto; padding: 8px 20px 20px;
+        }
+        .product-results::-webkit-scrollbar { width: 6px; }
+        .product-results::-webkit-scrollbar-thumb { background: #d2d2d7; border-radius: 3px; }
+
+        .product-card {
+            display: flex; align-items: center; gap: 14px;
+            padding: 14px 16px; margin-bottom: 8px;
+            border-radius: 14px; border: 1px solid #e5e5e7;
+            cursor: pointer; transition: all 0.15s; background: #fff;
+        }
+        .product-card:hover {
+            border-color: #D4E157; background: #fafff0;
+            transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+        }
+        .product-card .p-info { flex: 1; min-width: 0; }
+        .product-card .p-name {
+            font-size: 16px; font-weight: 600; margin-bottom: 3px;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .product-card .p-meta { font-size: 13px; color: #6e6e73; }
+        .product-card .p-price {
+            font-size: 18px; font-weight: 700; color: #1d1d1f;
+            white-space: nowrap;
+        }
+        .product-card .p-stock {
+            font-size: 12px; color: #86868b; text-align: right;
+        }
+        .product-card .p-stock.low { color: #ff3b30; font-weight: 600; }
+        .product-card .p-badge {
+            display: inline-block; padding: 2px 8px; border-radius: 6px;
+            font-size: 11px; font-weight: 600; margin-left: 6px;
+        }
+        .badge-secondhand { background: #fff3cd; color: #856404; }
+
+        .no-results {
+            text-align: center; padding: 60px 20px; color: #86868b;
+        }
+        .no-results .nr-icon { font-size: 48px; margin-bottom: 12px; }
+        .no-results p { font-size: 15px; }
+
+        .search-hint {
+            text-align: center; padding: 80px 20px; color: #86868b;
+        }
+        .search-hint .sh-icon { font-size: 64px; margin-bottom: 16px; opacity: 0.5; }
+        .search-hint p { font-size: 16px; line-height: 1.6; }
+
+        /* ─── RIGHT PANEL: Cart + Checkout (65%) ──────────────────── */
+        .right-panel {
+            flex: 1; display: flex; flex-direction: column;
+            min-width: 400px;
+        }
+        .right-header {
+            padding: 16px 20px; border-bottom: 1px solid #e5e5e7;
+            display: flex; align-items: center; justify-content: space-between;
+            background: #fafafa;
+        }
+        .right-header h2 { font-size: 20px; font-weight: 600; }
+        .cart-count {
+            background: #D4E157; color: #000; padding: 2px 10px;
+            border-radius: 980px; font-size: 13px; font-weight: 600;
+            margin-left: 8px;
+        }
+        .btn-clear-cart {
+            padding: 6px 14px; border-radius: 980px; border: 1px solid #ff3b30;
+            background: #fff; color: #ff3b30; font-size: 13px; font-weight: 500;
+            cursor: pointer; transition: all 0.2s;
+        }
+        .btn-clear-cart:hover { background: #ff3b30; color: #fff; }
+        .btn-clear-cart:disabled { opacity: 0.3; cursor: not-allowed; }
+
+        /* Cart Table */
+        .cart-area {
+            flex: 1; overflow-y: auto; padding: 0;
+        }
+        .cart-area::-webkit-scrollbar { width: 6px; }
+        .cart-area::-webkit-scrollbar-thumb { background: #d2d2d7; border-radius: 3px; }
+
+        .cart-table {
+            width: 100%; border-collapse: collapse; font-size: 14px;
+        }
+        .cart-table thead th {
+            position: sticky; top: 0; background: #f5f5f7;
+            padding: 10px 12px; text-align: left; font-weight: 600;
+            font-size: 12px; color: #6e6e73; text-transform: uppercase;
+            letter-spacing: 0.5px; border-bottom: 1px solid #e5e5e7;
+        }
+        .cart-table tbody tr {
+            border-bottom: 1px solid #f0f0f2; transition: background 0.1s;
+        }
+        .cart-table tbody tr:nth-child(even) { background: #fafafa; }
+        .cart-table tbody tr:hover { background: #f0f7ff; }
+        .cart-table tbody tr.selected { background: rgba(212,225,87,0.12); }
+        .cart-table tbody td { padding: 10px 12px; vertical-align: middle; }
+        .cart-item-name { font-weight: 500; font-size: 14px; }
+        .cart-item-sku { font-size: 11px; color: #86868b; }
+        .cart-item-serial { font-size: 11px; color: #0071e3; }
+        .cart-item-tax {
+            font-size: 11px; padding: 2px 6px; border-radius: 4px;
+            display: inline-block;
+        }
+        .tax-standard { background: #e8f5e9; color: #2e7d32; }
+        .tax-margin { background: #fff3cd; color: #856404; }
+
+        .qty-controls {
+            display: flex; align-items: center; gap: 4px;
+        }
+        .qty-btn {
+            width: 28px; height: 28px; border-radius: 8px;
+            border: 1px solid #d2d2d7; background: #fff;
+            font-size: 16px; font-weight: 600; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.15s; color: #1d1d1f;
+        }
+        .qty-btn:hover { background: #D4E157; border-color: #D4E157; }
+        .qty-val {
+            min-width: 32px; text-align: center; font-size: 16px; font-weight: 600;
+        }
+        .stock-warn { color: #ff3b30; font-size: 11px; font-weight: 500; }
+
+        .cart-subtotal { font-weight: 600; font-size: 15px; white-space: nowrap; }
+        .cart-original-price {
+            text-decoration: line-through; color: #86868b; font-size: 12px;
+        }
+
+        .btn-remove {
+            background: none; border: none; color: #ff3b30; cursor: pointer;
+            font-size: 18px; padding: 4px; border-radius: 6px; transition: all 0.15s;
+        }
+        .btn-remove:hover { background: rgba(255,59,48,0.1); }
+
+        /* ─── Inline Discount Controls ─────────────────────────────── */
+        .inline-disc {
+            display: flex; flex-direction: column; gap: 3px; min-width: 100px;
+        }
+        .inline-disc .disc-row {
+            display: flex; align-items: center; gap: 3px;
+        }
+        .inline-disc select {
+            padding: 3px 4px; border: 1px solid #d2d2d7; border-radius: 6px;
+            font-size: 11px; background: #fff; width: 52px; cursor: pointer;
+        }
+        .inline-disc input {
+            width: 50px; padding: 3px 5px; border: 1px solid #d2d2d7;
+            border-radius: 6px; font-size: 12px; text-align: right;
+        }
+        .inline-disc select:focus, .inline-disc input:focus {
+            outline: none; border-color: #D4E157;
+        }
+        .inline-disc .disc-clear {
+            background: none; border: none; color: #ff3b30; cursor: pointer;
+            font-size: 13px; padding: 0 2px; line-height: 1;
+        }
+        .disc-active { color: #ff3b30; font-size: 11px; font-weight: 600; }
+
+        .cart-empty {
+            text-align: center; padding: 80px 20px; color: #86868b;
+        }
+        .cart-empty .ce-icon { font-size: 64px; margin-bottom: 16px; opacity: 0.4; }
+        .cart-empty p { font-size: 16px; }
+
+        /* ─── Discount Area ────────────────────────────────────────── */
+        .discount-area {
+            padding: 12px 20px; border-top: 1px solid #e5e5e7;
+            background: #fafafa; display: flex; gap: 16px; flex-wrap: wrap;
+        }
+        .discount-group {
+            display: flex; align-items: center; gap: 8px; font-size: 13px;
+        }
+        .discount-group label { font-weight: 500; white-space: nowrap; color: #6e6e73; }
+        .discount-group select {
+            padding: 6px 8px; border: 1px solid #d2d2d7; border-radius: 8px;
+            font-size: 13px; background: #fff;
+        }
+        .discount-group input {
+            width: 80px; padding: 6px 8px; border: 1px solid #d2d2d7;
+            border-radius: 8px; font-size: 13px; text-align: right;
+        }
+        .discount-group input:focus, .discount-group select:focus {
+            outline: none; border-color: #D4E157;
+        }
+
+        /* ─── Checkout Area ────────────────────────────────────────── */
+        .checkout-area {
+            padding: 16px 20px; border-top: 2px solid #e5e5e7;
+            background: #fff;
+        }
+        .checkout-summary {
+            display: flex; flex-wrap: wrap; gap: 12px 24px;
+            margin-bottom: 12px; font-size: 14px;
+        }
+        .summary-item { display: flex; align-items: baseline; gap: 6px; }
+        .summary-label { color: #6e6e73; }
+        .summary-value { font-weight: 600; }
+        .summary-value.discount-val { color: #ff3b30; }
+
+        .checkout-total {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 12px;
+        }
+        .total-label { font-size: 18px; font-weight: 500; color: #6e6e73; }
+        .total-amount { font-size: 36px; font-weight: 700; color: #1d1d1f; }
+
+        .vat-breakdown {
+            display: flex; gap: 16px; margin-bottom: 12px; font-size: 13px;
+        }
+        .vat-item { color: #6e6e73; }
+        .vat-item span { font-weight: 600; color: #1d1d1f; }
+
+        .payment-row {
+            display: flex; align-items: center; gap: 12px; margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+        .split-payment {
+            display: flex; align-items: center; gap: 16px; flex-wrap: wrap; flex: 1;
+        }
+        .split-pay-group {
+            display: flex; align-items: center; gap: 8px; font-size: 14px;
+        }
+        .split-pay-group label { font-weight: 500; white-space: nowrap; color: #6e6e73; }
+        .split-pay-group input {
+            width: 110px; padding: 10px 12px; border: 1px solid #d2d2d7;
+            border-radius: 10px; font-size: 16px; font-weight: 600;
+            text-align: right;
+        }
+        .split-pay-group input:focus {
+            outline: none; border-color: #D4E157;
+            box-shadow: 0 0 0 3px rgba(212,225,87,0.15);
+        }
+        .split-pay-group input.over-limit {
+            border-color: #ff3b30; box-shadow: 0 0 0 3px rgba(255,59,48,0.1);
+        }
+        .change-display {
+            font-size: 16px; font-weight: 600; color: #34c759;
+            white-space: nowrap;
+        }
+        .change-display.negative { color: #ff3b30; }
+
+        .btn-checkout {
+            width: 100%; padding: 16px; border: none; border-radius: 14px;
+            background: #D4E157; color: #000; font-size: 20px; font-weight: 700;
+            cursor: pointer; transition: all 0.2s; letter-spacing: 0.5px;
+        }
+        .btn-checkout:hover:not(:disabled) {
+            background: #c5d148; transform: translateY(-1px);
+            box-shadow: 0 4px 16px rgba(212,225,87,0.4);
+        }
+        .btn-checkout:active:not(:disabled) { transform: translateY(0); }
+        .btn-checkout:disabled {
+            opacity: 0.35; cursor: not-allowed; transform: none; box-shadow: none;
+        }
+
+        /* ─── Action Bar Buttons ──────────────────────────────────── */
+        .pos-action-btn {
+            padding: 6px 12px; border-radius: 8px; border: 1px solid #d2d2d7;
+            background: #fff; color: #1d1d1f; font-size: 12px; font-weight: 500;
+            cursor: pointer; transition: all 0.15s; white-space: nowrap;
+        }
+        .pos-action-btn:hover { background: #f5f5f7; border-color: #D4E157; }
+        .pos-action-btn:active { background: #e5e5e7; }
+        .pos-action-primary { background: #D4E157; color: #000; border-color: #D4E157; font-weight: 700; }
+        .pos-action-primary:hover { background: #c5d148; }
+
+        /* ─── Toast / Success Message ──────────────────────────────── */
+        .toast {
+            position: fixed; top: 20px; right: 20px; z-index: 10000;
+            padding: 16px 24px; border-radius: 14px;
+            font-size: 15px; font-weight: 500;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+            transform: translateX(120%); transition: transform 0.3s ease;
+            max-width: 400px;
+        }
+        .toast.show { transform: translateX(0); }
+        .toast.success { background: #34c759; color: #fff; }
+        .toast.error { background: #ff3b30; color: #fff; }
+        .toast.info { background: #0071e3; color: #fff; }
+
+        /* ─── Confirm Dialog ───────────────────────────────────────── */
+        .confirm-overlay {
+            display: none; position: fixed; inset: 0; z-index: 9999;
+            background: rgba(0,0,0,0.5); backdrop-filter: blur(4px);
+            align-items: center; justify-content: center;
+        }
+        .confirm-overlay.show { display: flex; }
+        .confirm-box {
+            background: #fff; border-radius: 18px; padding: 32px;
+            max-width: 400px; width: 90%; text-align: center;
+            box-shadow: 0 24px 64px rgba(0,0,0,0.2);
+        }
+        .confirm-box h3 { font-size: 20px; margin-bottom: 8px; }
+        .confirm-box p { font-size: 15px; color: #6e6e73; margin-bottom: 24px; }
+        .confirm-actions { display: flex; gap: 12px; justify-content: center; }
+        .confirm-actions button {
+            padding: 10px 24px; border-radius: 980px; font-size: 15px;
+            font-weight: 500; cursor: pointer; transition: all 0.2s;
+        }
+        .btn-confirm-cancel {
+            background: #f5f5f7; border: 1px solid #d2d2d7; color: #1d1d1f;
+        }
+        .btn-confirm-cancel:hover { background: #e5e5e7; }
+        .btn-confirm-ok {
+            background: #ff3b30; border: none; color: #fff;
+        }
+        .btn-confirm-ok:hover { background: #e0342d; }
+
+        /* ─── Discount Modal ───────────────────────────────────────── */
+        .discount-modal-overlay {
+            display: none; position: fixed; inset: 0; z-index: 9998;
+            background: rgba(0,0,0,0.5); backdrop-filter: blur(4px);
+            align-items: center; justify-content: center;
+        }
+        .discount-modal-overlay.show { display: flex; }
+        .discount-modal {
+            background: #fff; border-radius: 18px; padding: 32px;
+            max-width: 480px; width: 90%;
+            box-shadow: 0 24px 64px rgba(0,0,0,0.2);
+        }
+        .discount-modal h3 { font-size: 20px; margin-bottom: 20px; }
+        .dm-section { margin-bottom: 16px; }
+        .dm-section label { display: block; font-size: 14px; font-weight: 500; margin-bottom: 6px; color: #6e6e73; }
+        .dm-row { display: flex; gap: 8px; }
+        .dm-row select, .dm-row input {
+            padding: 10px 12px; border: 1px solid #d2d2d7; border-radius: 10px;
+            font-size: 15px; flex: 1;
+        }
+        .dm-row select:focus, .dm-row input:focus { outline: none; border-color: #D4E157; }
+        .dm-actions { display: flex; gap: 12px; justify-content: flex-end; margin-top: 20px; }
+        .dm-actions button {
+            padding: 10px 24px; border-radius: 980px; font-size: 15px;
+            font-weight: 500; cursor: pointer; transition: all 0.2s;
+        }
+        .btn-dm-cancel { background: #f5f5f7; border: 1px solid #d2d2d7; color: #1d1d1f; }
+        .btn-dm-cancel:hover { background: #e5e5e7; }
+        .btn-dm-apply { background: #D4E157; border: none; color: #000; font-weight: 600; }
+        .btn-dm-apply:hover { background: #c5d148; }
+
+        /* ─── Quick Panel Buttons ──────────────────────────────────── */
+        .panel-btn {
+            flex: 1; padding: 8px 10px; border-radius: 10px;
+            background: none; color: #6e6e73; font-size: 12px;
+            cursor: pointer; transition: all .15s;
+        }
+        .panel-btn-sale { border: 1px dashed #D4E157; }
+        .panel-btn-sale:hover { background: #fafff0; border-style: solid; }
+        .panel-btn-repair { border: 1px dashed #0071e3; }
+        .panel-btn-repair:hover { background: #f0f7ff; border-style: solid; }
+        .panel-btn-used { border: 1px dashed #ff9500; }
+        .panel-btn-used:hover { background: #fff8f0; border-style: solid; }
+
+        /* ─── Panel Buttons Row ────────────────────────────────────── */
+        .panel-btn-row { display: flex; gap: 6px; margin-top: 8px; }
+
+        /* ─── Inline Panel Container ───────────────────────────────── */
+        .inline-panel { max-height: 0; overflow: hidden; transition: max-height .3s ease; }
+        .inline-panel.open { overflow: visible; }
+
+        /* ─── Action Bar ───────────────────────────────────────────── */
+        .action-bar {
+            display: flex; gap: 6px; padding: 10px 16px;
+            background: #fafafa; border-bottom: 1px solid #e5e5e7;
+            flex-wrap: wrap; align-items: center;
+        }
+        .action-bar-spacer { flex: 1; }
+        .pos-action-sm { font-size: 11px; }
+
+        /* ─── Action Bar Lang Toggle ───────────────────────────────── */
+        .lang-toggle-dark {
+            padding: 4px 10px; border-radius: 980px; border: 1px solid #d2d2d7;
+            background: #fff; color: #1d1d1f; font-size: 11px; cursor: pointer;
+        }
+        .lang-toggle-dark:hover { border-color: #D4E157; background: #f5f5f7; }
+
+        /* ─── Cart Title ───────────────────────────────────────────── */
+        .cart-title-wrap { display: flex; align-items: center; }
+        .cart-title { font-size: 16px; }
+
+        /* ─── Modal Overlay (shared) ───────────────────────────────── */
+        .pos-modal-overlay {
+            display: none; position: fixed; inset: 0; z-index: 9997;
+            background: rgba(0,0,0,.5); backdrop-filter: blur(4px);
+            align-items: center; justify-content: center;
+        }
+        .pos-modal-overlay.show { display: flex; }
+        .pos-modal-overlay.z-high { z-index: 9999; background: rgba(0,0,0,.6); }
+        .pos-modal-overlay.z-mid { z-index: 9998; }
+
+        /* ─── Modal Box (shared) ───────────────────────────────────── */
+        .pos-modal-box {
+            background: #fff; border-radius: 18px; padding: 32px;
+            max-width: 620px; width: 95%; max-height: 90vh;
+            overflow-y: auto; box-shadow: 0 24px 64px rgba(0,0,0,.2);
+        }
+        .pos-modal-box.narrow { max-width: 480px; width: 90%; max-height: 85vh; }
+        .pos-modal-box.receipt { padding: 0; max-width: 360px; width: 90%; box-shadow: 0 24px 64px rgba(0,0,0,.3); }
+
+        /* ─── Modal Title ──────────────────────────────────────────── */
+        .pos-modal-title { font-size: 20px; margin-bottom: 20px; }
+
+        /* ─── Form Group ───────────────────────────────────────────── */
+        .pos-form-group { margin-bottom: 12px; }
+        .pos-form-row { display: flex; gap: 12px; margin-bottom: 12px; }
+        .pos-form-row-sm { display: flex; gap: 8px; }
+        .pos-form-col { flex: 1; }
+        .pos-form-col-2 { flex: 2; }
+
+        /* ─── Form Label ───────────────────────────────────────────── */
+        .pos-form-label {
+            font-size: 14px; font-weight: 500; display: block; margin-bottom: 4px;
+        }
+        .pos-form-label-sm { font-size: 13px; font-weight: 500; display: block; margin-bottom: 4px; }
+        .pos-form-label-inline {
+            font-size: 14px; display: flex; align-items: center; gap: 8px; cursor: pointer;
+        }
+        .pos-form-label-inline-sm {
+            font-size: 13px; display: flex; align-items: center; gap: 6px; cursor: pointer;
+        }
+
+        /* ─── Form Input ───────────────────────────────────────────── */
+        .pos-form-input {
+            width: 100%; padding: 10px 14px; border: 1px solid #d2d2d7;
+            border-radius: 10px; font-size: 14px;
+        }
+        .pos-form-input-sm {
+            width: 100%; padding: 8px 12px; border: 1px solid #d2d2d7;
+            border-radius: 8px; font-size: 13px;
+        }
+        .pos-form-select {
+            width: 100%; padding: 10px 14px; border: 1px solid #d2d2d7;
+            border-radius: 10px; font-size: 14px;
+        }
+        .pos-form-select-sm {
+            width: 100%; padding: 8px 12px; border: 1px solid #d2d2d7;
+            border-radius: 8px; font-size: 13px;
+        }
+
+        /* ─── VAT Preset Buttons ───────────────────────────────────── */
+        .vat-row { display: flex; gap: 6px; align-items: center; }
+        .vat-preset-btn {
+            padding: 6px 10px; border: 1px solid #d2d2d7; border-radius: 8px;
+            background: #fff; font-size: 12px; cursor: pointer;
+        }
+
+        /* ─── Second-hand Fields ───────────────────────────────────── */
+        .qa-sh-fields {
+            display: none; background: #fffbeb; border: 1px solid #fde68a;
+            border-radius: 10px; padding: 12px; margin-bottom: 12px;
+        }
+        .qa-sh-row { margin-bottom: 8px; }
+
+        /* ─── Repair SN Group ──────────────────────────────────────── */
+        .qa-repair-sn { display: none; margin-bottom: 12px; }
+
+        /* ─── Error Box ────────────────────────────────────────────── */
+        .pos-error-box {
+            display: none; background: #fef2f2; color: #991b1b;
+            padding: 10px 14px; border-radius: 10px; font-size: 13px; margin-bottom: 12px;
+        }
+
+        /* ─── Modal Actions ────────────────────────────────────────── */
+        .pos-modal-actions { display: flex; gap: 12px; justify-content: flex-end; }
+
+        /* ─── Modal Button (pill) ──────────────────────────────────── */
+        .pos-btn-pill {
+            padding: 10px 24px; border-radius: 980px; font-size: 15px; cursor: pointer;
+        }
+        .pos-btn-pill-secondary {
+            border: 1px solid #d2d2d7; background: #f5f5f7; color: #1d1d1f;
+        }
+        .pos-btn-pill-primary {
+            border: none; background: #D4E157; color: #000; font-weight: 600;
+        }
+        .pos-btn-pill-danger {
+            border: none; background: #ff3b30; color: #fff; font-weight: 600;
+        }
+        .pos-btn-pill-sm { padding: 10px 20px; font-size: 14px; }
+
+        /* ─── Receipt Preview ──────────────────────────────────────── */
+        .receipt-preview-content {
+            padding: 24px; font-family: Calibri, 'Trebuchet MS', Arial, sans-serif;
+            font-size: 12px; line-height: 1.5; color: #000;
+        }
+        .receipt-preview-actions {
+            display: flex; gap: 12px; padding: 16px 24px;
+            border-top: 1px solid #e5e5e7; justify-content: flex-end;
+        }
+
+        /* ─── Refund Method Buttons ────────────────────────────────── */
+        .refund-method-btn {
+            flex: 1; padding: 10px; border: 2px solid #d2d2d7;
+            border-radius: 10px; background: #fff; font-size: 14px;
+            font-weight: 600; cursor: pointer;
+        }
+        .refund-method-btn.active {
+            border-color: #D4E157; background: #fafff0;
+        }
+
+        /* ─── Left Shortcut Bar (20 Quick Keys) ────────────────────── */
+        .left-shortcut-bar {
+            width: 90px; min-width: 90px; flex-shrink: 0;
+            display: flex; flex-direction: column;
+            gap: 4px; padding: 8px 4px;
+            background: #f7f7f9; border-right: 1px solid #e5e5e7;
+            overflow-y: auto;
+        }
+        .left-shortcut-bar::-webkit-scrollbar { width: 4px; }
+        .left-shortcut-bar::-webkit-scrollbar-thumb { background: #d2d2d7; border-radius: 2px; }
+
+        .shortcut-item {
+            flex: 1; min-height: 38px;
+            display: flex; align-items: center; justify-content: center;
+            padding: 4px 3px;
+            background: #fff; border: 1px solid #d2d2d7; border-radius: 8px;
+            font-size: 11px; font-weight: 500; text-align: center;
+            cursor: pointer; white-space: normal; line-height: 1.2;
+            transition: all 0.15s; user-select: none;
+            overflow: hidden; word-break: break-all;
+        }
+        .shortcut-item.empty {
+            background: #f1f1f3; border: 1px dashed #c9c9cd;
+            cursor: default;
+        }
+        .shortcut-item:not(.empty):hover {
+            background: #eef5ff; border-color: #007aff;
+            transform: scale(1.02);
+        }
+        .shortcut-item:not(.empty):active {
+            transform: scale(0.97); background: #d4e8ff;
+        }
+
+        /* ─── Checkout Success: Bottom-Sheet Style ──────────────────── */
+        @keyframes csFadeIn {
+            from { opacity: 0; transform: translateY(16px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .checkout-success-overlay {
+            display: flex; flex-direction: column;
+            height: 100%; width: 100%;
+            background: #f5f5f7;
+            animation: csFadeIn 0.25s ease;
+        }
+
+        .cs-body {
+            flex: 1; overflow-y: auto;
+            padding: 12px 16px 4px;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .cs-header { text-align: center; padding: 4px 0 12px; }
+        .cs-header .cs-checkmark { font-size: 40px; margin-bottom: 2px; }
+        .cs-header h2 { font-size: 20px; font-weight: 700; margin: 0 0 2px; }
+        .cs-header .cs-receipt-no { font-size: 14px; color: #6e6e73; margin: 0; }
+        .cs-header .cs-total { font-size: 28px; font-weight: 700; margin: 8px 0 4px; color: #1d1d1f; }
+
+        /* Receipt preview card */
+        .cs-receipt-card {
+            background: #fff; border: 1px solid #e5e5e7;
+            border-radius: 14px; padding: 16px;
+            margin: 0 auto 8px; max-width: 320px;
+            font-size: 13px; line-height: 1.5;
+        }
+        .cs-receipt-card .rc-header { text-align: center; font-weight: 700; font-size: 14px; margin-bottom: 4px; }
+        .cs-receipt-card .rc-divider { text-align: center; color: #d2d2d7; margin: 4px 0; font-size: 12px; letter-spacing: 2px; }
+        .cs-receipt-card .rc-row { display: flex; justify-content: space-between; margin: 2px 0; }
+        .cs-receipt-card .rc-sn { font-size: 11px; color: #0071e3; margin: -2px 0 2px; }
+        .cs-receipt-card .rc-total-row { display: flex; justify-content: space-between; font-weight: 700; font-size: 14px; margin-top: 2px; }
+        .cs-receipt-card .rc-meta { font-size: 12px; color: #6e6e73; margin-top: 4px; }
+        .cs-receipt-card .rc-thanks { text-align: center; margin-top: 8px; font-size: 12px; color: #6e6e73; }
+        .cs-receipt-card .rc-repair { border-top: 1px dashed #ccc; margin-top: 6px; padding-top: 6px; font-size: 11px; line-height: 1.5; }
+
+        /* Fixed action bar at bottom */
+        .cs-action-bar {
+            display: flex; flex-wrap: wrap; gap: 8px;
+            padding: 12px 16px;
+            padding-bottom: max(12px, env(safe-area-inset-bottom, 12px));
+            background: #fff;
+            border-top: 1px solid #e5e5e7;
+            box-shadow: 0 -2px 12px rgba(0,0,0,0.06);
+            position: sticky; bottom: 0;
+        }
+
+        .cs-action-btn {
+            flex: 1; min-width: calc(33.33% - 6px);
+            padding: 14px 8px; border-radius: 12px;
+            font-size: 13px; font-weight: 600;
+            cursor: pointer; border: 1px solid #d2d2d7;
+            background: #fff; color: #1d1d1f;
+            text-align: center; white-space: nowrap;
+            transition: all 0.15s;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation; user-select: none;
+        }
+        .cs-action-btn:active { transform: scale(0.97); background: #f5f5f7; }
+
+        .cs-action-btn.cs-primary {
+            background: #0071e3; border-color: #0071e3; color: #fff;
+        }
+        .cs-action-btn.cs-primary:active { background: #0062c4; }
+
+        .cs-action-btn.cs-invoice {
+            background: #1E7F5C; border-color: #1E7F5C; color: #fff;
+        }
+        .cs-action-btn.cs-invoice:active { background: #166a4a; }
+
+        .cs-action-btn.cs-whatsapp {
+            background: #25D366; border-color: #25D366; color: #fff;
+        }
+        .cs-action-btn.cs-whatsapp:active { background: #1da851; }
+    </style>
+</head>
+<script src="auth-guard.js"></script>
+<body>
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <!-- Confirm Dialog -->
+    <div class="confirm-overlay" id="confirmOverlay">
+        <div class="confirm-box">
+            <h3 id="confirmTitle"></h3>
+            <p id="confirmMsg"></p>
+            <div class="confirm-actions">
+                <button class="btn-confirm-cancel" id="confirmCancel"></button>
+                <button class="btn-confirm-ok" id="confirmOk"></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Discount Modal (F2) -->
+    <div class="discount-modal-overlay" id="discountModalOverlay">
+        <div class="discount-modal">
+            <h3 id="dmTitle">应用折扣</h3>
+            <div class="dm-section">
+                <label id="dmItemLabel">单品折扣（选中商品）</label>
+                <div class="dm-row">
+                    <select id="dmItemType">
+                        <option value="">无</option>
+                        <option value="percentage">百分比 %</option>
+                        <option value="fixed">固定金额 €</option>
+                    </select>
+                    <input type="number" id="dmItemValue" min="0" step="0.01" placeholder="0">
+                </div>
+            </div>
+            <div class="dm-section">
+                <label id="dmOrderLabel">整单折扣</label>
+                <div class="dm-row">
+                    <select id="dmOrderType">
+                        <option value="">无</option>
+                        <option value="percentage">百分比 %</option>
+                        <option value="fixed">固定金额 €</option>
+                    </select>
+                    <input type="number" id="dmOrderValue" min="0" step="0.01" placeholder="0">
+                </div>
+            </div>
+            <div class="dm-actions">
+                <button class="btn-dm-cancel" id="dmCancel">取消</button>
+                <button class="btn-dm-apply" id="dmApply">应用</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Layout -->
+    <div class="pos-container">
+        <!-- LEFT SHORTCUT BAR: 20 Quick Keys -->
+        <div class="left-shortcut-bar" id="leftShortcutBar">
+            <!-- JS 自动生成 1-20 个快捷按钮 -->
+        </div>
+
+        <!-- LEFT: Product Search -->
+        <div class="left-panel">
+            <div class="left-header">
+                <img src="logo.png" alt="Tech Cross" class="logo">
+                <h1 id="posTitle">POS 收银</h1>
+                <button class="lang-toggle" id="langToggle" title="Switch Language">中/EN</button>
+            </div>
+            <div class="search-area">
+                <div class="search-input-wrap">
+                    <input type="text" id="searchInput" autocomplete="off" autofocus>
+                    <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                </div>
+                <div class="panel-btn-row">
+                    <button class="panel-btn panel-btn-sale" id="btnQuickAdd" data-panel="sale">+ <span id="quickAddText">Sale</span></button>
+                    <button class="panel-btn panel-btn-repair" data-panel="repair">+ 🔧 Repair</button>
+                    <button class="panel-btn panel-btn-used" data-panel="used">+ 📱 Used</button>
+                    <button class="panel-btn panel-btn-used" data-panel="buy-used" style="border-color:#34c759;">+ 🛒 Buy</button>
+                </div>
+                <!-- Inline Panels -->
+                <div id="inlinePanel" class="inline-panel"></div>
+            </div>
+            <div class="product-results" id="productResults">
+                <div class="search-hint" id="searchHint">
+                    <div class="sh-icon">🔍</div>
+                    <p id="hintText">输入商品名称、SKU 或 IMEI 搜索<br>或扫描条码添加商品</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT: Cart + Checkout -->
+        <div class="right-panel">
+            <!-- Action Bar -->
+            <div class="action-bar">
+                <button class="pos-action-btn pos-action-primary" id="sidebarCheckout">✅ <span id="scCheckout">Checkout</span></button>
+                <button class="pos-action-btn" id="btnOpenDiscount">🏷️ <span id="scDiscount">Discount</span></button>
+                <button class="pos-action-btn" id="btnOpenOrders">📋 <span id="scOrderSearch">Orders</span></button>
+                <button class="pos-action-btn" id="btnClearAction">🧹 <span id="scClear">Clear</span></button>
+                <button class="pos-action-btn" id="btnOpenWhatsAppCenter">💬 <span id="scWhatsApp">WhatsApp</span></button>
+                <div class="action-bar-spacer"></div>
+                <button class="pos-action-btn pos-action-sm" id="btnNavUp">⬆</button>
+                <button class="pos-action-btn pos-action-sm" id="btnNavDown">⬇</button>
+                <button class="pos-action-btn pos-action-sm" id="btnRemoveSelected">🗑</button>
+                <button class="lang-toggle-dark" id="langToggle2">中/EN</button>
+            </div>
+
+            <!-- Cart Header -->
+            <div class="right-header">
+                <div class="cart-title-wrap">
+                    <h2 id="cartTitle" class="cart-title">Cart</h2>
+                    <span class="cart-count" id="cartCount">0</span>
+                </div>
+                <button class="btn-clear-cart" id="btnClearCart" disabled>
+                    <span id="clearCartText">Clear</span>
+                </button>
+            </div>
+
+            <div class="cart-area" id="cartArea">
+                <div class="cart-empty" id="cartEmpty">
+                    <div class="ce-icon">🛒</div>
+                    <p id="emptyCartText">购物车为空，请搜索并添加商品</p>
+                </div>
+                <table class="cart-table" id="cartTable" style="display:none;">
+                    <thead>
+                        <tr>
+                            <th id="thProduct">商品</th>
+                            <th id="thPrice">单价</th>
+                            <th id="thDisc">折扣</th>
+                            <th id="thQty">数量</th>
+                            <th id="thTax">税率</th>
+                            <th id="thSubtotal">小计</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="cartBody"></tbody>
+                </table>
+            </div>
+
+            <!-- Checkout Area -->
+            <div class="checkout-area">
+                <div class="checkout-summary" id="checkoutSummary">
+                    <div class="summary-item">
+                        <span class="summary-label" id="lblSubtotal">小计:</span>
+                        <span class="summary-value" id="valSubtotal">€0.00</span>
+                    </div>
+                    <div class="summary-item" id="discountSummary" style="display:none;">
+                        <span class="summary-label" id="lblDiscount">折扣:</span>
+                        <span class="summary-value discount-val" id="valDiscount">-€0.00</span>
+                    </div>
+                </div>
+
+                <div class="vat-breakdown">
+                    <div class="vat-item">
+                        <span id="lblStdVat">Standard VAT:</span> <span id="valStdVat">€0.00</span>
+                    </div>
+                    <div class="vat-item">
+                        <span id="lblMarginVat">Margin VAT:</span> <span id="valMarginVat">€0.00</span>
+                    </div>
+                </div>
+
+                <div class="checkout-total">
+                    <span class="total-label" id="lblTotal">总计</span>
+                    <span class="total-amount" id="valTotal">€0.00</span>
+                </div>
+
+                <div class="payment-row">
+                    <div class="split-payment" id="splitPayment">
+                        <div class="split-pay-group">
+                            <label id="lblCardAmount">💳 Card:</label>
+                            <input type="number" id="cardAmount" min="0" step="0.01" placeholder="0.00" value="">
+                        </div>
+                        <div class="split-pay-group">
+                            <label id="lblCashAmount">💵 Cash:</label>
+                            <input type="number" id="cashReceived" min="0" step="0.01" placeholder="0.00" value="">
+                        </div>
+                        <span class="change-display" id="changeDisplay"></span>
+                    </div>
+                </div>
+
+                <button class="btn-checkout" id="btnCheckout" disabled>
+                    <span id="checkoutText">结 账</span>
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Payment Method Selection Modal -->
+    <div id="payMethodModal" style="position:fixed; left:0; top:0; width:100%; height:100%; background:rgba(0,0,0,0.4); z-index:9999; display:none; justify-content:center; align-items:center;">
+      <div style="width:320px; background:#fff; border-radius:16px; padding:24px; box-shadow:0 10px 30px rgba(0,0,0,0.2); text-align:center;">
+        <h3 style="margin:0 0 16px; font-size:16px;">Select Payment Method</h3>
+        <button id="payCardBtn" style="width:100%; padding:14px; margin:6px 0; border:none; border-radius:12px; background:#007aff; color:#fff; font-size:15px; font-weight:bold; cursor:pointer;">💳 Card Payment</button>
+        <button id="payCashBtn" style="width:100%; padding:14px; margin:6px 0; border:none; border-radius:12px; background:#34c759; color:#fff; font-size:15px; font-weight:bold; cursor:pointer;">💵 Cash Payment</button>
+      </div>
+    </div>
+
+    <!-- Quick Add Product Modal -->
+    <div id="quickAddOverlay" class="pos-modal-overlay">
+        <div class="pos-modal-box">
+            <h3 class="pos-modal-title" id="qaTitle">快速新增商品</h3>
+            <div class="pos-form-group"><label class="pos-form-label" id="qaLblName">商品名称 *</label><input type="text" id="qaName" class="pos-form-input" placeholder="iPhone 15 128GB"></div>
+            <div class="pos-form-row">
+                <div class="pos-form-col"><label class="pos-form-label" id="qaLblSku">SKU/Barcode *</label><input type="text" id="qaSku" class="pos-form-input" placeholder="条码或自定义编号"></div>
+                <div class="pos-form-col"><label class="pos-form-label" id="qaLblCat">分类 *</label>
+                    <select id="qaCat" class="pos-form-select"><option value="销售">销售</option><option value="维修">维修</option><option value="服务">服务</option><option value="新机">新手机平板等电器</option><option value="二手">二手手机平板等电器</option><option value="Lyca Credit">Lyca Credit</option></select>
+                </div>
+            </div>
+            <div class="pos-form-row">
+                <div class="pos-form-col"><label class="pos-form-label" id="qaLblVat">VAT %</label>
+                    <div class="vat-row">
+                        <input type="number" id="qaVatRate" step="0.1" min="0" max="100" value="23" class="pos-form-input">
+                        <button type="button" class="vat-preset-btn" data-vat="23">23%</button>
+                        <button type="button" class="vat-preset-btn" data-vat="13.5">13.5%</button>
+                    </div>
+                </div>
+            </div>
+            <div class="pos-form-row">
+                <div class="pos-form-col"><label class="pos-form-label" id="qaLblCost">成本价 €</label><input type="text" inputmode="decimal" id="qaCost" class="pos-form-input" placeholder="0.00"></div>
+                <div class="pos-form-col"><label class="pos-form-label" id="qaLblPrice">售价 € *</label><input type="text" inputmode="decimal" id="qaPrice" class="pos-form-input" placeholder="0.00"></div>
+            </div>
+            <div class="pos-form-group"><label class="pos-form-label-inline"><input type="checkbox" id="qaSecondHand"> <span id="qaLblSH">二手商品</span></label></div>
+            <div id="qaSecondHandFields" class="qa-sh-fields">
+                <div class="qa-sh-row"><label class="pos-form-label-sm" id="qaLblSource">来源</label><select id="qaSource" class="pos-form-select-sm"><option value="customer">从客人收购</option><option value="dealer">从其他二手商人进货</option><option value="other">其他来源</option></select></div>
+                <div class="qa-sh-row"><label class="pos-form-label-inline-sm"><input type="checkbox" id="qaMarginScheme" checked> <span id="qaLblMargin">适用 Margin Scheme VAT</span></label></div>
+                <div><label class="pos-form-label-sm">IMEI/SN *</label><input type="text" id="qaSerial" class="pos-form-input-sm"></div>
+            </div>
+            <div id="qaRepairSnGroup" class="qa-repair-sn"><label class="pos-form-label">IMEI / SN (for repair tracking)</label><input type="text" id="qaRepairSn" class="pos-form-input" placeholder="Device IMEI or Serial Number"></div>
+            <div class="pos-form-group"><label class="pos-form-label" id="qaLblQty">初始库存</label><input type="number" id="qaStock" value="1" min="0" class="pos-form-input"></div>
+            <div id="qaError" class="pos-error-box"></div>
+            <div class="pos-modal-actions">
+                <button class="pos-btn-pill pos-btn-pill-secondary" id="qaBtnCancel">取消</button>
+                <button class="pos-btn-pill pos-btn-pill-primary" id="qaBtnSave">创建并添加到购物车</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Receipt Preview Modal -->
+    <div id="receiptPreviewOverlay" class="pos-modal-overlay z-high">
+        <div class="pos-modal-box receipt">
+            <div id="receiptPreviewContent" class="receipt-preview-content"></div>
+            <div class="receipt-preview-actions">
+                <button class="pos-btn-pill pos-btn-pill-sm pos-btn-pill-secondary" id="btnNoReceipt">No Receipt</button>
+                <button class="pos-btn-pill pos-btn-pill-sm pos-btn-pill-primary" id="btnPrintFromPreview">🖨️ Print Receipt</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Refund Modal -->
+    <div id="refundOverlay" class="pos-modal-overlay z-mid">
+        <div class="pos-modal-box narrow">
+            <h3 class="pos-modal-title" id="refundTitle">Refund / 退款</h3>
+            <div class="pos-form-group">
+                <label class="pos-form-label">Receipt # (optional)</label>
+                <div style="display:flex;gap:8px;">
+                    <input type="text" id="refundReceipt" class="pos-form-input" placeholder="e.g. 20260501153015" style="flex:1;">
+                    <button type="button" id="btnLoadReceipt" style="padding:8px 14px;border:1px solid #0071e3;border-radius:8px;background:#fff;color:#0071e3;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;">Load</button>
+                </div>
+            </div>
+            <div id="refundItemsList" style="display:none;margin-bottom:12px;max-height:200px;overflow-y:auto;border:1px solid #e5e5ea;border-radius:10px;padding:8px;"></div>
+            <div class="pos-form-group">
+                <label class="pos-form-label">Or enter manually:</label>
+                <div class="pos-form-row-sm">
+                    <input type="text" id="refundItemName" class="pos-form-input pos-form-col-2" placeholder="Item name">
+                    <input type="number" id="refundItemAmount" step="0.01" min="0" class="pos-form-input pos-form-col" placeholder="€ Amount">
+                </div>
+            </div>
+            <div class="pos-form-group">
+                <label class="pos-form-label">Refund Method / 退款方式</label>
+                <div class="pos-form-row-sm">
+                    <button id="refundCashBtn" class="refund-method-btn active">💵 Cash</button>
+                    <button id="refundCardBtn" class="refund-method-btn">💳 Card</button>
+                </div>
+            </div>
+            <div class="pos-form-group">
+                <label class="pos-form-label">Reason (optional)</label>
+                <input type="text" id="refundReason" class="pos-form-input" placeholder="e.g. Defective item">
+            </div>
+            <div id="refundError" class="pos-error-box"></div>
+            <div class="pos-modal-actions">
+                <button class="pos-btn-pill pos-btn-pill-secondary" id="btnRefundCancel">Cancel</button>
+                <button class="pos-btn-pill pos-btn-pill-danger" id="btnRefundSubmit">↩️ Process Refund</button>
+            </div>
+        </div>
+    </div>
+
+    
+    <!-- Email Receipt Modal -->
+    <div id="emailReceiptOverlay" class="pos-modal-overlay z-mid">
+        <div class="pos-modal-box narrow">
+            <h3 class="pos-modal-title">📧 Email Receipt</h3>
+            <div class="pos-form-group">
+                <label class="pos-form-label">Customer Email</label>
+                <input type="email" id="emailReceiptInput" class="pos-form-input" placeholder="customer@example.com">
+            </div>
+            <div id="emailReceiptError" class="pos-error-box" style="display:none;"></div>
+            <div class="pos-modal-actions">
+                <button class="pos-btn-pill pos-btn-pill-secondary" id="btnEmailReceiptCancel">Cancel</button>
+                <button class="pos-btn-pill pos-btn-pill-primary" id="btnEmailReceiptSend">📧 Send Receipt</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- WhatsApp Modal -->
+    <div id="whatsAppOverlay" class="pos-modal-overlay z-mid">
+        <div class="pos-modal-box narrow">
+            <h3 class="pos-modal-title">📱 Send via WhatsApp</h3>
+            <div class="pos-form-group">
+                <label class="pos-form-label">Customer Phone Number (Ireland)</label>
+                <input type="tel" id="whatsAppInput" class="pos-form-input" placeholder="089 123 4567">
+                <p style="font-size:12px;color:#6e6e73;margin:4px 0 0;">Enter any Irish mobile number. A WhatsApp chat will open with the receipt details.</p>
+            </div>
+            <div id="whatsAppError" class="pos-error-box" style="display:none;"></div>
+            <div class="pos-modal-actions">
+                <button class="pos-btn-pill pos-btn-pill-secondary" id="btnWhatsAppCancel">Cancel</button>
+                <button class="pos-btn-pill pos-btn-pill-primary" id="btnWhatsAppOpen" style="background:#25D366;">📱 Open WhatsApp</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Invoice Result Modal -->
+    <div id="invoiceResultOverlay" class="pos-modal-overlay z-mid">
+        <div class="pos-modal-box narrow">
+            <h3 class="pos-modal-title" id="invoiceResultTitle">🧾 Invoice Generated</h3>
+            <div id="invoiceResultBody" style="font-size:14px;line-height:1.6;">
+                <p id="invoiceResultMessage" style="color:#6e6e73;">Invoice generated successfully.</p>
+                <div style="background:#f5f5f7;border-radius:10px;padding:14px;margin:12px 0;">
+                    <div style="display:flex;justify-content:space-between;padding:4px 0;"><span style="color:#6e6e73;">Invoice #</span><span id="invoiceResultNumber" style="font-weight:600;">—</span></div>
+                    <div style="display:flex;justify-content:space-between;padding:4px 0;"><span style="color:#6e6e73;">Total</span><span id="invoiceResultTotal" style="font-weight:600;">—</span></div>
+                    <div style="display:flex;justify-content:space-between;padding:4px 0;"><span style="color:#6e6e73;">Status</span><span id="invoiceResultStatus" style="color:#1E7F5C;">Active</span></div>
+                </div>
+            </div>
+            <div id="invoiceResultActions" style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap;">
+                <button class="pos-btn-pill pos-btn-pill-primary" id="btnInvoiceDownload" style="flex:1;min-width:120px;">⬇️ Download PDF</button>
+                <button class="pos-btn-pill" id="btnInvoiceEmail" style="flex:1;min-width:120px;padding:12px 16px;border:1px solid #1E7F5C;border-radius:10px;background:#fff;color:#1E7F5C;font-size:13px;font-weight:600;cursor:pointer;">📧 Email Invoice</button>
+                <button class="pos-btn-pill" id="btnInvoiceWhatsApp" style="flex:1;min-width:120px;padding:12px 16px;border:1px solid #25D366;border-radius:10px;background:#fff;color:#25D366;font-size:13px;font-weight:600;cursor:pointer;">📱 Share WhatsApp</button>
+                <button class="pos-btn-pill pos-btn-pill-secondary" id="btnInvoiceClose" style="flex:1;min-width:80px;">Done</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+    (function() {
+    'use strict';
+    // Auth check (uses auth-guard.js)
+    var token = Auth.getToken();
+    if (!token) { Auth.redirectToLogin(); return; }
+    var isAdmin = Auth.isRoot() || Auth.isManager();
+    const API_BASE = '/api/inv';
+    const headers = function() { return Auth.getHeaders(); };
+
+    // State
+    let cart = [];
+    let selectedCartIndex = -1;
+    let paymentMethod = 'cash';
+    let lang = 'en';
+    let lastTransaction = null;
+    let searchTimer = null;
+    let orderDiscount = null;
+    let _transactionComplete = false; // Lock flag: true after checkout until new transaction starts
+
+    // i18n
+    const i18n = {
+      zh: {
+        posTitle: 'POS 收银', cartTitle: '购物车', clearCartText: '清空',
+        emptyCartText: '购物车为空，请搜索并添加商品', checkoutText: '结 账',
+        searchPlaceholder: '搜索商品名称、SKU/Barcode 或 IMEI...', hintText: '输入商品名称、SKU/Barcode 或 IMEI 搜索<br>或扫描条码添加商品',
+        thProduct: '商品', thPrice: '单价', thDisc: '折扣', thQty: '数量', thTax: '税率', thSubtotal: '小计',
+        lblSubtotal: '小计:', lblDiscount: '折扣:', lblTotal: '总计',
+        lblCardAmount: '💳 卡:', lblCashAmount: '💵 现金:',
+        scSearch: '搜索', scDiscount: 'F1 折扣', scPayment: '卡/现金', scReprint: '重打小票',
+        scCheckout: 'F4 结账', scClear: '清空', scWhatsApp: 'WhatsApp', scRemove: '移除', scNav: '导航',
+        scPrint: '打印小票', scNavUp: '上移', scNavDown: '下移', sidebarTitle: '操作', scOrderSearch: '查单', scRefund: '退款',
+        confirmClearTitle: '确认清空', confirmClearMsg: '确定要清空购物车吗？', confirmCancel: '取消', confirmOk: '确定',
+        dmTitle: '应用折扣', dmItemLabel: '单品折扣（选中商品）', dmOrderLabel: '整单折扣',
+        noResults: '未找到匹配商品', stock: '库存', secondHand: '二手',
+        lblStdVat: 'Standard VAT:', lblMarginVat: 'Margin VAT:',
+        quickAddText: '快速新增商品', qaTitle: '快速新增商品', qaBtnSave: '创建并添加到购物车', qaBtnCancel: '取消',
+        qaLblName: '商品名称 *', qaLblSku: 'SKU/Barcode *', qaLblCat: '分类 *', qaLblCost: '成本价 € *', qaLblPrice: '售价 € *', qaLblQty: '初始库存', qaLblSH: '二手商品',
+        qaLblSource: '来源', qaLblMargin: '适用 Margin Scheme VAT', qaLblVat: 'VAT %',
+      },
+      en: {
+        posTitle: 'POS Checkout', cartTitle: 'Cart', clearCartText: 'Clear',
+        emptyCartText: 'Cart is empty. Search and add products.', checkoutText: 'Checkout',
+        searchPlaceholder: 'Search by name, SKU/Barcode or IMEI...', hintText: 'Search by product name, SKU/Barcode or IMEI<br>or scan barcode to add',
+        thProduct: 'Product', thPrice: 'Price', thDisc: 'Disc.', thQty: 'Qty', thTax: 'Tax', thSubtotal: 'Subtotal',
+        lblSubtotal: 'Subtotal:', lblDiscount: 'Discount:', lblTotal: 'Total',
+        lblCardAmount: '💳 Card:', lblCashAmount: '💵 Cash:',
+        scSearch: 'Search', scDiscount: 'F1 Discount', scPayment: 'Card/Cash', scReprint: 'Reprint',
+        scCheckout: 'F4 Checkout', scClear: 'Clear', scWhatsApp: 'WhatsApp', scRemove: 'Remove', scNav: 'Navigate',
+        scPrint: 'Print Receipt', scNavUp: 'Up', scNavDown: 'Down', sidebarTitle: 'Actions', scOrderSearch: 'Orders', scRefund: 'Refund',
+        confirmClearTitle: 'Confirm Clear', confirmClearMsg: 'Clear all items from cart?', confirmCancel: 'Cancel', confirmOk: 'Confirm',
+        dmTitle: 'Apply Discount', dmItemLabel: 'Item Discount (selected)', dmOrderLabel: 'Order Discount',
+        noResults: 'No matching products found', stock: 'Stock', secondHand: 'Used',
+        lblStdVat: 'Standard VAT:', lblMarginVat: 'Margin VAT:',
+        quickAddText: 'Quick Add Product', qaTitle: 'Quick Add Product', qaBtnSave: 'Create & Add to Cart', qaBtnCancel: 'Cancel',
+        qaLblName: 'Product Name *', qaLblSku: 'SKU/Barcode *', qaLblCat: 'Category *', qaLblCost: 'Cost € *', qaLblPrice: 'Price € *', qaLblQty: 'Initial Stock', qaLblSH: 'Second-hand',
+        qaLblSource: 'Source', qaLblMargin: 'Apply Margin Scheme VAT', qaLblVat: 'VAT %',
+      }
+    };
+
+    function t(key) { return (i18n[lang] || i18n.zh)[key] || key; }
+
+    function updateLang() {
+      document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
+      ['posTitle','cartTitle','clearCartText','emptyCartText','checkoutText','thProduct','thPrice','thDisc','thQty','thTax','thSubtotal','lblSubtotal','lblDiscount','lblTotal','lblCardAmount','lblCashAmount','scSearch','scDiscount','scPayment','scReprint','scCheckout','scClear','scWhatsApp','scRemove','scPrint','scNavUp','scNavDown','sidebarTitle','scOrderSearch','scRefund','dmTitle','dmItemLabel','dmOrderLabel','lblStdVat','lblMarginVat','quickAddText','qaTitle','qaBtnSave','qaBtnCancel','qaLblName','qaLblSku','qaLblCat','qaLblCost','qaLblPrice','qaLblQty','qaLblSH','qaLblSource','qaLblMargin','qaLblVat'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.innerHTML = t(id);
+      });
+      document.getElementById('searchInput').placeholder = t('searchPlaceholder');
+      document.getElementById('hintText').innerHTML = t('hintText');
+      // Update repair panel title if open
+      var repairTitle = document.querySelector('.ip-repair-title');
+      if (repairTitle) repairTitle.textContent = lang === 'zh' ? '快速维修' : 'Quick Repair';
+      renderCart();
+    }
+
+    // Toast
+    function showToast(msg, type) {
+      var toast = document.getElementById('toast');
+      toast.textContent = msg;
+      toast.className = 'toast ' + (type || 'info');
+      setTimeout(function() { toast.classList.add('show'); }, 10);
+      setTimeout(function() { toast.classList.remove('show'); }, 3000);
+    }
+
+    // ─── Static Element Event Listeners ─────────────────────────
+    // Panel toggle buttons
+    document.querySelectorAll('.panel-btn[data-panel]').forEach(function(btn) {
+      btn.addEventListener('click', function() { togglePanel(this.dataset.panel); });
+    });
+
+    // Action bar buttons
+    document.getElementById('sidebarCheckout').addEventListener('click', function() { doCheckout(); });
+    document.getElementById('btnOpenDiscount').addEventListener('click', function() { openDiscountModal(); });
+    document.getElementById('btnOpenOrders').addEventListener('click', function() {
+      var today = new Date().toISOString().split('T')[0];
+      window.open('/inv-transactions.html?date=' + today, '_blank');
+    });
+    document.getElementById('btnClearAction').addEventListener('click', function() { clearCartAction(); });
+    document.getElementById('btnOpenWhatsAppCenter').addEventListener('click', function() {
+      window.open('/whatsapp-center.html', '_blank');
+    });
+    document.getElementById('btnNavUp').addEventListener('click', function() { window._navCart(-1); });
+    document.getElementById('btnNavDown').addEventListener('click', function() { window._navCart(1); });
+    document.getElementById('btnRemoveSelected').addEventListener('click', function() { window._removeSelectedItem(); });
+
+    // Quick Add modal buttons
+    document.getElementById('qaBtnCancel').addEventListener('click', function() { closeQuickAddModal(); });
+    document.getElementById('qaBtnSave').addEventListener('click', function() { submitQuickAdd(); });
+    document.getElementById('qaCat').addEventListener('change', function() { qaOnCategoryChange(); });
+    document.getElementById('qaSecondHand').addEventListener('change', function() {
+      document.getElementById('qaSecondHandFields').style.display = this.checked ? 'block' : 'none';
+    });
+
+    // VAT preset buttons
+    document.querySelectorAll('.vat-preset-btn[data-vat]').forEach(function(btn) {
+      btn.addEventListener('click', function() { document.getElementById('qaVatRate').value = this.dataset.vat; });
+    });
+
+    // Receipt preview buttons
+    document.getElementById('btnNoReceipt').addEventListener('click', function() { closeReceiptPreview(); });
+    document.getElementById('btnPrintFromPreview').addEventListener('click', function() { doPrintFromPreview(); });
+
+    // Refund modal buttons
+    document.getElementById('refundCashBtn').addEventListener('click', function() { selectRefundMethod('cash'); });
+    document.getElementById('refundCardBtn').addEventListener('click', function() { selectRefundMethod('card'); });
+    document.getElementById('btnRefundCancel').addEventListener('click', function() { closeRefundModal(); });
+    document.getElementById('btnRefundSubmit').addEventListener('click', function() { submitRefund(); });
+    document.getElementById('btnLoadReceipt').addEventListener('click', function() { loadRefundReceipt(); });
+
+    // Confirm dialog
+    function showConfirm(title, msg, onOk) {
+      document.getElementById('confirmTitle').textContent = title;
+      document.getElementById('confirmMsg').textContent = msg;
+      document.getElementById('confirmCancel').textContent = t('confirmCancel');
+      document.getElementById('confirmOk').textContent = t('confirmOk');
+      var overlay = document.getElementById('confirmOverlay');
+      overlay.classList.add('show');
+      document.getElementById('confirmOk').onclick = function() { overlay.classList.remove('show'); onOk(); };
+      document.getElementById('confirmCancel').onclick = function() { overlay.classList.remove('show'); };
+    }
+
+    // API helper
+    async function apiFetch(url, opts) {
+      opts = opts || {};
+      opts.headers = headers();
+      var res = await fetch(API_BASE + url, opts);
+      if (res.status === 401) { localStorage.removeItem('inv_token'); window.location.href = 'inv-login.html'; return null; }
+      return res;
+    }
+
+    // Search
+    var searchInput = document.getElementById('searchInput');
+    var productResults = document.getElementById('productResults');
+
+    // Event delegation for product cards
+    productResults.addEventListener('click', function(e) {
+      var card = e.target.closest('.product-card');
+      if (card && card.dataset.id) window._addToCart(card.dataset.id);
+    });
+
+    searchInput.addEventListener('input', function() {
+      clearTimeout(searchTimer);
+      var q = searchInput.value.trim();
+      if (!q) { showSearchHint(); return; }
+      searchTimer = setTimeout(function() { doSearch(q); }, 250);
+    });
+
+    searchInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        clearTimeout(searchTimer);
+        var q = searchInput.value.trim();
+        if (q) doSearch(q);
+      }
+    });
+
+    function showSearchHint() {
+      productResults.innerHTML = '<div class="search-hint" id="searchHint"><div class="sh-icon">🔍</div><p id="hintText">' + t('hintText') + '</p></div>';
+    }
+
+    async function doSearch(q) {
+      try {
+        var res = await apiFetch('/products/search?q=' + encodeURIComponent(q));
+        if (!res) return;
+        var products = await res.json();
+        if (!products || products.length === 0) {
+          productResults.innerHTML = '<div class="no-results"><div class="nr-icon">📦</div><p>' + t('noResults') + '</p></div>';
+          return;
+        }
+        var html = '';
+        products.forEach(function(p) {
+          var stockClass = p.stock <= (p.lowStockThreshold || 5) ? 'low' : '';
+          var badge = p.isSecondHand ? '<span class="p-badge badge-secondhand">' + t('secondHand') + '</span>' : '';
+          html += '<div class="product-card" data-id="' + p._id + '">' +
+            '<div class="p-info"><div class="p-name">' + escHtml(p.name) + badge + '</div>' +
+            '<div class="p-meta">' + escHtml(p.sku) + (p.serialNumber ? ' · ' + escHtml(p.serialNumber) : '') + '</div></div>' +
+            '<div style="text-align:right"><div class="p-price">€' + p.sellingPrice.toFixed(2) + '</div>' +
+            '<div class="p-stock ' + stockClass + '">' + t('stock') + ': ' + p.stock + '</div></div></div>';
+        });
+        productResults.innerHTML = html;
+      } catch (err) {
+        showToast('Search error', 'error');
+      }
+    }
+
+    function escHtml(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+    // ─── Receipt images ────────────────────────────────────────
+    // Logo and QR code are loaded from local static files at page load.
+    var _logoDataUri = '';
+    var _qrTermsDataUri = '';
+
+    // Preload logo from local static file
+    (function preloadLogo() {
+      var img = new Image();
+      img.onload = function() {
+        try {
+          var c = document.createElement('canvas');
+          c.width = img.naturalWidth;
+          c.height = img.naturalHeight;
+          c.getContext('2d').drawImage(img, 0, 0);
+          _logoDataUri = c.toDataURL('image/png');
+        } catch(e) { _logoDataUri = ''; }
+      };
+      img.onerror = function() { _logoDataUri = ''; };
+      img.src = 'logo.png';
+    })();
+
+    // Preload QR code from local static file (same approach as logo)
+    (function preloadQr() {
+      var img = new Image();
+      img.onload = function() {
+        try {
+          var c = document.createElement('canvas');
+          c.width = img.naturalWidth;
+          c.height = img.naturalHeight;
+          c.getContext('2d').drawImage(img, 0, 0);
+          _qrTermsDataUri = c.toDataURL('image/png');
+        } catch(e) { _qrTermsDataUri = ''; }
+      };
+      img.onerror = function() { _qrTermsDataUri = ''; };
+      img.src = 'qr-terms.png';
+    })();
+
+    // Add to cart
+    window._addToCart = async function(productId) {
+      // Block adding items while checkout success overlay is visible
+      if (document.getElementById('checkoutSuccessOverlay')) {
+        showToast(lang === 'zh' ? '请先点击 Done 完成当前交易' : 'Please click Done to finish current transaction first', 'warning');
+        return;
+      }
+      try {
+        var res = await apiFetch('/products/' + productId);
+        if (!res) return;
+        var p = await res.json();
+        var existing = cart.findIndex(function(c) { return c.product === p._id; });
+        if (existing >= 0) {
+          cart[existing].quantity += 1;
+        } else {
+          cart.push({
+            product: p._id, name: p.name, sku: p.sku, serialNumber: p.serialNumber || '',
+            unitPrice: p.sellingPrice, costPrice: p.costPrice, quantity: 1,
+            isSecondHand: p.isSecondHand || false, marginScheme: p.marginScheme || false,
+            vatRate: p.vatRate || 0.23, source: p.source || '', stock: p.stock, discount: null
+          });
+        }
+        renderCart();
+        showToast((lang === 'zh' ? '已添加: ' : 'Added: ') + p.name, 'success');
+      } catch (err) {
+        showToast('Error adding product', 'error');
+      }
+    };
+
+    // Render cart
+    function renderCart() {
+      var cartEmpty = document.getElementById('cartEmpty');
+      var cartTable = document.getElementById('cartTable');
+      var cartBody = document.getElementById('cartBody');
+      var cartCount = document.getElementById('cartCount');
+      var btnClear = document.getElementById('btnClearCart');
+      var totalItems = cart.reduce(function(s, c) { return s + c.quantity; }, 0);
+      cartCount.textContent = totalItems;
+      btnClear.disabled = cart.length === 0;
+
+      if (cart.length === 0) {
+        cartEmpty.style.display = '';
+        cartTable.style.display = 'none';
+        document.getElementById('emptyCartText').textContent = t('emptyCartText');
+        _resetTotalsDisplay();
+        return;
+      }
+      cartEmpty.style.display = 'none';
+      cartTable.style.display = '';
+
+      var html = '';
+      cart.forEach(function(item, idx) {
+        var stockWarn = (item.stock > 0 && item.quantity > item.stock) ? '<div class="stock-warn">⚠ ' + (lang === 'zh' ? '库存不足' : 'Low stock') + '</div>' : '';
+        var taxBadge = item.marginScheme ? '<span class="cart-item-tax tax-margin">Margin</span>' : '<span class="cart-item-tax tax-standard">' + parseFloat(((item.vatRate||0.23)*100).toFixed(1)).toString() + '%</span>';
+        // Use cached API calculation for display (no frontend VAT/discount math)
+        var calcItem = window._lastCalc && window._lastCalc.items ? window._lastCalc.items[idx] : null;
+        var displayPrice = calcItem ? calcItem.discountedPrice : 0;
+        var subtotal = calcItem ? calcItem.subtotal : 0;
+        var discountInfo = (item.discount && item.discount.type && item.discount.value > 0)
+          ? '<div class="cart-original-price">€' + item.unitPrice.toFixed(2) + '</div>'
+          : '';
+        var selected = idx === selectedCartIndex ? ' selected' : '';
+        var serial = item.serialNumber ? '<div class="cart-item-serial">SN: ' + escHtml(item.serialNumber) + '</div>' : '';
+
+        // Inline discount control
+        var dType = (item.discount && item.discount.type) ? item.discount.type : '';
+        var dVal = (item.discount && item.discount.value) ? item.discount.value : '';
+        var discCell = '<div class="inline-disc">' +
+          '<div class="disc-row">' +
+          '<select class="disc-type-select">' +
+          '<option value=""' + (!dType ? ' selected' : '') + '>—</option>' +
+          '<option value="percentage"' + (dType === 'percentage' ? ' selected' : '') + '>%</option>' +
+          '<option value="fixed"' + (dType === 'fixed' ? ' selected' : '') + '>€</option>' +
+          '</select>' +
+          '<input type="number" min="0" step="0.01" value="' + (dVal || '') + '" placeholder="0" ' +
+          'class="disc-val-input">' +
+          (dType && dVal ? '<button class="disc-clear" title="Clear">✕</button>' : '') +
+          '</div>' +
+          (item.discount && item.discount.type && item.discount.value > 0 ? '<div class="disc-active">' + (item.discount.type === 'percentage' ? '-' + item.discount.value + '%' : '-€' + Number(item.discount.value).toFixed(2)) + '</div>' : '') +
+          '</div>';
+
+        html += '<tr class="' + selected + '" data-idx="' + idx + '">' +
+          '<td><div class="cart-item-name">' + escHtml(item.name) + '</div><div class="cart-item-sku">' + escHtml(item.sku) + '</div>' + serial + '</td>' +
+          '<td>' + discountInfo + '€' + displayPrice.toFixed(2) + '</td>' +
+          '<td>' + discCell + '</td>' +
+          '<td><div class="qty-controls"><button class="qty-btn" data-delta="-1">−</button>' +
+          '<span class="qty-val">' + item.quantity + '</span>' +
+          '<button class="qty-btn" data-delta="1">+</button></div>' + stockWarn + '</td>' +
+          '<td>' + taxBadge + '</td>' +
+          '<td class="cart-subtotal">€' + subtotal.toFixed(2) + '</td>' +
+          '<td><button class="btn-remove" title="Remove">✕</button></td></tr>';
+      });
+      cartBody.innerHTML = html;
+
+      // Event delegation for cart interactions
+      cartBody.onclick = function(e) {
+        var tr = e.target.closest('tr[data-idx]');
+        if (!tr) return;
+        var idx = parseInt(tr.dataset.idx);
+        // Qty buttons
+        if (e.target.closest('.qty-btn')) {
+          e.stopPropagation();
+          var delta = e.target.closest('.qty-btn').dataset.delta;
+          window._changeQty(idx, parseInt(delta));
+          return;
+        }
+        // Remove button
+        if (e.target.closest('.btn-remove')) {
+          e.stopPropagation();
+          window._removeItem(idx);
+          return;
+        }
+        // Discount clear button
+        if (e.target.closest('.disc-clear')) {
+          e.stopPropagation();
+          window._clearItemDisc(idx);
+          return;
+        }
+        // Discount select/input - don't select row
+        if (e.target.tagName === 'SELECT' || e.target.tagName === 'INPUT') return;
+        // Select row
+        window._selectCartItem(idx);
+      };
+      // Discount select change delegation
+      cartBody.onchange = function(e) {
+        var tr = e.target.closest('tr[data-idx]');
+        if (!tr) return;
+        var idx = parseInt(tr.dataset.idx);
+        if (e.target.classList.contains('disc-type-select')) {
+          window._setItemDiscType(idx, e.target.value);
+        } else if (e.target.classList.contains('disc-val-input')) {
+          window._setItemDiscVal(idx, e.target.value);
+        }
+      };
+      // Stop keyboard shortcuts from firing when typing in cart inputs
+      cartBody.onkeydown = function(e) {
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') e.stopPropagation();
+      };
+      // Trigger async totals refresh via backend API (no frontend VAT/discount calc)
+      refreshTotals();
+    }
+
+    window._selectCartItem = function(idx) { selectedCartIndex = idx; renderCart(); };
+    window._changeQty = function(idx, delta) {
+      cart[idx].quantity = Math.max(1, cart[idx].quantity + delta);
+      renderCart();
+    };
+    window._removeItem = function(idx) {
+      cart.splice(idx, 1);
+      if (selectedCartIndex >= cart.length) selectedCartIndex = cart.length - 1;
+      renderCart();
+    };
+
+    // Inline discount handlers
+    window._setItemDiscType = function(idx, type) {
+      if (!cart[idx]) return;
+      if (!type) { cart[idx].discount = null; }
+      else {
+        var curVal = (cart[idx].discount && cart[idx].discount.value) || 0;
+        cart[idx].discount = { type: type, value: curVal };
+      }
+      renderCart();
+    };
+    window._setItemDiscVal = function(idx, val) {
+      if (!cart[idx]) return;
+      var v = parseFloat(val) || 0;
+      if (v <= 0) { cart[idx].discount = null; renderCart(); return; }
+      var curType = (cart[idx].discount && cart[idx].discount.type) || 'fixed';
+      cart[idx].discount = { type: curType, value: v };
+      renderCart();
+    };
+    window._clearItemDisc = function(idx) {
+      if (!cart[idx]) return;
+      cart[idx].discount = null;
+      renderCart();
+    };
+
+    // ─── API-driven totals (no frontend VAT/discount calculation) ──────
+    var _calcPending = false;
+
+    function _resetTotalsDisplay() {
+      document.getElementById('valSubtotal').textContent = '€0.00';
+      document.getElementById('valStdVat').textContent = '€0.00';
+      document.getElementById('valMarginVat').textContent = '€0.00';
+      document.getElementById('valTotal').textContent = '€0.00';
+      document.getElementById('discountSummary').style.display = 'none';
+      document.getElementById('btnCheckout').disabled = true;
+      updateChange();
+    }
+
+    function _applyCalcToDisplay(data) {
+      document.getElementById('valSubtotal').textContent = '€' + data.subtotalBeforeOrderDiscount.toFixed(2);
+      document.getElementById('valStdVat').textContent = '€' + data.standardVatTotal.toFixed(2);
+      document.getElementById('valMarginVat').textContent = '€' + data.marginVatTotal.toFixed(2);
+      document.getElementById('valTotal').textContent = '€' + data.totalAmount.toFixed(2);
+
+      var discSummary = document.getElementById('discountSummary');
+      if (data.orderDiscountAmount > 0) {
+        discSummary.style.display = '';
+        document.getElementById('valDiscount').textContent = '-€' + data.orderDiscountAmount.toFixed(2);
+      } else {
+        discSummary.style.display = 'none';
+      }
+
+      document.getElementById('btnCheckout').disabled = false;
+      updateChange();
+    }
+
+    async function refreshTotals() {
+      if (_calcPending) return; // avoid duplicate concurrent requests
+      if (!cart || cart.length === 0) {
+        window._lastCalc = null;
+        _resetTotalsDisplay();
+        return;
+      }
+      _calcPending = true;
+      try {
+        var body = {
+          items: cart.map(function(c) { return { product: c.product, quantity: c.quantity, discount: c.discount }; }),
+        };
+        if (orderDiscount && orderDiscount.type && orderDiscount.value > 0) {
+          body.orderDiscount = orderDiscount;
+        }
+        var res = await apiFetch('/transactions/calculate', { method: 'POST', body: JSON.stringify(body) });
+        if (!res) return;
+        var data = await res.json();
+        if (!res.ok) return;
+        window._lastCalc = data;
+        _applyCalcToDisplay(data);
+        // Re-render cart to refresh per-item prices from API response
+        renderCart();
+      } catch (err) {
+        showToast('Error calculating totals', 'error');
+      } finally {
+        _calcPending = false;
+      }
+    }
+
+    // Split payment: card + cash inputs
+    document.getElementById('cardAmount').addEventListener('input', function() {
+      var totalText = document.getElementById('valTotal').textContent.replace('€', '');
+      var total = parseFloat(totalText) || 0;
+      var cardVal = parseFloat(this.value) || 0;
+      // Card cannot exceed total
+      if (cardVal > total) {
+        this.classList.add('over-limit');
+      } else {
+        this.classList.remove('over-limit');
+      }
+      updateChange();
+    });
+    document.getElementById('cashReceived').addEventListener('input', updateChange);
+
+    function updateChange() {
+      var totalText = document.getElementById('valTotal').textContent.replace('€', '');
+      var total = parseFloat(totalText) || 0;
+      var cardVal = parseFloat(document.getElementById('cardAmount').value) || 0;
+      var cashVal = parseFloat(document.getElementById('cashReceived').value) || 0;
+
+      // Cap card at total
+      if (cardVal > total) cardVal = total;
+
+      var remaining = Math.round((total - cardVal) * 100) / 100;
+      var change = Math.round((cashVal - remaining) * 100) / 100;
+      var display = document.getElementById('changeDisplay');
+
+      if (cardVal <= 0 && cashVal <= 0) { display.textContent = ''; return; }
+      if (cardVal > 0 && cashVal <= 0 && cardVal >= total) {
+        display.textContent = lang === 'zh' ? '✓ 卡付全额' : '✓ Card covers total';
+        display.className = 'change-display';
+        return;
+      }
+      if (cashVal <= 0 && cardVal < total) {
+        var due = Math.round((total - cardVal) * 100) / 100;
+        display.textContent = (lang === 'zh' ? '还需现金: €' : 'Cash due: €') + due.toFixed(2);
+        display.className = 'change-display negative';
+        return;
+      }
+      if (change >= 0) {
+        display.textContent = (lang === 'zh' ? '找零: €' : 'Change: €') + change.toFixed(2);
+        display.className = 'change-display';
+      } else {
+        display.textContent = (lang === 'zh' ? '不足: €' : 'Short: €') + Math.abs(change).toFixed(2);
+        display.className = 'change-display negative';
+      }
+    }
+
+    // Clear cart
+    document.getElementById('btnClearCart').addEventListener('click', function() {
+      if (cart.length === 0) return;
+      showConfirm(t('confirmClearTitle'), t('confirmClearMsg'), function() {
+        cart = []; selectedCartIndex = -1; orderDiscount = null;
+        renderCart();
+      });
+    });
+
+    // Checkout - show payment method modal if no amounts entered
+    document.getElementById('btnCheckout').addEventListener('click', function() {
+      if (cart.length === 0) return;
+      var card = document.getElementById('cardAmount').value.trim();
+      var cash = document.getElementById('cashReceived').value.trim();
+      // If user hasn't entered any amount, show payment method selection
+      if (card === '' && cash === '') {
+        document.getElementById('payMethodModal').style.display = 'flex';
+        return;
+      }
+      // Otherwise proceed with normal checkout
+      doCheckout();
+    });
+
+    // Payment method modal - Card
+    document.getElementById('payCardBtn').addEventListener('click', function() {
+      var totalText = document.getElementById('valTotal').textContent.replace('€', '');
+      var total = parseFloat(totalText) || 0;
+      document.getElementById('cardAmount').value = total.toFixed(2);
+      document.getElementById('cashReceived').value = '';
+      document.getElementById('payMethodModal').style.display = 'none';
+      doCheckout();
+    });
+
+    // Payment method modal - Cash
+    document.getElementById('payCashBtn').addEventListener('click', function() {
+      var totalText = document.getElementById('valTotal').textContent.replace('€', '');
+      var total = parseFloat(totalText) || 0;
+      document.getElementById('cashReceived').value = total.toFixed(2);
+      document.getElementById('cardAmount').value = '';
+      document.getElementById('payMethodModal').style.display = 'none';
+      doCheckout();
+    });
+
+    // Close modal on background click
+    document.getElementById('payMethodModal').addEventListener('click', function(e) {
+      if (e.target === this) this.style.display = 'none';
+    });
+
+    async function doCheckout() {
+      if (cart.length === 0) return;
+      var totalText = document.getElementById('valTotal').textContent.replace('€', '');
+      var total = parseFloat(totalText) || 0;
+      var cardVal = parseFloat(document.getElementById('cardAmount').value) || 0;
+      var cashVal = parseFloat(document.getElementById('cashReceived').value) || 0;
+
+      // Cap card at total
+      if (cardVal > total) cardVal = total;
+
+      var remaining = Math.round((total - cardVal) * 100) / 100;
+
+      // Determine payment method
+      var method = 'cash';
+      if (cardVal > 0 && cashVal <= 0 && cardVal >= total) {
+        method = 'card';
+      } else if (cardVal > 0 && cashVal > 0) {
+        method = 'split';
+      }
+
+      // Validate: total payment must cover the bill
+      if (method === 'cash' && cashVal < total) {
+        showToast(lang === 'zh' ? '实收金额不足' : 'Insufficient payment', 'error'); return;
+      }
+      if (method === 'split' && cashVal < remaining) {
+        showToast(lang === 'zh' ? '现金不足以覆盖剩余金额' : 'Cash insufficient for remaining amount', 'error'); return;
+      }
+
+      var btn = document.getElementById('btnCheckout');
+      btn.disabled = true;
+      btn.textContent = lang === 'zh' ? '处理中...' : 'Processing...';
+      try {
+        var body = {
+          items: cart.map(function(c) { return { product: c.product, quantity: c.quantity, discount: c.discount, serialNumber: c.serialNumber }; }),
+          paymentMethod: method
+        };
+        if (orderDiscount && orderDiscount.type && orderDiscount.value > 0) body.orderDiscount = orderDiscount;
+        if (method === 'cash') {
+          body.cashReceived = cashVal;
+        } else if (method === 'split') {
+          body.cardAmount = cardVal;
+          body.cashReceived = cashVal;
+        }
+
+        var res = await apiFetch('/transactions/checkout', { method: 'POST', body: JSON.stringify(body) });
+        if (!res) return;
+        var data = await res.json();
+        if (!res.ok) { showToast(data.error || 'Checkout failed', 'error'); return; }
+
+        lastTransaction = data;
+
+        // IMMEDIATELY clear cart to prevent double payment
+        cart = []; selectedCartIndex = -1; orderDiscount = null;
+        document.getElementById('cashReceived').value = '';
+        document.getElementById('cardAmount').value = '';
+        btn.disabled = true;
+
+        // Show checkout complete screen with receipt preview in cart area
+        var receiptNum = (data.transaction || data).receiptNumber;
+        var totalAmt = (data.transaction || data).totalAmount;
+        var txn = data.transaction || data;
+        var cartArea = document.getElementById('cartArea');
+        document.getElementById('cartTable').style.display = 'none';
+        document.getElementById('cartEmpty').style.display = 'none';
+
+        // Build receipt preview
+        var rxItems = '';
+        (txn.items || []).forEach(function(it) {
+          var total = it.subtotal != null ? it.subtotal : 0;
+          rxItems += '<div style="display:flex;justify-content:space-between;font-size:13px;margin:2px 0;"><span>' + (it.quantity > 1 ? it.quantity + 'x ' : '') + escHtml(it.name) + '</span><span>€' + total.toFixed(2) + '</span></div>';
+          if (it.serialNumber) rxItems += '<div style="font-size:11px;color:#0071e3;">SN: ' + escHtml(it.serialNumber) + '</div>';
+        });
+
+        var pmLabel = txn.paymentMethod === 'split' ? 'Card+Cash' : txn.paymentMethod === 'card' ? 'Card' : 'Cash';
+
+        // Use an overlay div instead of replacing innerHTML (preserves cart DOM)
+        var successOverlay = document.createElement('div');
+        successOverlay.id = 'checkoutSuccessOverlay';
+        var csHasEmail = txn.customerContact || txn.customerEmail;
+        var csHasPhone = txn.customerPhone || txn.phone || txn.customerMobile;
+
+        var csActionBtns = '';
+        csActionBtns += '<button class="cs-action-btn" id="btnPrintReceipt">🖨 Print</button>';
+        if (csHasEmail) csActionBtns += '<button class="cs-action-btn" id="btnEmailReceipt">📧 Email</button>';
+        if (csHasPhone) csActionBtns += '<button class="cs-action-btn cs-whatsapp" id="btnWhatsAppReceipt">📱 WhatsApp</button>';
+        csActionBtns += '<button class="cs-action-btn cs-invoice" id="btnGenerateInvoice">🧾 Invoice</button>';
+        csActionBtns += '<button class="cs-action-btn cs-primary" id="btnNewTx">Done</button>';
+
+        successOverlay.innerHTML =
+          '<div class="checkout-success-overlay">' +
+            '<div class="cs-body">' +
+              '<div class="cs-header">' +
+                '<div class="cs-checkmark">✅</div>' +
+                '<h2>Transaction Complete</h2>' +
+                '<p class="cs-receipt-no">Receipt #' + receiptNum + '</p>' +
+                '<div class="cs-total">€' + Number(totalAmt).toFixed(2) + '</div>' +
+              '</div>' +
+              '<div class="cs-receipt-card">' +
+                '<div class="rc-header">Tech Cross</div>' +
+                '<div class="rc-divider">——————————————————————</div>' +
+                rxItems +
+                '<div class="rc-divider">——————————————————————</div>' +
+                '<div class="rc-total-row"><span>TOTAL</span><span>€' + Number(totalAmt).toFixed(2) + '</span></div>' +
+                '<div class="rc-meta">' +
+                  '<div class="rc-row"><span>Payment</span><span>' + pmLabel + '</span></div>' +
+                  (txn.cashReceived ? '<div class="rc-row"><span>Cash</span><span>€' + Number(txn.cashReceived).toFixed(2) + '</span></div>' : '') +
+                  (txn.changeGiven > 0 ? '<div class="rc-row" style="font-weight:600;"><span>Change</span><span>€' + Number(txn.changeGiven).toFixed(2) + '</span></div>' : '') +
+                '</div>' +
+                (window._lastRepairInfo ? '<div class="rc-repair">' +
+                  '<div style="font-weight:700;">REPAIR [' + window._lastRepairInfo.orderTypeLabel + ']</div>' +
+                  'Fault: ' + escHtml(window._lastRepairInfo.fault) + '<br>' +
+                  'Condition: ' + escHtml(window._lastRepairInfo.condition) + '<br>' +
+                  'Test: ' + escHtml(window._lastRepairInfo.testStatus) + '<br>' +
+                  'Notes: ' + escHtml(window._lastRepairInfo.notes) + '</div>' : '') +
+                '<div class="rc-thanks">Thank you!</div>' +
+              '</div>' +
+            '</div>' +
+            '<div class="cs-action-bar">' + csActionBtns + '</div>' +
+          '</div>';
+        cartArea.appendChild(successOverlay);
+
+        // Attach event listeners to dynamically created buttons
+        document.getElementById('btnPrintReceipt').addEventListener('click', function() { doPrintReceipt(); });
+        if (csHasEmail) document.getElementById('btnEmailReceipt').addEventListener('click', function() { showEmailReceiptModal(); });
+        if (csHasPhone) document.getElementById('btnWhatsAppReceipt').addEventListener('click', function() { showWhatsAppModal(); });
+        document.getElementById('btnGenerateInvoice').addEventListener('click', function() { doGenerateInvoice(); });
+        document.getElementById('btnNewTx').addEventListener('click', function() { startNewTransaction(); });
+
+        // Store receipt data for printing
+        window._lastReceiptData = data.receipt || data.transaction || data;
+        window._lastTransaction = data.transaction || data;
+
+      } catch (err) {
+        showToast('Checkout error: ' + err.message, 'error');
+      } finally {
+        btn.disabled = true;
+        btn.textContent = t('checkoutText');
+      }
+    }
+
+    // Print last receipt
+    window.doPrintReceipt = async function() {
+      var receiptData = window._lastReceiptData;
+      if (!receiptData) { showToast('No receipt data', 'error'); return; }
+      try {
+        var res = await fetch('http://localhost:9100/print', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(receiptData),
+          signal: AbortSignal.timeout(5000)
+        });
+        if (!res.ok) throw new Error('Print Agent error');
+        showToast('✅ Printed!', 'success');
+      } catch (err) {
+        // Fallback: silent iframe print (no popup window)
+        silentBrowserPrint(buildReceiptPreviewHtml(receiptData));
+      }
+    };
+
+    // Start new transaction — restore cart UI
+    window.startNewTransaction = function() {
+      // Remove the checkout success overlay and restore cart DOM
+      var overlay = document.getElementById('checkoutSuccessOverlay');
+      if (overlay) overlay.remove();
+      // Reset cart state
+      cart = []; selectedCartIndex = -1; orderDiscount = null;
+      _transactionComplete = false;
+      window._lastRepairInfo = null;
+      window._repairInfoMap = {};
+      window._lastUsedDeviceInfo = null;
+      window._lastReceiptData = null;
+      // Reset payment inputs
+      document.getElementById('cashReceived').value = '';
+      document.getElementById('cardAmount').value = '';
+      // Restore cart UI
+      renderCart();
+      searchInput.value = '';
+      showSearchHint();
+      searchInput.focus();
+    };
+
+    // Keep old printReceipt for reprint from sidebar
+    var _pendingReceiptData = null;
+
+    async function printReceipt(receiptData) {
+      _pendingReceiptData = receiptData;
+      var html = buildReceiptPreviewHtml(receiptData);
+      document.getElementById('receiptPreviewContent').innerHTML = html;
+      document.getElementById('receiptPreviewOverlay').classList.add('show');
+    }
+
+    window.doPrintFromPreview = async function() {
+      if (!_pendingReceiptData) return;
+      try {
+        var res = await fetch('http://localhost:9100/print', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(_pendingReceiptData),
+          signal: AbortSignal.timeout(5000)
+        });
+        if (!res.ok) throw new Error('Print Agent error');
+        showToast(lang === 'zh' ? '打印成功' : '✅ Printed', 'success');
+      } catch (err) {
+        // Fallback: silent iframe print
+        silentBrowserPrint(document.getElementById('receiptPreviewContent').innerHTML);
+      }
+      document.getElementById('receiptPreviewOverlay').classList.remove('show');
+    };
+
+    // ─── Email Receipt ──────────────────────────────────────────────
+    window.showEmailReceiptModal = function() {
+      document.getElementById('emailReceiptInput').value = '';
+      document.getElementById('emailReceiptError').style.display = 'none';
+      document.getElementById('emailReceiptOverlay').classList.add('show');
+      document.getElementById('emailReceiptInput').focus();
+    };
+
+    window.sendEmailReceipt = async function() {
+      var email = document.getElementById('emailReceiptInput').value.trim();
+      var errEl = document.getElementById('emailReceiptError');
+      if (!email || !email.includes('@')) {
+        errEl.textContent = 'Please enter a valid email address.';
+        errEl.style.display = 'block';
+        return;
+      }
+      errEl.style.display = 'none';
+      var txn = window._lastTransaction;
+      if (!txn || !txn._id) { showToast('No transaction data', 'error'); return; }
+
+      var sendBtn = document.getElementById('btnEmailReceiptSend');
+      sendBtn.disabled = true;
+      sendBtn.textContent = 'Sending...';
+
+      try {
+        var res = await apiFetch('/delivery/receipt/email', {
+          method: 'POST',
+          body: JSON.stringify({ transactionId: txn._id, email: email }),
+        });
+        if (!res) return;
+        var data = await res.json();
+        if (!res.ok) { showToast(data.error || 'Send failed', 'error'); return; }
+        showToast('✅ Receipt sent to ' + email, 'success');
+        document.getElementById('emailReceiptOverlay').classList.remove('show');
+      } catch (err) {
+        showToast('Error: ' + err.message, 'error');
+      } finally {
+        sendBtn.disabled = false;
+        sendBtn.textContent = '📧 Send Receipt';
+      }
+    };
+
+    // ─── WhatsApp Receipt ────────────────────────────────────────────
+    window.showWhatsAppModal = function() {
+      document.getElementById('whatsAppInput').value = '';
+      document.getElementById('whatsAppError').style.display = 'none';
+      document.getElementById('whatsAppOverlay').classList.add('show');
+      document.getElementById('whatsAppInput').focus();
+    };
+
+    window.sendWhatsApp = async function() {
+      var phone = document.getElementById('whatsAppInput').value.trim();
+      var errEl = document.getElementById('whatsAppError');
+      if (!phone) {
+        errEl.textContent = 'Please enter a phone number.';
+        errEl.style.display = 'block';
+        return;
+      }
+      errEl.style.display = 'none';
+      var txn = window._lastTransaction;
+      if (!txn || !txn._id) { showToast('No transaction data', 'error'); return; }
+
+      try {
+        var res = await apiFetch('/delivery/receipt/whatsapp/' + txn._id + '?phone=' + encodeURIComponent(phone));
+        if (!res) return;
+        var data = await res.json();
+        if (!res.ok) { showToast(data.error || 'Failed', 'error'); return; }
+        window.open(data.link, '_blank');
+        showToast('✅ WhatsApp opened', 'success');
+        document.getElementById('whatsAppOverlay').classList.remove('show');
+      } catch (err) {
+        showToast('Error: ' + err.message, 'error');
+      }
+    };
+
+    // ─── Generate Invoice ────────────────────────────────────────────
+    window.doGenerateInvoice = async function() {
+      var txn = window._lastTransaction;
+      if (!txn || !txn._id) { showToast('No transaction data', 'error'); return; }
+
+      var checkRes = await apiFetch('/invoices/check-transaction/' + encodeURIComponent(txn.receiptNumber));
+      if (!checkRes) return;
+      var checkData = await checkRes.json();
+      if (checkData.exists && checkData.invoice) {
+        showInvoiceResult(checkData.invoice);
+        return;
+      }
+
+      var customerName = prompt('Customer name (optional):', '') || '';
+      var customerContact = prompt('Customer email (optional):', '') || '';
+
+      try {
+        var res = await apiFetch('/invoices/' + txn._id + '/generate', {
+          method: 'POST',
+          body: JSON.stringify({
+            customerName: customerName,
+            customerContact: customerContact,
+          }),
+        });
+        if (!res) return;
+        var data = await res.json();
+        if (!res.ok) {
+          if (data.code === 'INVOICE_EXISTS' && data.invoice) {
+            showInvoiceResult(data.invoice);
+            return;
+          }
+          showToast(data.error || 'Invoice generation failed', 'error');
+          return;
+        }
+        showInvoiceResult(data.invoice || data);
+        showToast('✅ Invoice generated', 'success');
+      } catch (err) {
+        showToast('Error: ' + err.message, 'error');
+      }
+    };
+
+    window.showInvoiceResult = function(invoice) {
+      document.getElementById('invoiceResultNumber').textContent = invoice.invoiceNumber || '—';
+      document.getElementById('invoiceResultTotal').textContent = '€' + (invoice.grossTotal || 0).toFixed(2);
+      document.getElementById('invoiceResultMessage').textContent = 'Invoice ' + (invoice.invoiceNumber || '') + ' generated successfully.';
+      document.getElementById('invoiceResultOverlay').classList.add('show');
+      window._lastInvoice = invoice;
+    };
+
+
+    // ─── Silent Browser Print (iframe, no popup) ────────────────
+    // Uses a hidden iframe to trigger print. Browser will still show
+    // the print dialog the FIRST time, but after you select the receipt
+    // printer once and check "remember", subsequent prints go straight through.
+    //
+    // KEY FIX: Use fixed pixel width (500px) instead of mm units.
+    // 80mm thermal printers have 576 dots/line at 203 DPI.
+    // Using 500px leaves safe margins for the printer's physical non-printable area.
+    // This avoids browser DPI/mm conversion issues that cause clipping.
+    function silentBrowserPrint(html) {
+      var iframe = document.getElementById('_printFrame');
+      if (!iframe) {
+        iframe = document.createElement('iframe');
+        iframe.id = '_printFrame';
+        iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:0;height:0;border:none;';
+        document.body.appendChild(iframe);
+      }
+      var doc = iframe.contentDocument || iframe.contentWindow.document;
+      doc.open();
+      doc.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>Receipt</title>');
+      doc.write('<style>');
+      doc.write('@page{margin:0;size:auto;}');
+      doc.write('html,body{margin:0;padding:0;width:100%;background:#fff;}');
+      doc.write('body{width:420px;max-width:420px;padding:8px 40px 8px 10px;margin:0 auto;');
+      doc.write('font-family:"Courier New",Courier,monospace;font-size:20px;font-weight:700;line-height:1.4;color:#000;');
+      doc.write('-webkit-print-color-adjust:exact;print-color-adjust:exact;}');
+      doc.write('*{box-sizing:border-box;}');
+      doc.write('img{max-width:100%;height:auto;display:block;}');
+      doc.write('</style></head><body>');
+      doc.write(html);
+      doc.write('</body></html>');
+      doc.close();
+      setTimeout(function() {
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+      }, 200);
+    }
+
+    // ─── Print Agent Status Check ───────────────────────────────
+    // Check on page load if Print Agent is running
+    (function checkPrintAgent() {
+      fetch('http://localhost:9100/status', { signal: AbortSignal.timeout(3000) })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (data.connected) {
+            console.log('🟢 Print Agent online — ' + data.connectionType + ' printer');
+          } else {
+            console.warn('🟡 Print Agent running but printer not connected:', data.error);
+          }
+        })
+        .catch(function() {
+          console.warn('🔴 Print Agent offline — browser print fallback will be used');
+        });
+    })();
+
+    function closeReceiptPreview() {
+      document.getElementById('receiptPreviewOverlay').classList.remove('show');
+      // Only clear cart if this was triggered from a new checkout (not from Orders reprint)
+      if (window._lastReceiptData) clearCartAfterCheckout();
+    }
+    window.closeReceiptPreview = closeReceiptPreview;
+
+    function clearCartAfterCheckout() {
+      cart = []; selectedCartIndex = -1; orderDiscount = null;
+      window._lastRepairInfo = null;
+      window._repairInfoMap = {};
+      window._lastUsedDeviceInfo = null;
+      renderCart();
+      searchInput.value = '';
+      showSearchHint();
+      searchInput.focus();
+    }
+
+    function buildReceiptPreviewHtml(r) {
+      if (!r) return '<p style="text-align:center;">No receipt data</p>';
+      var h = '';
+
+      // ═══ LOGO ═══
+      if (_logoDataUri) {
+        h += '<div style="text-align:center;margin-bottom:10px;">';
+        h += '<img src="' + _logoDataUri + '" alt="Tech Cross" style="max-width:200px;max-height:55px;margin:0 auto;">';
+        h += '</div>';
+      }
+
+      // ═══ HEADER ═══
+      h += '<div style="text-align:center;padding-bottom:10px;margin-bottom:10px;border-bottom:2px solid #000;font-size:17px;line-height:1.4;">';
+      h += '<div>' + (r.companyAddress || 'Unit 4, Navan Shopping Centre, Navan, Co. Meath, C15 F658') + '</div>';
+      h += '<div>Tel: ' + (r.companyPhone || '046 905 9854') + '</div>';
+      h += '<div>Mob: 089 482 5300</div>';
+      h += '</div>';
+
+      // ═══ RECEIPT INFO ═══
+      h += '<div style="margin-bottom:10px;font-size:18px;">';
+      h += '<div style="display:flex;justify-content:space-between;width:100%;padding:3px 0;"><span>Receipt#</span><span>' + (r.receiptNumber || '-') + '</span></div>';
+      h += '<div style="display:flex;justify-content:space-between;width:100%;padding:3px 0;"><span>Date</span><span>' + (r.date || '-') + '</span></div>';
+      h += '</div>';
+
+      // ═══ ITEMS ═══
+      h += '<div style="border-top:2px solid #000;border-bottom:2px solid #000;padding:8px 0;margin-bottom:10px;">';
+      if (r.items && r.items.length) {
+        r.items.forEach(function(item) {
+          var price = (item.discountedPrice != null ? item.discountedPrice : item.unitPrice) || 0;
+          var total = price * (item.quantity || 1);
+          h += '<div style="display:flex;justify-content:space-between;width:100%;font-size:20px;padding:3px 0;">';
+          h += '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:8px;">' + (item.quantity > 1 ? item.quantity + 'x ' : '') + escHtml(item.name) + '</span>';
+          h += '<span style="white-space:nowrap;flex-shrink:0;">' + '\u20AC' + total.toFixed(2) + '</span>';
+          h += '</div>';
+          if (item.serialNumber) {
+            h += '<div style="font-size:16px;padding:2px 0 2px 6px;">SN: ' + escHtml(item.serialNumber) + '</div>';
+          }
+          if (item.discountedPrice != null && item.discountedPrice < item.unitPrice) {
+            h += '<div style="font-size:16px;text-decoration:line-through;padding:2px 0 2px 6px;">Was ' + '\u20AC' + item.unitPrice.toFixed(2) + '</div>';
+          }
+        });
+      }
+      h += '</div>';
+
+      // ═══ TOTAL ═══
+      h += '<div style="display:flex;justify-content:space-between;width:100%;font-size:28px;font-weight:900;padding:6px 0;margin-bottom:10px;">';
+      h += '<span>TOTAL</span><span>' + '\u20AC' + (r.totalAmount || 0).toFixed(2) + '</span>';
+      h += '</div>';
+
+      // ═══ PAYMENT ═══
+      h += '<div style="margin-bottom:10px;font-size:20px;border-bottom:1px dashed #000;padding-bottom:10px;">';
+      var pm = r.paymentMethod || 'cash';
+      if (pm === 'split') {
+        h += '<div style="display:flex;justify-content:space-between;width:100%;padding:3px 0;"><span>Card</span><span>' + '\u20AC' + (r.cardAmount || 0).toFixed(2) + '</span></div>';
+        h += '<div style="display:flex;justify-content:space-between;width:100%;padding:3px 0;"><span>Cash</span><span>' + '\u20AC' + (r.cashReceived || 0).toFixed(2) + '</span></div>';
+      } else if (pm === 'cash') {
+        h += '<div style="display:flex;justify-content:space-between;width:100%;padding:3px 0;"><span>Cash</span><span>' + '\u20AC' + (r.cashReceived || 0).toFixed(2) + '</span></div>';
+      } else {
+        h += '<div style="padding:3px 0;">Card Payment</div>';
+      }
+      if (r.changeGiven != null && r.changeGiven > 0) {
+        h += '<div style="display:flex;justify-content:space-between;width:100%;padding:3px 0;font-weight:900;"><span>Change</span><span>' + '\u20AC' + r.changeGiven.toFixed(2) + '</span></div>';
+      }
+      h += '</div>';
+
+      // ═══ VAT ═══
+      if (r.standardVatTotal > 0 || r.marginVatTotal > 0) {
+        h += '<div style="margin-bottom:10px;font-size:18px;border-bottom:1px dashed #000;padding-bottom:10px;">';
+        if (r.standardVatTotal > 0) h += '<div style="display:flex;justify-content:space-between;width:100%;padding:3px 0;"><span>VAT (23%)</span><span>' + '\u20AC' + r.standardVatTotal.toFixed(2) + '</span></div>';
+        if (r.marginVatTotal > 0) h += '<div style="display:flex;justify-content:space-between;width:100%;padding:3px 0;"><span>Margin VAT</span><span>' + '\u20AC' + r.marginVatTotal.toFixed(2) + '</span></div>';
+        h += '</div>';
+      }
+
+      // ═══ REPAIR INFO ═══
+      if (window._lastRepairInfo) {
+        var ri = window._lastRepairInfo;
+        h += '<div style="border-top:2px solid #000;padding:8px 0;margin-bottom:10px;">';
+        h += '<div style="text-align:center;font-size:20px;margin-bottom:6px;">REPAIR DETAILS</div>';
+        h += '<div style="font-size:18px;margin-bottom:4px;">[' + ri.orderTypeLabel + ']</div>';
+        h += '<div style="font-size:17px;line-height:1.5;">';
+        h += 'Fault: ' + escHtml(ri.fault) + '<br>';
+        h += 'Condition: ' + escHtml(ri.condition) + '<br>';
+        h += 'Test: ' + escHtml(ri.testStatus) + '<br>';
+        h += 'Notes: ' + escHtml(ri.notes);
+        h += '</div></div>';
+      }
+
+      // ═══ USED DEVICE INFO ═══
+      if (window._lastUsedDeviceInfo) {
+        var ui = window._lastUsedDeviceInfo;
+        h += '<div style="border-top:1px dashed #000;padding:6px 0;margin-bottom:10px;font-size:17px;line-height:1.5;">';
+        h += '<div style="margin-bottom:4px;">PRE-OWNED DEVICE</div>';
+        if (ui.serial) h += 'Serial/IMEI: ' + escHtml(ui.serial) + '<br>';
+        if (ui.cost > 0) h += 'Cost: ' + '\u20AC' + Number(ui.cost).toFixed(2) + '<br>';
+        if (ui.notes) h += 'Notes: ' + escHtml(ui.notes) + '<br>';
+        if (ui.source) h += 'Source: ' + escHtml(ui.source);
+        h += '</div>';
+      }
+
+      // ═══ T&C ═══
+      h += '<div style="font-size:15px;text-align:left;line-height:1.4;margin-bottom:10px;">';
+      h += '<div style="font-size:17px;text-align:center;margin-bottom:6px;">Warranty & Store Policy</div>';
+      h += '<div>Repairs - 3 Months: Hardware defects only. Void if damage or 3rd party repair.</div>';
+      if (r.hasSecondHandItems) {
+        h += '<div style="margin-top:4px;">Pre-owned - 7 Days: No damage. Must be erased. Locked = non-refundable.</div>';
+      }
+      h += '<div style="margin-top:4px;">Accessories - 14 Days: Unopened and resalable only.</div>';
+      h += '</div>';
+
+      // ═══ QR CODE ═══
+      if (_qrTermsDataUri) {
+        h += '<div style="text-align:center;margin-bottom:10px;">';
+        h += '<div style="font-size:15px;margin-bottom:4px;">Terms & Conditions</div>';
+        h += '<img src="' + _qrTermsDataUri + '" style="width:180px;height:180px;display:block;margin:0 auto;">';
+        h += '<div style="font-size:14px;margin-top:4px;">techcross.ie/terms</div>';
+        h += '</div>';
+      }
+
+      // ═══ THANK YOU ═══
+      h += '<div style="text-align:center;font-size:22px;font-weight:900;padding:10px 0;border-top:2px solid #000;">Thank you!</div>';
+
+      return h;
+    }
+
+    // ─── Orders Panel ──────────────────────────────────────────
+    function openOrdersPanel() {
+      document.getElementById('ordersPanel').style.display = 'flex';
+      loadOrdersPanelToday();
+    }
+    window.openOrdersPanel = openOrdersPanel;
+
+    function closeOrdersPanel() {
+      document.getElementById('ordersPanel').style.display = 'none';
+    }
+    window.closeOrdersPanel = closeOrdersPanel;
+
+    window.loadOrdersPanelToday = function() {
+      var today = new Date().toISOString().split('T')[0];
+      document.getElementById('opDateStart').value = today;
+      document.getElementById('opDateEnd').value = today;
+      document.getElementById('opSearchInput').value = '';
+      loadOrdersPanel();
+    };
+
+    window.loadOrdersPanel = async function() {
+      var q = document.getElementById('opSearchInput').value.trim();
+      var startDate = document.getElementById('opDateStart').value;
+      var endDate = document.getElementById('opDateEnd').value;
+      var resultEl = document.getElementById('opResults');
+      var summaryEl = document.getElementById('opSummary');
+
+      resultEl.innerHTML = '<div style="text-align:center;color:#86868b;padding:20px;">Loading...</div>';
+
+      var url = '/transactions?limit=100';
+      if (q) url += '&q=' + encodeURIComponent(q);
+      if (startDate) url += '&startDate=' + startDate;
+      if (endDate) url += '&endDate=' + endDate;
+
+      try {
+        var res = await apiFetch(url);
+        if (!res) return;
+        var data = await res.json();
+        var matches = data.data || [];
+
+        // Summary
+        var totalSales = 0, totalCash = 0, totalCard = 0;
+        var stdSales = 0, marginSales = 0, serviceSales = 0, lycaSales = 0;
+        matches.forEach(function(t) {
+          totalSales += t.totalAmount;
+          if (t.paymentMethod === 'cash') totalCash += t.totalAmount;
+          else if (t.paymentMethod === 'card') totalCard += t.totalAmount;
+          else { totalCard += t.cardAmount || 0; totalCash += t.totalAmount - (t.cardAmount || 0); }
+          (t.items || []).forEach(function(item) {
+            var rate = item.vatRate || 0.23;
+            var isLyca = (item.sku || '').toUpperCase().startsWith('LYCA-');
+            if (isLyca) lycaSales += item.subtotal || 0;
+            else if (item.marginScheme || item.isSecondHand) marginSales += item.subtotal || 0;
+            else if (Math.abs(rate - 0.135) < 0.01) serviceSales += item.subtotal || 0;
+            else stdSales += item.subtotal || 0;
+          });
+        });
+
+        summaryEl.style.display = 'block';
+        summaryEl.innerHTML = '<div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;">' +
+          '<strong>Total: €' + totalSales.toFixed(2) + '</strong>' +
+          '<span>💵 €' + totalCash.toFixed(2) + '</span>' +
+          '<span>💳 €' + totalCard.toFixed(2) + '</span>' +
+          '<span style="color:#86868b;">' + matches.length + ' txns</span>' +
+          '</div>' +
+          '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:4px;">' +
+          (stdSales > 0 ? '<span>🛒 Sales €' + stdSales.toFixed(2) + '</span>' : '') +
+          (marginSales > 0 ? '<span>📱 Margin €' + marginSales.toFixed(2) + '</span>' : '') +
+          (serviceSales > 0 ? '<span>🔧 Service €' + serviceSales.toFixed(2) + '</span>' : '') +
+          (lycaSales > 0 ? '<span>📞 Lyca €' + lycaSales.toFixed(2) + '</span>' : '') +
+          '</div>';
+
+        if (!matches.length) {
+          resultEl.textContent = '';
+          const emptyDiv = document.createElement('div');
+          emptyDiv.style.textAlign = 'center';
+          emptyDiv.style.color = '#86868b';
+          emptyDiv.style.padding = '20px';
+          emptyDiv.textContent = 'No orders found';
+          resultEl.appendChild(emptyDiv);
+          return;
+        }
+
+        resultEl.innerHTML = '';
+        const fragment = document.createDocumentFragment();
+
+        matches.forEach(function(t) {
+          const card = document.createElement('div');
+          card.style.padding = '12px';
+          card.style.border = '1px solid #e5e5e7';
+          card.style.borderRadius = '10px';
+          card.style.marginBottom = '8px';
+          card.style.background = '#fff';
+
+          const topRow = document.createElement('div');
+          topRow.style.display = 'flex';
+          topRow.style.justifyContent = 'space-between';
+          topRow.style.alignItems = 'center';
+
+          const info = document.createElement('div');
+          const title = document.createElement('strong');
+          title.textContent = (t.totalAmount < 0 ? '↩️ ' : '') + '#' + t.receiptNumber;
+          info.appendChild(title);
+
+          const meta = document.createElement('span');
+          meta.style.color = '#86868b';
+          meta.style.fontSize = '12px';
+          meta.textContent = new Date(t.createdAt).toLocaleString('en-IE', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' }) + ' ' +
+            (t.paymentMethod === 'split' ? '💳+💵' : (t.paymentMethod === 'card' ? '💳' : '💵'));
+          info.appendChild(document.createTextNode(' '));
+          info.appendChild(meta);
+
+          topRow.appendChild(info);
+
+          const amount = document.createElement('strong');
+          amount.style.fontSize = '16px';
+          if (t.totalAmount < 0) amount.style.color = '#ff3b30';
+          amount.textContent = '€' + t.totalAmount.toFixed(2);
+          topRow.appendChild(amount);
+
+          card.appendChild(topRow);
+
+          const itemLine = document.createElement('div');
+          itemLine.style.fontSize = '12px';
+          itemLine.style.color = '#6e6e73';
+          itemLine.style.marginTop = '4px';
+          itemLine.style.whiteSpace = 'nowrap';
+          itemLine.style.overflow = 'hidden';
+          itemLine.style.textOverflow = 'ellipsis';
+          itemLine.textContent = (t.items || []).map(function(i) { return i.name; }).join(', ');
+          card.appendChild(itemLine);
+
+          const actionRow = document.createElement('div');
+          actionRow.style.display = 'flex';
+          actionRow.style.gap = '8px';
+          actionRow.style.marginTop = '8px';
+
+          const viewBtn = document.createElement('button');
+          viewBtn.className = 'op-view-receipt';
+          viewBtn.dataset.id = t._id;
+          viewBtn.style.padding = '6px 12px';
+          viewBtn.style.border = '1px solid #d2d2d7';
+          viewBtn.style.borderRadius = '8px';
+          viewBtn.style.background = '#fff';
+          viewBtn.style.fontSize = '12px';
+          viewBtn.style.cursor = 'pointer';
+          viewBtn.textContent = '📄 View Receipt';
+          actionRow.appendChild(viewBtn);
+
+          if (t.totalAmount >= 0) {
+            const refundBtn = document.createElement('button');
+            refundBtn.className = 'op-refund';
+            refundBtn.dataset.receipt = t.receiptNumber;
+            refundBtn.style.padding = '6px 12px';
+            refundBtn.style.border = '1px solid #ff3b30';
+            refundBtn.style.borderRadius = '8px';
+            refundBtn.style.background = '#fff';
+            refundBtn.style.color = '#ff3b30';
+            refundBtn.style.fontSize = '12px';
+            refundBtn.style.cursor = 'pointer';
+            refundBtn.textContent = '↩️ Refund';
+            actionRow.appendChild(refundBtn);
+          }
+
+          card.appendChild(actionRow);
+          fragment.appendChild(card);
+        });
+
+        resultEl.appendChild(fragment);
+
+        resultEl.onclick = function(e) {
+          var viewBtn = e.target.closest('.op-view-receipt');
+          if (viewBtn) { viewOrderDetail(viewBtn.dataset.id); return; }
+          var refundBtn = e.target.closest('.op-refund');
+          if (refundBtn) { refundFromOrder(refundBtn.dataset.receipt); return; }
+        };
+      } catch(e) {
+        resultEl.innerHTML = '<div style="color:#ff3b30;padding:20px;">Error: ' + e.message + '</div>';
+      }
+    };
+
+    window.refundFromOrder = function(receiptNumber) {
+      closeOrdersPanel();
+      openRefundModal();
+      document.getElementById('refundReceipt').value = receiptNumber;
+    };
+
+    window.viewOrderDetail = async function(id) {
+      try {
+        var res = await apiFetch('/transactions/' + id);
+        if (!res) return;
+        var txn = await res.json();
+
+        // Build receipt data and show preview
+        var receiptData = {
+          companyName: 'Tech Cross Repair Centre',
+          companyAddress: 'Unit 4, Navan Shopping Centre, Navan, Co. Meath, C15 F658',
+          companyPhone: '046 905 9854',
+          receiptNumber: txn.receiptNumber,
+          date: new Date(txn.createdAt).toLocaleString('en-IE'),
+          items: (txn.items || []).map(function(item) {
+            return {
+              name: item.name, quantity: item.quantity, unitPrice: item.unitPrice,
+              discountedPrice: item.discountedPrice, subtotal: item.subtotal,
+              isSecondHand: item.isSecondHand, serialNumber: item.serialNumber
+            };
+          }),
+          totalAmount: txn.totalAmount,
+          paymentMethod: txn.paymentMethod,
+          cardAmount: txn.cardAmount,
+          cashReceived: txn.cashReceived,
+          changeGiven: txn.changeGiven,
+          standardVatTotal: txn.standardVatTotal || 0,
+          marginVatTotal: txn.marginVatTotal || 0,
+          termsText: 'Warranty & Store Policy | Repairs - 3 Months: Covers replaced parts for hardware defects only. Void if physical/liquid damage or third-party repair. | Accessories - 14 Days: Exchange/return only if unopened, sealed, and resalable.',
+          hasSecondHandItems: (txn.items || []).some(function(i) { return i.isSecondHand; }),
+          secondHandTermsText: 'Pre-owned Devices - 7 Days: No physical/liquid damage. Must be fully erased (no ID/passcode). Locked devices are non-refundable.'
+        };
+
+        printReceipt(receiptData);
+      } catch(e) {
+        showToast('Failed to load order: ' + e.message, 'error');
+      }
+    };
+
+    // ─── Refund Modal ───────────────────────────────────────────
+    var _refundMethod = 'cash';
+    var _refundLoadedItems = null;
+
+    function openRefundModal() {
+      document.getElementById('refundOverlay').classList.add('show');
+      document.getElementById('refundReceipt').value = '';
+      document.getElementById('refundItemName').value = '';
+      document.getElementById('refundItemAmount').value = '';
+      document.getElementById('refundReason').value = '';
+      document.getElementById('refundError').style.display = 'none';
+      document.getElementById('refundItemsList').style.display = 'none';
+      document.getElementById('refundItemsList').innerHTML = '';
+      _refundLoadedItems = null;
+      selectRefundMethod('cash');
+    }
+    window.openRefundModal = openRefundModal;
+
+    function closeRefundModal() {
+      document.getElementById('refundOverlay').classList.remove('show');
+      _refundLoadedItems = null;
+    }
+    window.closeRefundModal = closeRefundModal;
+
+    window.selectRefundMethod = function(method) {
+      _refundMethod = method;
+      document.getElementById('refundCashBtn').classList.toggle('active', method === 'cash');
+      document.getElementById('refundCardBtn').classList.toggle('active', method === 'card');
+    };
+
+    // Load receipt items for partial refund selection
+    window.loadRefundReceipt = async function() {
+      var receipt = document.getElementById('refundReceipt').value.trim();
+      var errEl = document.getElementById('refundError');
+      var listEl = document.getElementById('refundItemsList');
+      errEl.style.display = 'none';
+      if (!receipt) { errEl.textContent = lang === 'zh' ? '请先输入小票号' : 'Enter a receipt number first'; errEl.style.display = 'block'; return; }
+      try {
+        var res = await apiFetch('/transactions?receiptNumber=' + encodeURIComponent(receipt));
+        if (!res) return;
+        var data = await res.json();
+        var txns = data.data || data;
+        var txn = Array.isArray(txns) ? txns.find(function(t) { return t.receiptNumber === receipt; }) : null;
+        if (!txn) { errEl.textContent = lang === 'zh' ? '未找到该小票' : 'Receipt not found'; errEl.style.display = 'block'; listEl.style.display = 'none'; return; }
+        _refundLoadedItems = txn.items || [];
+        if (!_refundLoadedItems.length) { errEl.textContent = lang === 'zh' ? '该小票无商品' : 'No items in this receipt'; errEl.style.display = 'block'; listEl.style.display = 'none'; return; }
+        var html = '<div style="font-size:12px;font-weight:600;margin-bottom:6px;">' + (lang === 'zh' ? '选择要退款的商品：' : 'Select items to refund:') + '</div>';
+        _refundLoadedItems.forEach(function(item, idx) {
+          var price = (item.discountedPrice != null ? item.discountedPrice : item.unitPrice) || 0;
+          var total = price * (item.quantity || 1);
+          html += '<label style="display:flex;align-items:center;gap:8px;padding:6px 4px;border-bottom:1px solid #f0f0f0;font-size:13px;cursor:pointer;">';
+          html += '<input type="checkbox" name="refundItem" value="' + idx + '" checked style="width:18px;height:18px;">';
+          html += '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escHtml(item.name) + (item.quantity > 1 ? ' x' + item.quantity : '') + '</span>';
+          html += '<strong style="flex-shrink:0;">€' + total.toFixed(2) + '</strong>';
+          html += '</label>';
+        });
+        listEl.innerHTML = html;
+        listEl.style.display = 'block';
+      } catch(e) {
+        errEl.textContent = 'Error: ' + e.message;
+        errEl.style.display = 'block';
+      }
+    };
+
+    window.submitRefund = async function() {
+      var errEl = document.getElementById('refundError');
+      errEl.style.display = 'none';
+      var receipt = document.getElementById('refundReceipt').value.trim();
+      var itemName = document.getElementById('refundItemName').value.trim();
+      var itemAmount = parseFloat(document.getElementById('refundItemAmount').value) || 0;
+      var reason = document.getElementById('refundReason').value.trim();
+
+      if (!receipt && (!itemName || itemAmount <= 0)) {
+        errEl.textContent = lang === 'zh' ? '请输入小票号或手动填写退款商品' : 'Enter receipt # or item details';
+        errEl.style.display = 'block';
+        return;
+      }
+
+      var body = { refundMethod: _refundMethod, reason: reason || undefined };
+      if (receipt) {
+        body.receiptNumber = receipt;
+        // If items were loaded, check which ones are selected for partial refund
+        if (_refundLoadedItems && _refundLoadedItems.length > 0) {
+          var checkboxes = document.querySelectorAll('#refundItemsList input[name="refundItem"]');
+          var selectedItems = [];
+          checkboxes.forEach(function(cb) {
+            if (cb.checked) {
+              var item = _refundLoadedItems[parseInt(cb.value)];
+              if (item) selectedItems.push({ product: item.product, name: item.name, quantity: item.quantity });
+            }
+          });
+          if (selectedItems.length === 0) {
+            errEl.textContent = lang === 'zh' ? '请至少选择一个商品' : 'Select at least one item';
+            errEl.style.display = 'block';
+            return;
+          }
+          // Partial refund: only send items if not all selected
+          if (selectedItems.length < _refundLoadedItems.length) {
+            body.items = selectedItems;
+          }
+        }
+      } else {
+        body.items = [{ name: itemName, amount: itemAmount, quantity: 1 }];
+      }
+
+      // Prevent double-click
+      var submitBtn = document.getElementById('btnRefundSubmit');
+      if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Processing...'; }
+
+      try {
+        var res = await apiFetch('/transactions/refund', { method: 'POST', body: JSON.stringify(body) });
+        if (!res) { if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = lang === 'zh' ? '确认退款' : 'Refund'; } return; }
+        var data = await res.json();
+        if (!res.ok) { errEl.textContent = data.error || 'Refund failed'; errEl.style.display = 'block'; if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = lang === 'zh' ? '确认退款' : 'Refund'; } return; }
+        showToast((lang === 'zh' ? '退款成功 #' : 'Refund OK #') + data.refund.receiptNumber, 'success');
+        closeRefundModal();
+        // Auto-print refund receipt
+        printRefundReceiptFromPOS(data.refund);
+      } catch(e) {
+        errEl.textContent = 'Error: ' + e.message;
+        errEl.style.display = 'block';
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = lang === 'zh' ? '确认退款' : 'Refund'; }
+      }
+    };
+
+    // ─── Print Refund Receipt from POS ──────────────────────────
+    function printRefundReceiptFromPOS(refund) {
+      var items = refund.items || [];
+      var totalRefund = refund.totalRefund || 0;
+      var method = refund.refundMethod || 'cash';
+      var receiptNum = refund.receiptNumber || '';
+      var originalReceipt = refund.originalReceipt || '';
+
+      var receiptData = {
+        receiptNumber: receiptNum,
+        date: new Date().toLocaleString('en-IE'),
+        items: items.map(function(i) { return { name: i.name, quantity: i.quantity, unitPrice: i.unitPrice, discountedPrice: i.unitPrice }; }),
+        totalAmount: -totalRefund,
+        paymentMethod: method,
+        isRefund: true,
+        originalReceipt: originalReceipt
+      };
+
+      // Build refund receipt HTML
+      var h = '';
+      if (_logoDataUri) h += '<div style="text-align:center;margin-bottom:8px;"><img src="' + _logoDataUri + '" style="max-width:200px;max-height:55px;margin:0 auto;"></div>';
+      h += '<div style="text-align:center;padding-bottom:8px;margin-bottom:8px;border-bottom:2px solid #000;font-size:13px;line-height:1.5;">';
+      h += '<div>Unit 4, Navan Shopping Centre, Navan, Co. Meath, C15 F658</div>';
+      h += '<div>Tel: 046 905 9854 | Mob: 089 482 5300</div>';
+      h += '<div>navantechcross@gmail.com</div></div>';
+      h += '<div style="text-align:center;font-size:16px;font-weight:900;margin-bottom:8px;">*** REFUND ***</div>';
+      h += '<div style="margin-bottom:8px;font-size:13px;">';
+      h += '<div style="display:flex;justify-content:space-between;width:100%;padding:2px 0;"><span>Refund #</span><span style="font-weight:700;">' + escHtml(receiptNum) + '</span></div>';
+      if (originalReceipt) h += '<div style="display:flex;justify-content:space-between;width:100%;padding:2px 0;"><span>Original #</span><span>' + escHtml(originalReceipt) + '</span></div>';
+      h += '<div style="display:flex;justify-content:space-between;width:100%;padding:2px 0;"><span>Date</span><span>' + new Date().toLocaleString('en-IE') + '</span></div></div>';
+      h += '<div style="border-top:2px solid #000;border-bottom:2px solid #000;padding:6px 0;margin-bottom:8px;">';
+      items.forEach(function(it) {
+        var price = it.unitPrice || 0;
+        var total = price * (it.quantity || 1);
+        h += '<div style="display:flex;justify-content:space-between;width:100%;font-size:13px;padding:2px 0;"><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:10px;">' + (it.quantity > 1 ? it.quantity + 'x ' : '') + escHtml(it.name) + '</span><span style="white-space:nowrap;flex-shrink:0;font-weight:700;">-' + '\u20AC' + total.toFixed(2) + '</span></div>';
+      });
+      h += '</div>';
+      h += '<div style="display:flex;justify-content:space-between;width:100%;font-size:18px;font-weight:900;padding:4px 0;margin-bottom:8px;"><span>REFUND TOTAL</span><span>-' + '\u20AC' + totalRefund.toFixed(2) + '</span></div>';
+      h += '<div style="margin-bottom:8px;font-size:13px;border-bottom:1px dashed #000;padding-bottom:8px;">';
+      h += '<div>' + (method === 'card' ? 'Refund to Card' : 'Cash Refund') + '</div></div>';
+      h += '<div style="text-align:center;font-size:12px;margin-bottom:8px;">This is a refund receipt.</div>';
+      h += '<div style="text-align:center;font-size:14px;font-weight:900;padding:8px 0;border-top:2px solid #000;">Thank you!</div>';
+
+      // Try Print Agent, fallback to browser print
+      fetch('http://localhost:9100/print', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(receiptData),
+        signal: AbortSignal.timeout(5000)
+      }).then(function(r) { if (r.ok) return; throw new Error(); }).catch(function() {
+        silentBrowserPrint(h);
+      });
+    }
+
+    // Discount modal (F2)
+    function openDiscountModal() {
+      var overlay = document.getElementById('discountModalOverlay');
+      overlay.classList.add('show');
+      // Pre-fill item discount
+      if (selectedCartIndex >= 0 && cart[selectedCartIndex]) {
+        var d = cart[selectedCartIndex].discount;
+        if (d && d.type) { document.getElementById('dmItemType').value = d.type; document.getElementById('dmItemValue').value = d.value; }
+        else { document.getElementById('dmItemType').value = ''; document.getElementById('dmItemValue').value = ''; }
+      }
+      // Pre-fill order discount
+      if (orderDiscount && orderDiscount.type) { document.getElementById('dmOrderType').value = orderDiscount.type; document.getElementById('dmOrderValue').value = orderDiscount.value; }
+      else { document.getElementById('dmOrderType').value = ''; document.getElementById('dmOrderValue').value = ''; }
+    }
+    document.getElementById('dmCancel').addEventListener('click', function() { document.getElementById('discountModalOverlay').classList.remove('show'); });
+    document.getElementById('dmApply').addEventListener('click', function() {
+      // Item discount
+      if (selectedCartIndex >= 0 && cart[selectedCartIndex]) {
+        var iType = document.getElementById('dmItemType').value;
+        var iVal = parseFloat(document.getElementById('dmItemValue').value) || 0;
+        if (iType && iVal > 0) cart[selectedCartIndex].discount = { type: iType, value: iVal };
+        else cart[selectedCartIndex].discount = null;
+      }
+      // Order discount
+      var oType = document.getElementById('dmOrderType').value;
+      var oVal = parseFloat(document.getElementById('dmOrderValue').value) || 0;
+      if (oType && oVal > 0) orderDiscount = { type: oType, value: oVal };
+      else orderDiscount = null;
+
+      document.getElementById('discountModalOverlay').classList.remove('show');
+      renderCart();
+    });
+
+
+      // Email modal events
+      document.getElementById('btnEmailReceiptCancel').addEventListener('click', function() {
+        document.getElementById('emailReceiptOverlay').classList.remove('show');
+      });
+      document.getElementById('btnEmailReceiptSend').addEventListener('click', window.sendEmailReceipt);
+      document.getElementById('emailReceiptInput').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') window.sendEmailReceipt();
+      });
+
+      // WhatsApp modal events
+      document.getElementById('btnWhatsAppCancel').addEventListener('click', function() {
+        document.getElementById('whatsAppOverlay').classList.remove('show');
+      });
+      document.getElementById('btnWhatsAppOpen').addEventListener('click', window.sendWhatsApp);
+      document.getElementById('whatsAppInput').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') window.sendWhatsApp();
+      });
+
+      // Invoice result modal events
+      document.getElementById('btnInvoiceDownload').addEventListener('click', async function() {
+        var inv = window._lastInvoice;
+        if (!inv || !inv._id) { showToast('No invoice data', 'error'); return; }
+        try {
+          // Create share token so customer can open remotely (no auth required)
+          var r = await apiFetch('/delivery/share/invoice/' + inv._id, { method: 'POST' });
+          if (!r) return;
+          if (!r.ok) { showToast('生成分享链接失败', 'error'); return; }
+          var data = await r.json();
+          if (data.pdfUrl) {
+            window.open(data.pdfUrl, '_blank');
+          } else {
+            showToast('获取下载链接失败', 'error');
+          }
+        } catch(e) { showToast('下载失败', 'error'); }
+      });
+      document.getElementById('btnInvoiceWhatsApp').addEventListener('click', function() {
+        var inv = window._lastInvoice;
+        if (!inv || !inv._id) { showToast('No invoice data', 'error'); return; }
+        var phone = prompt('Customer phone number for WhatsApp:', '');
+        if (!phone || !phone.trim()) return;
+        phone = phone.trim();
+        var btn = document.getElementById('btnInvoiceWhatsApp');
+        btn.disabled = true;
+        btn.textContent = 'Opening...';
+        apiFetch('/delivery/invoice/whatsapp/' + inv._id + '?phone=' + encodeURIComponent(phone))
+          .then(function(r) { return r.json(); })
+          .then(function(data) {
+            if (data.link) { window.open(data.link, '_blank'); showToast('✅ WhatsApp opened', 'success'); }
+            else { showToast(data.error || 'Failed', 'error'); }
+          })
+          .catch(function(err) { showToast('Error: ' + err.message, 'error'); })
+          .finally(function() { btn.disabled = false; btn.textContent = '📱 Share WhatsApp'; });
+      });
+      document.getElementById('btnInvoiceEmail').addEventListener('click', function() {
+        var inv = window._lastInvoice;
+        if (!inv || !inv._id) { showToast('No invoice data', 'error'); return; }
+        var email = prompt('Customer email address:', '');
+        if (!email || !email.trim() || !email.includes('@')) { showToast('请输入有效的邮箱地址', 'error'); return; }
+        email = email.trim();
+        var btn = document.getElementById('btnInvoiceEmail');
+        btn.disabled = true;
+        btn.textContent = 'Sending...';
+        apiFetch('/delivery/invoice/email', {
+          method: 'POST',
+          body: JSON.stringify({ invoiceId: inv._id, email: email })
+        })
+          .then(function(r) { return r.json(); })
+          .then(function(data) {
+            if (data.error) { showToast(data.error, 'error'); return; }
+            showToast('✅ Invoice sent to ' + email, 'success');
+          })
+          .catch(function(err) { showToast('发送失败: ' + err.message, 'error'); })
+          .finally(function() { btn.disabled = false; btn.textContent = '📧 Email Invoice'; });
+      });
+      document.getElementById('btnInvoiceClose').addEventListener('click', function() {
+        document.getElementById('invoiceResultOverlay').classList.remove('show');
+      });
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+      // Skip if in input/select
+      var tag = (e.target.tagName || '').toLowerCase();
+      var isInput = tag === 'input' || tag === 'select' || tag === 'textarea';
+
+      if (e.key === 'F1') { e.preventDefault(); openDiscountModal(); }
+      else if (e.key === 'F2') { e.preventDefault(); startNewTransaction(); }
+      else if (e.key === 'F3') {
+        e.preventDefault();
+        doPrintReceipt();
+      }
+      else if (e.key === 'F4') { e.preventDefault(); doCheckout(); }
+      else if (e.key === 'F5') { e.preventDefault(); searchInput.focus(); searchInput.select(); }
+      else if (e.key === 'F6') { e.preventDefault(); window.open('/inv-transactions.html', '_blank'); }
+      else if (e.key === 'Enter' && !isInput) { e.preventDefault(); doCheckout(); }
+      else if (e.key === 'Escape') {
+        // Close modals first
+        var dm = document.getElementById('discountModalOverlay');
+        var cm = document.getElementById('confirmOverlay');
+        if (dm.classList.contains('show')) { dm.classList.remove('show'); return; }
+        if (cm.classList.contains('show')) { cm.classList.remove('show'); return; }
+        if (cart.length > 0) { e.preventDefault(); showConfirm(t('confirmClearTitle'), t('confirmClearMsg'), function() { cart = []; selectedCartIndex = -1; orderDiscount = null; renderCart(); }); }
+      }
+      else if ((e.key === 'Delete' || e.key === 'Backspace') && !isInput) {
+        e.preventDefault();
+        if (selectedCartIndex >= 0 && cart[selectedCartIndex]) { cart.splice(selectedCartIndex, 1); if (selectedCartIndex >= cart.length) selectedCartIndex = cart.length - 1; renderCart(); }
+      }
+      else if (e.key === 'ArrowUp' && !isInput) { e.preventDefault(); if (cart.length > 0) { selectedCartIndex = Math.max(0, selectedCartIndex - 1); renderCart(); } }
+      else if (e.key === 'ArrowDown' && !isInput) { e.preventDefault(); if (cart.length > 0) { selectedCartIndex = Math.min(cart.length - 1, selectedCartIndex + 1); renderCart(); } }
+    });
+
+    // Language toggle
+    document.getElementById('langToggle').addEventListener('click', function() {
+      lang = lang === 'zh' ? 'en' : 'zh';
+      updateLang();
+    });
+    // Second lang toggle in sidebar
+    var langToggle2 = document.getElementById('langToggle2');
+    if (langToggle2) {
+      langToggle2.addEventListener('click', function() {
+        lang = lang === 'zh' ? 'en' : 'zh';
+        updateLang();
+      });
+    }
+
+    // Sidebar action helpers
+    function reprintLast() {
+      if (lastTransaction) printReceipt(lastTransaction.receipt || lastTransaction.transaction || lastTransaction);
+      else showToast(lang === 'zh' ? '没有上一张小票' : 'No last receipt', 'info');
+    }
+    window.reprintLast = reprintLast;
+
+    function triggerPrint() {
+      if (lastTransaction) printReceipt(lastTransaction.receipt || lastTransaction.transaction || lastTransaction);
+      else showToast(lang === 'zh' ? '没有可打印的小票' : 'No receipt to print', 'info');
+    }
+    window.triggerPrint = triggerPrint;
+
+    function clearCartAction() {
+      if (cart.length === 0) return;
+      showConfirm(t('confirmClearTitle'), t('confirmClearMsg'), function() {
+        cart = []; selectedCartIndex = -1; orderDiscount = null;
+        renderCart();
+      });
+    }
+    window.clearCartAction = clearCartAction;
+
+    window._removeSelectedItem = function() {
+      if (selectedCartIndex >= 0 && selectedCartIndex < cart.length) {
+        cart.splice(selectedCartIndex, 1);
+        if (selectedCartIndex >= cart.length) selectedCartIndex = cart.length - 1;
+        renderCart();
+      }
+    };
+
+    window._navCart = function(dir) {
+      if (cart.length === 0) return;
+      selectedCartIndex += dir;
+      if (selectedCartIndex < 0) selectedCartIndex = 0;
+      if (selectedCartIndex >= cart.length) selectedCartIndex = cart.length - 1;
+      renderCart();
+    };
+
+    // Barcode scanner: rapid input detection
+    var barcodeBuffer = '';
+    var barcodeTimer = null;
+    searchInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' && searchInput.value.trim().length > 3) {
+        clearTimeout(barcodeTimer);
+        var q = searchInput.value.trim();
+        // Treat as barcode scan - search and auto-add first result
+        doSearch(q).then(function() {
+          var firstCard = productResults.querySelector('.product-card');
+          if (firstCard) firstCard.click();
+          searchInput.value = '';
+          searchInput.focus();
+        });
+      }
+    });
+
+    // ─── Inline Panel System ────────────────────────────────────
+    var _currentPanel = null;
+    var _panelInputs = 'padding:8px 10px;border:1px solid #d2d2d7;border-radius:8px;font-size:13px;width:100%;min-width:0;box-sizing:border-box;';
+    var _panelBtn = 'padding:8px 16px;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;';
+
+    window.togglePanel = function(type) {
+      var panel = document.getElementById('inlinePanel');
+      if (_currentPanel === type) { panel.style.maxHeight = '0'; panel.classList.remove('open'); _currentPanel = null; return; }
+      _currentPanel = type;
+      var html = '';
+      if (type === 'sale') html = buildSalePanel();
+      else if (type === 'repair') html = buildRepairPanel();
+      else if (type === 'used') html = buildUsedPanel();
+      else if (type === 'buy-used') html = buildBuyUsedPanel();
+      panel.innerHTML = html;
+      panel.classList.remove('open');
+      panel.style.maxHeight = '900px';
+      setTimeout(function() { panel.classList.add('open'); var first = panel.querySelector('input'); if (first) first.focus(); }, 350);
+    };
+
+    function closePanel() { var p = document.getElementById('inlinePanel'); p.style.maxHeight = '0'; p.classList.remove('open'); _currentPanel = null; }
+    window.closePanel = closePanel;
+
+    function buildSalePanel() {
+      return '<div style="background:#fafff0;border:1px solid #D4E157;border-radius:10px;padding:12px;margin-top:8px;">' +
+        '<div style="font-size:13px;font-weight:600;margin-bottom:8px;">+ Quick Add Product</div>' +
+        '<div style="display:flex;gap:6px;margin-bottom:6px;"><input id="ipName" placeholder="Product name *" style="flex:2;' + _panelInputs + '"><input id="ipSku" placeholder="SKU/Barcode *" style="flex:1;' + _panelInputs + '"></div>' +
+        '<div style="display:flex;gap:6px;margin-bottom:6px;"><input id="ipPrice" type="number" step="0.01" placeholder="Price € *" style="flex:1;' + _panelInputs + '"><input id="ipCost" type="number" step="0.01" placeholder="Cost € (opt)" style="flex:1;' + _panelInputs + '"></div>' +
+        '<div style="display:flex;gap:6px;margin-bottom:6px;">' +
+        '<select id="ipCat" style="flex:1;' + _panelInputs + '"><option value="销售">Sales 销售</option><option value="Lyca Credit">Lyca Credit</option></select>' +
+        '<div style="display:flex;gap:4px;align-items:center;"><input id="ipVat" type="number" value="23" step="0.1" style="width:50px;' + _panelInputs + '"><span style="font-size:11px;">%</span>' +
+        '<button class="ip-vat-preset" data-vat="13.5" style="padding:4px 6px;border:1px solid #d2d2d7;border-radius:4px;background:#fff;font-size:10px;cursor:pointer;">13.5</button></div></div>' +
+        '<div style="display:flex;gap:6px;"><button class="ip-submit" data-cat="销售" style="flex:1;' + _panelBtn + 'background:#D4E157;color:#000;">Add to Cart</button><button class="ip-cancel" style="' + _panelBtn + 'background:#f5f5f7;border:1px solid #d2d2d7;">Cancel</button></div>' +
+        '<div id="ipError" style="display:none;color:#ff3b30;font-size:12px;margin-top:6px;"></div></div>';
+    }
+
+    function buildRepairPanel() {
+      return '<div style="background:#f0f7ff;border:1px solid #0071e3;border-radius:10px;padding:12px;margin-top:8px;">' +
+        '<div style="font-size:13px;font-weight:600;margin-bottom:8px;">+ 🔧 <span class="ip-repair-title">Quick Repair</span></div>' +
+        '<div style="display:flex;gap:6px;margin-bottom:6px;"><input id="ipModel" placeholder="Model 型号 * e.g. iPhone 15" style="flex:1;' + _panelInputs + '"><input id="ipRepairItem" placeholder="Repair 维修项目 * e.g. Screen Repair" style="flex:1;' + _panelInputs + '"></div>' +
+        '<input type="hidden" id="ipName" value="">' +
+        '<div style="display:flex;gap:6px;margin-bottom:6px;"><input id="ipSku" placeholder="SKU (any format)" style="flex:1;' + _panelInputs + '"><input id="ipPrice" type="number" step="0.01" placeholder="Price € *" style="flex:1;' + _panelInputs + '"></div>' +
+        '<div style="margin-bottom:6px;"><input id="ipSerial" placeholder="IMEI / SN *" style="' + _panelInputs + '"></div>' +
+        // 付款 / 送修
+        '<div style="margin-bottom:6px;"><select id="ipOrderType" style="width:100%;' + _panelInputs + '">' +
+          '<option value="PAID">Paid - 已付款</option>' +
+          '<option value="REPAIR_ONLY">Customer Drop-off - 送修未付款</option>' +
+        '</select></div>' +
+        // 故障类型（多选）
+        '<div style="margin-bottom:6px;">' +
+          '<label style="font-size:12px;font-weight:600;">Fault Type / 故障类型（可多选）</label>' +
+          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:4px;">' +
+            '<label style="display:flex;align-items:center;gap:4px;font-size:13px;"><input type="checkbox" name="ipFault" value="Broken Screen"> Broken Screen 坏屏</label>' +
+            '<label style="display:flex;align-items:center;gap:4px;font-size:13px;"><input type="checkbox" name="ipFault" value="No Charging"> No Charging 不充电</label>' +
+            '<label style="display:flex;align-items:center;gap:4px;font-size:13px;"><input type="checkbox" name="ipFault" value="Camera Fault"> Camera Fault 相机损坏</label>' +
+            '<label style="display:flex;align-items:center;gap:4px;font-size:13px;"><input type="checkbox" name="ipFault" value="No Power"> No Power 不开机</label>' +
+            '<label style="display:flex;align-items:center;gap:4px;font-size:13px;"><input type="checkbox" name="ipFault" value="Water Damage"> Water Damage 进水</label>' +
+            '<label style="display:flex;align-items:center;gap:4px;font-size:13px;"><input type="checkbox" name="ipFault" value="Battery Issue"> Battery Issue 电池问题</label>' +
+            '<label style="display:flex;align-items:center;gap:4px;font-size:13px;"><input type="checkbox" name="ipFault" value="Speaker/Mic"> Speaker/Mic 听筒/麦克风</label>' +
+            '<label style="display:flex;align-items:center;gap:4px;font-size:13px;"><input type="checkbox" name="ipFault" value="Software Issue"> Software Issue 软件问题</label>' +
+            '<label style="display:flex;align-items:center;gap:4px;font-size:13px;"><input type="checkbox" name="ipFault" value="Other"> Other 其他</label>' +
+          '</div>' +
+        '</div>' +
+        // 自定义故障备注
+        '<div style="margin-bottom:6px;"><input id="ipFaultCustom" placeholder="Other Fault Details / 其他故障详情（选填）" style="' + _panelInputs + '"></div>' +
+        // 外观状态
+        '<div style="margin-bottom:6px;"><select id="ipCondition" style="width:100%;' + _panelInputs + '">' +
+          '<option value="">Physical Condition 外观状态</option>' +
+          '<option value="Good">Good 完好</option>' +
+          '<option value="Back Broken">Back Broken 后盖碎</option>' +
+          '<option value="Frame Bent">Frame Bent 中框变形</option>' +
+          '<option value="Scratches">Scratches 明显划痕</option>' +
+          '<option value="Multiple Damage">Multiple Damage 多处损坏</option>' +
+        '</select></div>' +
+        // 检测状态
+        '<div style="margin-bottom:6px;"><select id="ipTestStatus" style="width:100%;' + _panelInputs + '">' +
+          '<option value="">Test Status 检测状态</option>' +
+          '<option value="Testable">Testable 可测试</option>' +
+          '<option value="Cannot Test">Cannot Test 不能测试</option>' +
+          '<option value="Need Diagnose">Need Diagnose 需拆机检测</option>' +
+        '</select></div>' +
+        // 备注
+        '<div style="margin-bottom:6px;"><input id="ipNotes" placeholder="Notes / Customer description 备注" style="' + _panelInputs + '"></div>' +
+        '<input type="hidden" id="ipVat" value="13.5"><input type="hidden" id="ipCat" value="维修"><input type="hidden" id="ipCost" value="0">' +
+        '<div style="display:flex;gap:6px;"><button class="ip-submit" data-cat="维修" style="flex:1;' + _panelBtn + 'background:#0071e3;color:#fff;">Add Repair</button><button class="ip-cancel" style="' + _panelBtn + 'background:#f5f5f7;border:1px solid #d2d2d7;">Cancel</button></div>' +
+        '<div id="ipError" style="display:none;color:#ff3b30;font-size:12px;margin-top:6px;"></div></div>';
+    }
+
+    function buildUsedPanel() {
+      return '<div style="background:#fff8f0;border:1px solid #ff9500;border-radius:10px;padding:12px;margin-top:8px;">' +
+        '<div style="font-size:13px;font-weight:600;margin-bottom:8px;">+ 📱 Quick Used Device (Sell)</div>' +
+        '<div style="margin-bottom:6px;"><input id="ipName" placeholder="e.g. iPhone 13 128GB, Laptop, Tablet *" style="' + _panelInputs + '"></div>' +
+        '<div style="display:flex;gap:6px;margin-bottom:6px;"><input id="ipSku" placeholder="SKU/Barcode *" style="flex:1;' + _panelInputs + '"><input id="ipSerial" placeholder="Serial / SN / IMEI (any)" style="flex:1;' + _panelInputs + '"></div>' +
+        '<div style="display:flex;gap:6px;margin-bottom:6px;"><input id="ipPrice" type="number" step="0.01" placeholder="Sell Price € *" style="flex:1;' + _panelInputs + '"><input id="ipCost" type="number" step="0.01" placeholder="Cost €" style="flex:1;' + _panelInputs + '"></div>' +
+        '<div style="margin-bottom:6px;"><input id="ipNotes" placeholder="Notes (condition, specs, color, storage etc.)" style="' + _panelInputs + '"></div>' +
+        '<div style="display:flex;gap:6px;margin-bottom:6px;align-items:center;">' +
+        '<select id="ipSource" style="flex:1;' + _panelInputs + '"><option value="customer">From Customer</option><option value="dealer">From Dealer</option><option value="other">Other</option></select>' +
+        '<label style="font-size:12px;display:flex;align-items:center;gap:4px;"><input type="checkbox" id="ipMargin" checked> Margin VAT</label></div>' +
+        '<input type="hidden" id="ipVat" value="23"><input type="hidden" id="ipCat" value="二手">' +
+        '<div style="display:flex;gap:6px;"><button class="ip-submit" data-cat="二手" style="flex:1;' + _panelBtn + 'background:#ff9500;color:#fff;">Add Used Device</button><button class="ip-cancel" style="' + _panelBtn + 'background:#f5f5f7;border:1px solid #d2d2d7;">Cancel</button></div>' +
+        '<div id="ipError" style="display:none;color:#ff3b30;font-size:12px;margin-top:6px;"></div></div>';
+    }
+
+    function buildBuyUsedPanel() {
+      return '<div style="background:#f0fff4;border:1px solid #34c759;border-radius:10px;padding:12px;margin-top:8px;">' +
+        '<div style="font-size:13px;font-weight:600;margin-bottom:8px;">+ 🛒 Buy Used (Stock In)</div>' +
+        '<div style="margin-bottom:6px;"><input id="buyName" placeholder="Item Name (e.g. MacBook Air M2, iPhone 14 Pro) *" style="' + _panelInputs + '"></div>' +
+        '<div style="display:flex;gap:6px;margin-bottom:6px;"><input id="buySku" placeholder="SKU/Barcode" style="flex:1;' + _panelInputs + '"><input id="buySerial" placeholder="Serial / SN / IMEI" style="flex:1;' + _panelInputs + '"></div>' +
+        '<div style="display:flex;gap:6px;margin-bottom:6px;"><input id="buyCost" type="number" step="0.01" placeholder="Cost € *" style="flex:1;' + _panelInputs + '"><input id="buySellPrice" type="number" step="0.01" placeholder="Sell Price € (opt)" style="flex:1;' + _panelInputs + '"></div>' +
+        '<div style="margin-bottom:6px;"><input id="buyNotes" placeholder="Notes (condition, specs, color, storage, from whom)" style="' + _panelInputs + '"></div>' +
+        '<div style="display:flex;gap:6px;margin-bottom:6px;align-items:center;">' +
+        '<select id="buySource" style="flex:1;' + _panelInputs + '"><option value="customer">From Customer 从客人收购</option><option value="dealer">From Dealer 从商人进货</option><option value="other">Other 其他</option></select>' +
+        '<label style="font-size:12px;display:flex;align-items:center;gap:4px;"><input type="checkbox" id="buyMargin" checked> Margin VAT</label></div>' +
+        '<div style="display:flex;gap:6px;"><button class="buy-submit" style="flex:1;' + _panelBtn + 'background:#34c759;color:#fff;">Save Buy Record & Stock In</button><button class="ip-cancel" style="' + _panelBtn + 'background:#f5f5f7;border:1px solid #d2d2d7;">Cancel</button></div>' +
+        '<div id="buyError" style="display:none;color:#ff3b30;font-size:12px;margin-top:6px;"></div></div>';
+    }
+
+    // Event delegation for inline panels
+    document.getElementById('inlinePanel').addEventListener('click', function(e) {
+      var submitBtn = e.target.closest('.ip-submit');
+      if (submitBtn) { submitInlineProduct(submitBtn.dataset.cat); return; }
+      if (e.target.closest('.ip-cancel')) { closePanel(); return; }
+      var vatBtn = e.target.closest('.ip-vat-preset');
+      if (vatBtn) { var ipVat = document.getElementById('ipVat'); if (ipVat) ipVat.value = vatBtn.dataset.vat; return; }
+      // Buy Used submit
+      if (e.target.closest('.buy-submit')) { submitBuyUsed(); return; }
+    });
+
+    // ─── Buy Used: 创建商品 + 入库 + 记录支出 ──────────────────
+    async function submitBuyUsed() {
+      var errEl = document.getElementById('buyError');
+      if (errEl) errEl.style.display = 'none';
+
+      var name = (document.getElementById('buyName') || {}).value || '';
+      name = name.trim();
+      var sku = (document.getElementById('buySku') || {}).value || '';
+      sku = sku.trim() || (name.replace(/\s+/g, '-').substring(0, 20) + '-' + Date.now().toString(36));
+      var serial = (document.getElementById('buySerial') || {}).value || '';
+      var cost = parseFloat((document.getElementById('buyCost') || {}).value);
+      var sellPrice = parseFloat((document.getElementById('buySellPrice') || {}).value) || 0;
+      var notes = (document.getElementById('buyNotes') || {}).value || '';
+      var source = (document.getElementById('buySource') || {}).value || 'customer';
+      var margin = document.getElementById('buyMargin') ? document.getElementById('buyMargin').checked : true;
+
+      if (!name) { if (errEl) { errEl.textContent = 'Item name required'; errEl.style.display = 'block'; } return; }
+      if (isNaN(cost) || cost <= 0) { if (errEl) { errEl.textContent = 'Cost price required'; errEl.style.display = 'block'; } return; }
+
+      try {
+        // Step 1: 创建商品
+        var productBody = {
+          name: name,
+          sku: sku,
+          category: '二手',
+          costPrice: cost,
+          sellingPrice: sellPrice > 0 ? sellPrice : cost,
+          vatRate: 0.23,
+          stock: 0,
+          isSecondHand: true,
+          purchasedFromCustomer: source === 'customer',
+          marginScheme: margin,
+          source: source,
+          serialNumber: serial.trim()
+        };
+
+        var r1 = await apiFetch('/products', { method: 'POST', body: JSON.stringify(productBody) });
+        if (!r1) return;
+        var product = await r1.json();
+        if (!r1.ok) { if (errEl) { errEl.textContent = product.error || 'Failed to create product'; errEl.style.display = 'block'; } return; }
+
+        var productId = product._id || product.id;
+
+        // Step 2: 入库 (stock +1)
+        var r2 = await apiFetch('/stock/entry', { method: 'POST', body: JSON.stringify({
+          productId: productId,
+          quantity: 1,
+          note: 'Buy Used - ' + name + (serial ? ' SN:' + serial : '') + (notes ? ' | ' + notes : '')
+        })});
+        if (r2 && !r2.ok) {
+          var e2 = await r2.json();
+          showToast('Stock entry warning: ' + (e2.error || ''), 'error');
+        }
+
+        // Step 3: 记录支出 (category=收购客人商品)
+        var expenseBody = {
+          category: '收购客人商品',
+          amount: cost,
+          paymentMethod: 'cash',
+          description: 'Buy Used: ' + name + (serial ? ' SN:' + serial : '') + (notes ? ' | ' + notes : '')
+        };
+        var r3 = await apiFetch('/expenses', { method: 'POST', body: JSON.stringify(expenseBody) });
+        // 支出记录失败不阻塞（可能员工没权限），但提示
+        if (r3 && !r3.ok) {
+          showToast('Expense record may need admin to add manually', 'info');
+        }
+
+        closePanel();
+        showToast('✅ Buy Used saved: ' + name + ' | Cost €' + cost.toFixed(2) + ' | Stocked in', 'success');
+
+      } catch(e) {
+        if (errEl) { errEl.textContent = e.message; errEl.style.display = 'block'; }
+      }
+    }
+
+    window.submitInlineProduct = async function(defaultCat) {
+      var errEl = document.getElementById('ipError');
+      errEl.style.display = 'none';
+      // 维修面板：从型号+维修项目拼接 name
+      var ipModel = document.getElementById('ipModel');
+      var ipRepairItem = document.getElementById('ipRepairItem');
+      if (ipModel && ipRepairItem) {
+        var m = ipModel.value.trim(), ri = ipRepairItem.value.trim();
+        var nameEl = document.getElementById('ipName');
+        if (nameEl) nameEl.value = (ri && m) ? ri + ' ' + m : (ri || m || '');
+      }
+      var name = document.getElementById('ipName').value.trim();
+      var sku = (document.getElementById('ipSku') || {}).value || (name.replace(/\s+/g, '-').substring(0, 20) + '-' + Date.now().toString(36));
+      sku = sku.trim();
+      var price = parseFloat((document.getElementById('ipPrice') || {}).value);
+      var cost = parseFloat((document.getElementById('ipCost') || {}).value) || 0;
+      var vatVal = parseFloat((document.getElementById('ipVat') || {}).value) || 23;
+      var cat = (document.getElementById('ipCat') || {}).value || defaultCat;
+      var serial = (document.getElementById('ipSerial') || {}).value || '';
+      var source = (document.getElementById('ipSource') || {}).value || '';
+      var margin = document.getElementById('ipMargin') ? document.getElementById('ipMargin').checked : false;
+
+      if (!name || isNaN(price)) { errEl.textContent = 'Name and price required'; errEl.style.display = 'block'; return; }
+
+      // 维修类别：收集额外信息
+      var repairInfo = null;
+      if (cat === '维修') {
+        var orderType = (document.getElementById('ipOrderType') || {}).value || 'PAID';
+        // 多选故障类型
+        var faultArr = [];
+        document.querySelectorAll('input[name="ipFault"]:checked').forEach(function(cb){ faultArr.push(cb.value); });
+        var faultCustom = (document.getElementById('ipFaultCustom') || {}).value || '';
+        var fault = faultArr.join(', ');
+        if (faultCustom.trim()) fault += (fault ? ' | ' : '') + faultCustom.trim();
+        var condition = (document.getElementById('ipCondition') || {}).value || '';
+        var testStatus = (document.getElementById('ipTestStatus') || {}).value || '';
+        var notes = (document.getElementById('ipNotes') || {}).value || '';
+
+        if (!fault) { errEl.textContent = 'Please select at least one fault / 请至少选择一个故障类型'; errEl.style.display = 'block'; return; }
+
+        // 存维修信息供收据打印（全英文）
+        repairInfo = {
+          orderType: orderType,
+          orderTypeLabel: orderType === 'PAID' ? 'PAID' : 'CUSTOMER DROP-OFF',
+          fault: fault,
+          condition: condition || '-',
+          testStatus: testStatus || '-',
+          notes: notes || '-'
+        };
+
+        // 送修未付款：价格设为0，名称加标记
+        if (orderType === 'REPAIR_ONLY') {
+          price = 0;
+          name = '[DROP-OFF] ' + name;
+        }
+      }
+
+      var body = {
+        name: name, sku: sku.trim(), category: cat,
+        costPrice: cost, sellingPrice: price, vatRate: vatVal / 100,
+        stock: 0, isSecondHand: cat === '二手',
+        marginScheme: cat === '二手' ? margin : (cat === 'Lyca Credit'),
+        source: source, serialNumber: serial.trim()
+      };
+
+      try {
+        var res = await apiFetch('/products', { method: 'POST', body: JSON.stringify(body) });
+        if (!res) return;
+        var data = await res.json();
+        if (!res.ok) { errEl.textContent = data.error || 'Failed'; errEl.style.display = 'block'; return; }
+
+        // 存维修信息到全局，收据生成时使用
+        if (repairInfo) {
+          if (!window._repairInfoMap) window._repairInfoMap = {};
+          window._repairInfoMap[data._id || data.id] = repairInfo;
+          window._lastRepairInfo = repairInfo;
+        }
+
+        // 二手设备：存备注/成本信息供收据使用
+        if (cat === '二手') {
+          var usedNotes = (document.getElementById('ipNotes') || {}).value || '';
+          if (usedNotes || cost > 0 || serial) {
+            window._lastUsedDeviceInfo = {
+              cost: cost,
+              serial: serial,
+              notes: usedNotes,
+              source: source
+            };
+          }
+        }
+
+        // Add to cart
+        window._addToCart(data._id || data.id);
+        closePanel();
+        showToast('Added: ' + name, 'success');
+      } catch(e) { errEl.textContent = e.message; errEl.style.display = 'block'; }
+    };
+
+    function qaOnCategoryChange() {
+      var cat = document.getElementById('qaCat').value;
+      var vatInput = document.getElementById('qaVatRate');
+      var shCheck = document.getElementById('qaSecondHand');
+      var repairSnGroup = document.getElementById('qaRepairSnGroup');
+      if (cat === '维修' || cat === '服务') {
+        vatInput.value = '13.5';
+        repairSnGroup.style.display = 'block';
+      } else {
+        vatInput.value = '23';
+        repairSnGroup.style.display = 'none';
+      }
+      if (cat === '二手') {
+        shCheck.checked = true;
+        document.getElementById('qaSecondHandFields').style.display = 'block';
+      }
+    }
+    window.qaOnCategoryChange = qaOnCategoryChange;
+
+    function closeQuickAddModal() {
+      document.getElementById('quickAddOverlay').classList.remove('show');
+    }
+    window.closeQuickAddModal = closeQuickAddModal;
+
+    async function submitQuickAdd() {
+      var errEl = document.getElementById('qaError');
+      errEl.style.display = 'none';
+      var qaVatVal = parseFloat(document.getElementById('qaVatRate').value);
+      var body = {
+        name: document.getElementById('qaName').value.trim(),
+        sku: document.getElementById('qaSku').value.trim(),
+        category: document.getElementById('qaCat').value,
+        costPrice: parseFloat(document.getElementById('qaCost').value) || 0,
+        sellingPrice: parseFloat(document.getElementById('qaPrice').value),
+        vatRate: (!isNaN(qaVatVal) && qaVatVal >= 0) ? qaVatVal / 100 : 0.23,
+        stock: parseInt(document.getElementById('qaStock').value) || 0,
+        isSecondHand: document.getElementById('qaSecondHand').checked
+      };
+      if (body.isSecondHand) body.serialNumber = document.getElementById('qaSerial').value.trim();
+      if (body.isSecondHand) {
+        body.source = document.getElementById('qaSource').value;
+        body.marginScheme = document.getElementById('qaMarginScheme').checked;
+        body.purchasedFromCustomer = body.source === 'customer';
+      }
+      // Repair/service: include SN/IMEI if provided
+      var repairSn = document.getElementById('qaRepairSn').value.trim();
+      if (repairSn && !body.serialNumber) body.serialNumber = repairSn;
+
+      if (!body.name || !body.sku || !body.category || isNaN(body.sellingPrice) || body.sellingPrice <= 0) {
+        errEl.textContent = lang === 'zh' ? '请填写商品名称、SKU、分类和售价' : 'Please fill name, SKU, category and price';
+        errEl.style.display = 'block';
+        return;
+      }
+      try {
+        var res = await apiFetch('/products', { method: 'POST', body: JSON.stringify(body) });
+        if (!res) return;
+        var data = await res.json();
+        if (!res.ok) { errEl.textContent = data.error || 'Error'; errEl.style.display = 'block'; return; }
+
+        // Ask if user wants to add to stock
+        var stockQty = body.stock;
+        if (stockQty > 0) {
+          var doStock = confirm(lang === 'zh'
+            ? '商品已创建！是否将 ' + stockQty + ' 件入库？'
+            : 'Product created! Add ' + stockQty + ' to stock?');
+          if (doStock) {
+            await apiFetch('/stock/entry', { method: 'POST', body: JSON.stringify({ productId: data._id, quantity: stockQty, note: 'POS快速新增入库' }) });
+          }
+        }
+
+        closeQuickAddModal();
+        showToast((lang === 'zh' ? '商品已创建: ' : 'Product created: ') + data.name, 'success');
+
+        // Auto-add to cart
+        window._addToCart(data._id);
+      } catch (err) {
+        errEl.textContent = err.message || 'Error';
+        errEl.style.display = 'block';
+      }
+    }
+    window.submitQuickAdd = submitQuickAdd;
+
+    // Init
+    updateLang();
+    renderCart();
+    searchInput.focus();
+    loadShortcuts(); // 加载左侧快捷按钮
+
+    // ─── 左侧快捷按钮栏加载 ─────────────────────────────────────
+    async function loadShortcuts() {
+      var bar = document.getElementById('leftShortcutBar');
+      if (!bar) return;
+      var totalKeys = 20;
+      var list = [];
+      try {
+        var res = await apiFetch('/pos-shortcuts');
+        if (res && res.ok) list = await res.json();
+      } catch (e) {
+        list = [];
+      }
+      bar.innerHTML = '';
+      for (var i = 1; i <= totalKeys; i++) {
+        var item = list.find(function(x) { return x.sort_no === i; }) || null;
+        var div = document.createElement('div');
+        if (item && item.product_id && item.status !== false) {
+          div.className = 'shortcut-item';
+          div.textContent = item.title || ('Key' + i);
+          div.dataset.productId = item.product_id;
+          div.addEventListener('click', (function(pid) {
+            return function() { window._addToCart(pid); };
+          })(item.product_id));
+        } else {
+          div.className = 'shortcut-item empty';
+        }
+        bar.appendChild(div);
+      }
+    }
+
+    // ─── 店员权限控制 ───────────────────────────────────────────
+    // 店员：隐藏成本价字段（仅出售相关）、隐藏删除按钮
+    // 注意：Buy Used 的 buyCost 是收购价，店员必须能看到和填写
+    if (!isAdmin) {
+      // 隐藏 Quick Add 模态框的成本价
+      var qaCostLabel = document.getElementById('qaLblCost');
+      var qaCostInput = document.getElementById('qaCost');
+      if (qaCostLabel) qaCostLabel.parentElement.style.display = 'none';
+      if (qaCostInput) qaCostInput.parentElement.style.display = 'none';
+
+      // 用 MutationObserver 监听动态面板，隐藏出售面板的成本价和删除按钮
+      var observer = new MutationObserver(function() {
+        // 只隐藏 Sale/Used Sell 面板的成本价（ipCost），不隐藏 Buy Used 的收购价（buyCost）
+        document.querySelectorAll('#inlinePanel [id="ipCost"]').forEach(function(el) {
+          el.style.display = 'none';
+        });
+        // 隐藏所有删除按钮
+        document.querySelectorAll('.btn-delete, [data-action="delete"]').forEach(function(el) {
+          el.style.display = 'none';
+        });
+      });
+      observer.observe(document.body, { childList: true, subtree: true });
+    }
+
+    })();
+    </script>
+</body>
+</html>

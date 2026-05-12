@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title data-i18n="saas.login.title">Store Login — TechCross SaaS</title>
+  <link rel="icon" type="image/png" href="../logo-sm.png">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'SF Pro Display', sans-serif; font-size: 16px; -webkit-font-smoothing: antialiased; }
+    body { background: #f2f2f7; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; }
+
+    .login-card { background: #fff; border-radius: 24px; padding: 40px 32px; width: 100%; max-width: 400px; box-shadow: 0 2px 20px rgba(0,0,0,.06); position: relative; }
+    .login-logo { display: flex; align-items: center; gap: 10px; justify-content: center; margin-bottom: 32px; }
+    .login-logo img { height: 36px; }
+    .login-logo span { font-size: 22px; font-weight: 700; color: #1d1d1f; }
+    h1 { text-align: center; font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+    .login-sub { text-align: center; font-size: 14px; color: #8e8e93; margin-bottom: 28px; }
+
+    .lang-btn { position: absolute; top: 16px; right: 16px; padding: 6px 12px; border: 1.5px solid #d2d2d7; background: #fff; color: #1d1d1f; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; }
+    .lang-btn:hover { background: #f2f2f7; }
+
+    .form-group { margin-bottom: 18px; }
+    .form-group label { display: block; font-size: 13px; font-weight: 600; color: #3a3a3c; margin-bottom: 6px; }
+    .form-group input { width: 100%; padding: 14px 16px; border: 1.5px solid #d2d2d7; border-radius: 12px; font-size: 15px; background: #f9f9fb; outline: none; transition: all .2s; }
+    .form-group input:focus { border-color: #0071e3; box-shadow: 0 0 0 3px rgba(0,113,227,.15); }
+
+    .btn-login { width: 100%; padding: 14px; background: #0071e3; color: #fff; border: none; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer; transition: background .2s; }
+    .btn-login:hover { background: #0077ed; }
+    .btn-login:disabled { opacity: .5; cursor: not-allowed; }
+
+    .error-msg { background: #fef2f2; color: #dc2626; padding: 12px 16px; border-radius: 10px; font-size: 14px; margin-bottom: 18px; display: none; }
+    .error-msg.show { display: block; }
+
+    .register-link { text-align: center; margin-top: 20px; font-size: 14px; color: #8e8e93; }
+    .register-link a { color: #0071e3; text-decoration: none; font-weight: 500; }
+    .register-link a:hover { text-decoration: underline; }
+
+    .back-link { text-align: center; margin-top: 16px; font-size: 13px; }
+    .back-link a { color: #8e8e93; text-decoration: none; }
+    .back-link a:hover { color: #555; }
+
+    @media (max-width: 480px) {
+      .login-card { padding: 28px 20px; border-radius: 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="login-card">
+  <button class="lang-btn" id="langToggle" onclick="toggleLang()">中</button>
+  <a href="/saas" class="login-logo" style="text-decoration:none;">
+    <img src="../logo-sm.png" alt="TechCross">
+    <span>TechCross SaaS</span>
+  </a>
+  <h1 data-i18n="saas.login.title">Store Owner Login</h1>
+  <p class="login-sub" data-i18n="saas.login.subtitle">Sign in to manage your store</p>
+
+  <div class="error-msg" id="errorMsg"></div>
+
+  <form id="loginForm">
+    <div class="form-group">
+      <label data-i18n="saas.login.username">Username</label>
+      <input type="text" id="username" data-i18n-placeholder="saas.login.usernamePlaceholder" placeholder="Enter your username" autocomplete="username" required>
+    </div>
+    <div class="form-group">
+      <label data-i18n="saas.login.password">Password</label>
+      <input type="password" id="password" data-i18n-placeholder="saas.login.passwordPlaceholder" placeholder="Enter your password" autocomplete="current-password" required>
+    </div>
+    <button type="submit" class="btn-login" id="loginBtn" data-i18n="saas.login.btn">Sign In</button>
+  </form>
+
+  <div class="register-link">
+    <span data-i18n="saas.login.noAccount">Don't have a store?</span> <a href="/saas/register" data-i18n="saas.login.createOne">Create one</a>
+  </div>
+  <div class="back-link">
+    <a href="/saas" data-i18n="saas.login.backHome">&larr; Back to homepage</a>
+  </div>
+</div>
+
+<script src="../lang.js"></script>
+<script>
+document.getElementById('loginForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  var btn = document.getElementById('loginBtn');
+  var err = document.getElementById('errorMsg');
+  btn.disabled = true; btn.textContent = __('saas.login.signingIn');
+  err.classList.remove('show');
+  try {
+    var res = await fetch('/api/saas/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: document.getElementById('username').value, password: document.getElementById('password').value })
+    });
+    var data = await res.json();
+    if (!res.ok) { err.textContent = data.error || __('saas.login.error.invalid'); err.classList.add('show'); btn.disabled = false; btn.textContent = __('saas.login.btn'); return; }
+    localStorage.setItem('saas_token', data.token);
+    localStorage.setItem('saas_user', JSON.stringify(data.user));
+    window.location.href = data.user && data.user.role === 'super_admin' ? '/saas/admin.html' : '/saas/dashboard.html';
+  } catch(e) { err.textContent = __('saas.login.error.network'); err.classList.add('show'); btn.disabled = false; btn.textContent = __('saas.login.btn'); }
+});
+
+applyLang();
+</script>
+
+</body>
+</html>

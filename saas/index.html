@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TechCross SaaS</title>
+  <link rel="icon" type="image/png" href="../logo-sm.png">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'SF Pro Display', sans-serif; font-size: 16px; -webkit-font-smoothing: antialiased; }
+    body { background: #f2f2f7; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; }
+
+    .card { background: #fff; border-radius: 24px; padding: 48px 40px; width: 100%; max-width: 460px; box-shadow: 0 2px 20px rgba(0,0,0,.06); text-align: center; position: relative; }
+    .logo { display: flex; align-items: center; gap: 10px; justify-content: center; margin-bottom: 12px; }
+    .logo img { height: 40px; }
+    .logo span { font-size: 24px; font-weight: 700; color: #1d1d1f; }
+    .logo span .saas-label { font-weight: 400; color: #6e6e73; }
+    .sub { color: #8e8e93; font-size: 14px; margin-bottom: 36px; }
+
+    .lang-btn { position: absolute; top: 16px; right: 16px; padding: 6px 12px; border: 1.5px solid #d2d2d7; background: #fff; color: #1d1d1f; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; }
+    .lang-btn:hover { background: #f2f2f7; }
+
+    .btn-group { display: flex; flex-direction: column; gap: 14px; }
+    .btn-primary, .btn-secondary { display: block; padding: 18px; border-radius: 14px; font-size: 17px; font-weight: 600; text-decoration: none; transition: all .2s; }
+    .btn-primary { background: #0071e3; color: #fff; }
+    .btn-primary:hover { background: #0077ed; transform: translateY(-1px); }
+    .btn-secondary { background: #f2f2f7; color: #1d1d1f; border: 1.5px solid #e5e5ea; }
+    .btn-secondary:hover { background: #e5e5ea; transform: translateY(-1px); }
+
+    .footer { margin-top: 24px; font-size: 13px; color: #8e8e93; }
+    .footer a { color: #0071e3; text-decoration: none; }
+    .footer a:hover { text-decoration: underline; }
+
+    @media (max-width: 480px) {
+      .card { padding: 32px 24px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <button class="lang-btn" id="langToggle" onclick="toggleLang()">中</button>
+    <div class="logo">
+      <img src="../logo-sm.png" alt="TechCross">
+      <span>TechCross <span class="saas-label">SaaS</span></span>
+    </div>
+    <p class="sub" data-i18n="saas.landing.hero.subtitle">POS for repair shops — simple, powerful, cloud-based.</p>
+
+    <div class="btn-group">
+      <a href="/saas/register.html" class="btn-primary" data-i18n="saas.landing.hero.btnCreate">Create Your Store</a>
+      <a href="/saas/login.html" class="btn-secondary" data-i18n="saas.landing.hero.btnLogin">Store Owner Login</a>
+    </div>
+  </div>
+
+  <div class="footer">
+    <a href="/" data-i18n="saas.register.backHome">&larr; Back to homepage</a>
+  </div>
+
+  <script src="../lang.js"></script>
+  <script>applyLang();</script>
+</body>
+</html>

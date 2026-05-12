@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>交易记录 - Tech Cross 进销存</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;}
+        html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:antialiased;background:#f5f5f7;color:#1d1d1f;}
+        .layout{display:flex;height:100vh;}
+        .sidebar{width:220px;background:#1d1d1f;color:#f5f5f7;display:flex;flex-direction:column;flex-shrink:0;}
+        .sidebar .logo{padding:20px;text-align:center;border-bottom:1px solid #333;}.sidebar .logo img{height:36px;}.sidebar .logo span{display:block;font-size:12px;color:#86868b;margin-top:4px;}
+        .sidebar nav{flex:1;overflow-y:auto;padding:12px 0;}
+        .sidebar nav a{display:flex;align-items:center;gap:10px;padding:10px 20px;color:#b0b0b5;text-decoration:none;font-size:14px;transition:all .15s;border-left:3px solid transparent;}
+        .sidebar nav a:hover{background:#2a2a2d;color:#f5f5f7;}.sidebar nav a.active{background:#2a2a2d;color:#D4E157;border-left-color:#D4E157;font-weight:600;}
+        .sidebar nav a .icon{width:20px;text-align:center;font-size:16px;}
+        .sidebar .nav-section{padding:16px 20px 6px;font-size:11px;color:#6e6e73;text-transform:uppercase;letter-spacing:1px;}
+        .main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+        .topbar{height:56px;background:#fff;border-bottom:1px solid #e5e5e7;display:flex;align-items:center;justify-content:space-between;padding:0 24px;flex-shrink:0;}
+        .topbar h2{font-size:18px;font-weight:600;}.topbar .user-info{display:flex;align-items:center;gap:12px;font-size:14px;color:#6e6e73;}.topbar .user-info strong{color:#1d1d1f;}
+        .btn-logout{padding:6px 14px;border-radius:980px;border:1px solid #d2d2d7;background:#fff;font-size:13px;cursor:pointer;transition:all .2s;}.btn-logout:hover{background:#ff3b30;color:#fff;border-color:#ff3b30;}
+        .content{flex:1;overflow-y:auto;padding:24px;}
+        .card{background:#fff;border-radius:14px;box-shadow:0 2px 12px rgba(0,0,0,.06);padding:24px;margin-bottom:20px;}
+        .toolbar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:16px;}
+        .toolbar input,.toolbar select{padding:8px 14px;border:1px solid #d2d2d7;border-radius:10px;font-size:14px;background:#fff;}
+        .toolbar input:focus,.toolbar select:focus{outline:none;border-color:#D4E157;}
+        .btn{padding:8px 18px;border:none;border-radius:10px;font-size:14px;font-weight:500;cursor:pointer;transition:all .2s;}
+        .btn-primary{background:#D4E157;color:#000;}.btn-primary:hover{background:#c5d148;}
+        .btn-secondary{background:#f5f5f7;border:1px solid #d2d2d7;color:#1d1d1f;}.btn-secondary:hover{background:#e5e5e7;}
+        .btn-danger{background:#ff3b30;color:#fff;}.btn-danger:hover{background:#e0342d;}
+        .btn-success{background:#34c759;color:#fff;}.btn-success:hover{background:#2db84e;}
+        .btn-sm{padding:5px 12px;font-size:13px;}
+        table{width:100%;border-collapse:collapse;font-size:14px;}
+        thead th{background:#f5f5f7;padding:10px 12px;text-align:left;font-weight:600;font-size:12px;color:#6e6e73;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #e5e5e7;}
+        tbody td{padding:10px 12px;border-bottom:1px solid #f0f0f2;vertical-align:middle;}
+        tbody tr:hover{background:#fafafa;}
+        .badge{display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;}
+        .badge-active{background:#e8f5e9;color:#2e7d32;}.badge-exported{background:#e3f2fd;color:#1565c0;}
+        .badge-invoice{background:#fff3e0;color:#e65100;}
+        .badge-refunded{background:#ffebee;color:#c62828;}
+        .tr-refunded{background:#fff5f5 !important;border-left:3px solid #ff4d4f;}
+        .tr-refunded:hover{background:#ffebee !important;}
+        .modal-overlay{display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.5);backdrop-filter:blur(4px);align-items:center;justify-content:center;}
+        .modal-overlay.show{display:flex;}
+        .modal{background:#fff;border-radius:18px;padding:32px;max-width:650px;width:90%;max-height:85vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.2);}
+        .modal h3{font-size:20px;margin-bottom:20px;}
+        .detail-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f0f0f2;font-size:14px;}
+        .detail-row .label{color:#6e6e73;}.detail-row .value{font-weight:500;}
+        .detail-items{margin-top:16px;}
+        .detail-items table{font-size:13px;}
+        .modal-actions{display:flex;gap:12px;justify-content:flex-end;margin-top:24px;}
+        .toast{position:fixed;top:20px;right:20px;z-index:10000;padding:14px 22px;border-radius:12px;font-size:14px;font-weight:500;box-shadow:0 8px 32px rgba(0,0,0,.15);transform:translateX(120%);transition:transform .3s ease;max-width:400px;}
+        .toast.show{transform:translateX(0);}.toast.success{background:#34c759;color:#fff;}.toast.error{background:#ff3b30;color:#fff;}
+    </style>
+</head>
+<body>
+<div class="toast" id="toast"></div>
+<div class="layout">
+    <aside class="sidebar">
+        <div class="logo"><img src="logo.png" alt="Tech Cross"><span>进销存管理系统</span></div>
+        <nav>
+            <div class="nav-section">业务管理 / Business</div>
+            <a href="inv-pos.html" data-perm="pos"><span class="icon">💰</span>POS 收银 / Checkout</a>
+            <a href="inv-products.html" data-perm="products"><span class="icon">📦</span>商品管理 / Products</a>
+            <a href="inv-stock.html" data-perm="stock"><span class="icon">🏭</span>库存管理 / Stock</a>
+            <a href="inv-suppliers.html" data-perm="suppliers"><span class="icon">🤝</span>供应商 / Suppliers</a>
+            <a href="inv-purchases.html" data-perm="purchases"><span class="icon">🛒</span>采购管理 / Purchases</a>
+            <a href="inv-transactions.html" class="active" data-perm="transactions"><span class="icon">📋</span>交易记录 / Transactions</a>
+            <div class="nav-section">报表与发票 / Reports</div>
+            <a href="inv-reports.html" data-perm="reports"><span class="icon">📊</span>报表中心 / Reports</a>
+            <a href="inv-invoices.html" data-perm="invoices"><span class="icon">🧾</span>发票管理 / VAT Invoice</a>
+            <a href="inv-expenses.html" data-perm="expenses"><span class="icon">💸</span>支出管理 / Expenses</a>
+            <div class="nav-section" id="adminSection" style="display:none;">系统管理 / System</div>
+            <a href="inv-settings.html" class="admin-only" style="display:none;" data-perm="settings"><span class="icon">⚙️</span>系统设置 / Settings</a>
+            <a href="inv-users.html" class="admin-only" style="display:none;" data-perm="users"><span class="icon">👥</span>用户管理 / Users</a>
+        </nav>
+    </aside>
+    <div class="main">
+        <div class="topbar">
+            <h2>Transactions / 交易记录</h2>
+            <div class="user-info"><span>欢迎, <strong id="displayName">-</strong></span><span class="badge badge-active" id="roleBadge">-</span><button class="btn-logout" onclick="logout()">退出登录 / Logout</button></div>
+        </div>
+        <div class="content">
+            <div class="card">
+                <div class="toolbar">
+                    <input type="text" id="searchReceipt" placeholder="Receipt # search..." style="width:180px;" onkeydown="if(event.key==='Enter')loadTransactions()">
+                    <input type="date" id="startDate">
+                    <span style="color:#86868b;">to</span>
+                    <input type="date" id="endDate">
+                    <button class="btn btn-primary" onclick="loadTransactions()">Search</button>
+                    <button class="btn btn-secondary" onclick="loadToday()">Today</button>
+                    <div style="flex:1;"></div>
+                    <button class="btn btn-secondary" onclick="exportTx('csv')">Export CSV</button>
+                    <button class="btn btn-danger btn-sm admin-only" style="display:none;" onclick="batchDelete()">Batch Delete Exported</button>
+                </div>
+                <table>
+                    <thead><tr><th>单号 / Receipt#</th><th>时间 / Time</th><th>商品数 / Items</th><th>总金额 / Total (€)</th><th>支付方式 / Payment</th><th>标记 / Status</th><th>操作 / Actions</th></tr></thead>
+                    <tbody id="txTable"><tr><td colspan="7" style="text-align:center;color:#86868b;padding:40px;">加载中...</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Detail Modal -->
+<div class="modal-overlay" id="detailModal">
+    <div class="modal">
+        <h3>交易详情</h3>
+        <div id="detailContent"></div>
+        <div class="modal-actions">
+            <button class="btn btn-secondary" onclick="document.getElementById('detailModal').classList.remove('show')">关闭</button>
+        </div>
+    </div>
+</div>
+
+<!-- Hidden batch delete trigger (admin only) -->
+<img src="logo.png" alt="" class="admin-only" style="display:none;position:fixed;bottom:16px;right:16px;width:48px;height:48px;opacity:0.2;cursor:pointer;z-index:100;border-radius:50%;transition:opacity 0.2s;" onclick="batchDelete()" onmouseover="this.style.opacity='0.5'" onmouseout="this.style.opacity='0.2'" title="">
+
+<!-- Refund Method Dialog -->
+<div id="refundDialog" style="display:none;position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.5);backdrop-filter:blur(4px);align-items:center;justify-content:center;">
+    <div style="background:#fff;border-radius:18px;padding:32px;max-width:360px;width:90%;text-align:center;box-shadow:0 24px 64px rgba(0,0,0,.2);">
+        <h3 style="font-size:20px;margin-bottom:8px;">↩️ Refund</h3>
+        <p style="font-size:14px;color:#6e6e73;margin-bottom:20px;" id="refundDialogInfo"></p>
+        <p style="font-size:14px;margin-bottom:20px;">Select refund method:</p>
+        <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+            <button onclick="confirmRefund('cash')" style="padding:12px 24px;border:none;border-radius:12px;background:#34c759;color:#fff;font-size:15px;font-weight:600;cursor:pointer;">💵 Cash</button>
+            <button onclick="confirmRefund('card')" style="padding:12px 24px;border:none;border-radius:12px;background:#0071e3;color:#fff;font-size:15px;font-weight:600;cursor:pointer;">💳 Card</button>
+            <button onclick="cancelRefund()" style="padding:12px 24px;border:none;border-radius:12px;background:#f5f5f7;border:1px solid #d2d2d7;color:#1d1d1f;font-size:15px;cursor:pointer;">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<!-- WhatsApp Modal -->
+<div class="modal-overlay" id="whatsAppModal">
+    <div class="modal" style="max-width:380px;">
+        <h3>📱 Send via WhatsApp</h3>
+        <p style="font-size:14px;color:#6e6e73;margin-bottom:16px;">Enter customer phone number</p>
+        <input id="waPhoneInput" type="tel" placeholder="0870908555" style="width:100%;padding:14px 16px;border:1.5px solid #d2d2d7;border-radius:12px;font-size:18px;margin-bottom:8px;">
+        <p id="waPhoneHint" style="font-size:12px;color:#34c759;min-height:18px;"></p>
+        <p style="font-size:12px;color:#86868b;margin-bottom:16px;">Irish mobile: <strong>0870908555</strong> → <strong>+353870908555</strong><br>08xxxxxxxx converts automatically</p>
+        <div class="modal-actions">
+            <button class="btn btn-secondary" onclick="closeWhatsAppModal()">Cancel</button>
+            <button class="btn btn-primary" onclick="sendWhatsAppReceipt()" id="waSendBtn" style="background:#25D366;">📤 Send</button>
+        </div>
+    </div>
+</div>
+
+<script src="auth-guard.js"></script>
+<script>
+(function(){
+'use strict';
+const user = Auth.requireAuth(); if (!user) return;
+document.getElementById('displayName').textContent = Auth.getDisplayName();
+document.getElementById('roleBadge').textContent = Auth.isRoot() ? '店主':'员工';
+const isAdmin = Auth.isRoot();
+if(isAdmin){document.getElementById('adminSection').style.display='';document.querySelectorAll('.admin-only').forEach(el=>el.style.display='');}
+
+// Hide sidebar items based on permissions
+var perms=user.permissions||{};
+if(isAdmin){document.querySelectorAll('nav a[data-perm]').forEach(function(a){a.style.display='';});}
+else{document.querySelectorAll('nav a[data-perm]').forEach(function(a){if(!perms[a.dataset.perm])a.style.display='none';});}
+
+const API='/api/inv';
+const headers=()=>Auth.getHeaders();
+function showToast(msg,type){const t=document.getElementById('toast');t.textContent=msg;t.className='toast '+(type||'success');setTimeout(()=>t.classList.add('show'),10);setTimeout(()=>t.classList.remove('show'),3000);}
+function logout(){Auth.logout();}
+window.logout=logout;
+async function apiFetch(url,opts){opts=opts||{};opts.headers=headers();const r=await fetch(API+url,opts);if(r.status===401){logout();return null;}return r;}
+function esc(s){if(!s)return'';const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+
+// Preload logo and QR codes for receipt printing
+window._txLogoDataUri='';
+window._txQrTerms='';
+(function(){var img=new Image();img.onload=function(){try{var c=document.createElement('canvas');c.width=img.naturalWidth;c.height=img.naturalHeight;c.getContext('2d').drawImage(img,0,0);window._txLogoDataUri=c.toDataURL('image/png');}catch(e){}};img.src='logo.png';})();
+(function(){var img=new Image();img.onload=function(){try{var c=document.createElement('canvas');c.width=img.naturalWidth;c.height=img.naturalHeight;c.getContext('2d').drawImage(img,0,0);window._txQrTerms=c.toDataURL('image/png');}catch(e){}};img.src='qr-terms.png';})();
+
+// Set default dates
+const today=new Date();
+// 读取 URL 参数 ?date=YYYY-MM-DD，有则默认显示当日
+var urlParams=new URLSearchParams(window.location.search);
+var urlDate=urlParams.get('date');
+if(urlDate){
+    document.getElementById('startDate').value=urlDate;
+    document.getElementById('endDate').value=urlDate;
+}else{
+    document.getElementById('endDate').value=today.toISOString().split('T')[0];
+    const weekAgo=new Date(today);weekAgo.setDate(weekAgo.getDate()-30);
+    document.getElementById('startDate').value=weekAgo.toISOString().split('T')[0];
+}
+
+async function loadTransactions(){
+    const q=document.getElementById('searchReceipt').value.trim();
+    const start=document.getElementById('startDate').value;
+    const end=document.getElementById('endDate').value;
+    let url='/transactions?limit=100';
+    if(q)url+='&q='+encodeURIComponent(q);
+    if(start)url+='&startDate='+start;
+    if(end)url+='&endDate='+end;
+    try{
+        const r=await apiFetch(url);if(!r)return;
+        const data=await r.json();
+        const list=data.data||[];
+        const tb=document.getElementById('txTable');
+        if(!list.length){tb.innerHTML='<tr><td colspan="7" style="text-align:center;color:#86868b;padding:40px;">No transactions found</td></tr>';return;}
+        // Clear existing content
+        tb.innerHTML = '';
+
+        // Build refund map: receipt numbers that have been refunded
+        const refundedReceipts = new Set();
+        list.forEach(function(tx) { if (tx.originalReceipt) refundedReceipts.add(tx.originalReceipt); });
+
+        // Build DOM elements safely
+        list.forEach(function(tx) {
+            const isRefund = tx.totalAmount < 0;
+            const hasRefund = !isRefund && refundedReceipts.has(tx.receiptNumber);
+            const tr = document.createElement('tr');
+            if (hasRefund) tr.className = 'tr-refunded';
+
+            // Receipt number cell
+            const td1 = document.createElement('td');
+            td1.style.fontFamily = 'monospace';
+            td1.style.fontSize = '13px';
+            td1.textContent = (isRefund ? '↩️ ' : '') + tx.receiptNumber;
+            tr.appendChild(td1);
+
+            // Date cell
+            const td2 = document.createElement('td');
+            td2.textContent = new Date(tx.createdAt).toLocaleString('en-IE');
+            tr.appendChild(td2);
+
+            // Items count cell
+            const td3 = document.createElement('td');
+            td3.textContent = tx.items ? tx.items.length : 0;
+            tr.appendChild(td3);
+
+            // Amount cell
+            const td4 = document.createElement('td');
+            if (isRefund) td4.style.color = '#ff3b30';
+            td4.textContent = '€' + Number(tx.totalAmount).toFixed(2);
+            tr.appendChild(td4);
+
+            // Payment method cell
+            const td5 = document.createElement('td');
+            if (tx.paymentMethod === 'split') {
+                td5.textContent = '💳+💵';
+            } else if (tx.paymentMethod === 'cash') {
+                td5.textContent = '💵 Cash';
+            } else {
+                td5.textContent = '💳 Card';
+            }
+            tr.appendChild(td5);
+
+            // Exported + Invoice + Refund status cell
+            const td6 = document.createElement('td');
+            if (tx.exported) {
+                const exportedSpan = document.createElement('span');
+                exportedSpan.className = 'badge badge-exported';
+                exportedSpan.textContent = 'Exported';
+                td6.appendChild(exportedSpan);
+            }
+            if (tx.invoiceGenerated) {
+                if (td6.children.length) td6.appendChild(document.createTextNode(' '));
+                const invBadge = document.createElement('span');
+                invBadge.className = 'badge badge-invoice';
+                invBadge.textContent = '🧾 Invoice';
+                td6.appendChild(invBadge);
+            }
+            if (hasRefund) {
+                if (td6.children.length) td6.appendChild(document.createTextNode(' '));
+                const refBadge = document.createElement('span');
+                refBadge.className = 'badge badge-refunded';
+                refBadge.textContent = '↩️ Refunded';
+                td6.appendChild(refBadge);
+            }
+            tr.appendChild(td6);
+
+            // Actions cell
+            const td7 = document.createElement('td');
+
+            // View detail button
+            const viewBtn = document.createElement('button');
+            viewBtn.className = 'btn btn-secondary btn-sm';
+            viewBtn.textContent = '详情';
+            viewBtn.onclick = () => viewDetail(tx._id);
+            td7.appendChild(viewBtn);
+
+            td7.appendChild(document.createTextNode(' '));
+
+            // Invoice button
+            const invBtn = document.createElement('button');
+            invBtn.className = 'btn btn-secondary btn-sm';
+            invBtn.textContent = '🧾 Invoice';
+            invBtn.onclick = async () => {
+                try {
+                    var ir = await apiFetch('/invoices/' + tx._id + '/generate', { method: 'POST' });
+                    if (!ir) return;
+                    if (ir.ok) {
+                        var idata = await ir.json();
+                        showToast('✅ Invoice ' + (idata.invoice?.invoiceNumber || '') + ' generated', 'success');
+                        // Create share link and open PDF
+                        var sr = await apiFetch('/delivery/share/invoice/' + idata.invoice._id, { method: 'POST' });
+                        if (sr && sr.ok) {
+                            var sd = await sr.json();
+                            if (sd.pdfUrl) window.open(sd.pdfUrl, '_blank');
+                        }
+                        loadTransactions();
+                    } else if (ir.status === 409) {
+                        // Already exists → open existing invoice PDF directly
+                        var idata = await ir.json();
+                        if (idata.invoice?._id) {
+                            var sr = await apiFetch('/delivery/share/invoice/' + idata.invoice._id, { method: 'POST' });
+                            if (sr && sr.ok) {
+                                var sd = await sr.json();
+                                if (sd.pdfUrl) window.open(sd.pdfUrl, '_blank');
+                            }
+                        }
+                    }
+                } catch(e) { showToast('Invoice failed', 'error'); }
+            };
+            td7.appendChild(invBtn);
+
+            // Email invoice button (only when invoice already exists)
+            if (tx.invoiceGenerated) {
+                td7.appendChild(document.createTextNode(' '));
+                const emailBtn = document.createElement('button');
+                emailBtn.className = 'btn btn-secondary btn-sm';
+                emailBtn.textContent = '📧';
+                emailBtn.onclick = async () => {
+                    var email = prompt('Resend invoice to email:', tx.customerContact || '');
+                    if (!email || !email.trim() || !email.includes('@')) return;
+                    email = email.trim();
+                    emailBtn.disabled = true;
+                    emailBtn.textContent = '...';
+                    try {
+                        // Get invoice ID from existing invoice
+                        var cr = await apiFetch('/invoices/check-transaction/' + encodeURIComponent(tx.receiptNumber));
+                        if (!cr) return;
+                        var cd = await cr.json();
+                        if (!cd.exists || !cd.invoice?._id) { showToast('Invoice not found', 'error'); return; }
+                        var er = await apiFetch('/delivery/invoice/email', {
+                            method: 'POST',
+                            body: JSON.stringify({ invoiceId: cd.invoice._id, email: email })
+                        });
+                        if (!er) return;
+                        var ed = await er.json();
+                        if (ed.error) { showToast(ed.error, 'error'); return; }
+                        showToast('✅ Invoice resent to ' + email, 'success');
+                    } catch(e) { showToast('Email failed', 'error'); }
+                    finally { emailBtn.disabled = false; emailBtn.textContent = '📧'; }
+                };
+                td7.appendChild(emailBtn);
+            }
+
+            td7.appendChild(document.createTextNode(' '));
+
+            // Print receipt button
+            const printBtn = document.createElement('button');
+            printBtn.className = 'btn btn-secondary btn-sm';
+            printBtn.textContent = '🖨️';
+            printBtn.onclick = () => reprintReceipt(tx._id);
+            td7.appendChild(printBtn);
+
+            td7.appendChild(document.createTextNode(' '));
+
+            // WhatsApp button
+            const waBtn = document.createElement('button');
+            waBtn.className = 'btn btn-secondary btn-sm';
+            waBtn.textContent = '📱';
+            waBtn.title = 'Send via WhatsApp';
+            waBtn.onclick = () => showWhatsAppModal(tx._id);
+            td7.appendChild(waBtn);
+
+            // Delete button (admin only)
+            if (isAdmin) {
+                td7.appendChild(document.createTextNode(' '));
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'btn btn-danger btn-sm';
+                deleteBtn.textContent = '删除';
+                deleteBtn.onclick = () => silentDelete(tx._id);
+                td7.appendChild(deleteBtn);
+            }
+
+            tr.appendChild(td7);
+            tb.appendChild(tr);
+        });
+    }catch(e){showToast('加载失败','error');}
+}
+
+async function viewDetail(id){
+    try{
+        const r=await apiFetch('/transactions/'+id);if(!r)return;
+        const tx=await r.json();
+        let html=`
+            <div class="detail-row"><span class="label">单号</span><span class="value">${esc(tx.receiptNumber)}</span></div>
+            <div class="detail-row"><span class="label">时间</span><span class="value">${new Date(tx.createdAt).toLocaleString('zh-CN')}</span></div>
+            <div class="detail-row"><span class="label">支付方式</span><span class="value">${tx.paymentMethod==='cash'?'现金':tx.paymentMethod==='split'?'Card+Cash':'银行卡'}</span></div>
+            <div class="detail-row"><span class="label">总金额</span><span class="value">€${Number(tx.totalAmount).toFixed(2)}</span></div>
+            <div class="detail-row"><span class="label">Standard VAT</span><span class="value">€${Number(tx.standardVatTotal||0).toFixed(2)}</span></div>
+            <div class="detail-row"><span class="label">Margin VAT</span><span class="value">€${Number(tx.marginVatTotal||0).toFixed(2)}</span></div>`;
+        if(tx.paymentMethod==='cash'){
+            html+=`<div class="detail-row"><span class="label">实收</span><span class="value">€${Number(tx.cashReceived||0).toFixed(2)}</span></div>`;
+            html+=`<div class="detail-row"><span class="label">找零</span><span class="value">€${Number(tx.changeGiven||0).toFixed(2)}</span></div>`;
+        }
+        if(tx.orderDiscount&&tx.orderDiscount.value){
+            html+=`<div class="detail-row"><span class="label">整单折扣</span><span class="value">${tx.orderDiscount.type==='percentage'?tx.orderDiscount.value+'%':'€'+tx.orderDiscount.value}</span></div>`;
+        }
+        html+=`<div class="detail-items"><h4 style="margin:12px 0 8px;">商品明细</h4><table>
+            <thead><tr><th>商品</th><th>数量</th><th>单价</th><th>成本</th><th>小计</th></tr></thead>
+            <tbody>${(tx.items||[]).map((it,idx)=>`<tr>
+                <td>${esc(it.name)}${it.isSecondHand?' <span class="badge" style="background:#fff3cd;color:#856404;">二手</span>':''}${it.serialNumber?' <br><small style="color:#0071e3;">SN: '+esc(it.serialNumber)+'</small>':''}</td>
+                <td>${it.quantity}</td>
+                <td>${isAdmin?'<input type="number" step="0.01" value="'+Number(it.unitPrice||0).toFixed(2)+'" data-txid="'+tx._id+'" data-idx="'+idx+'" data-field="unitPrice" class="edit-item-field" style="width:70px;padding:3px 5px;border:1px solid #d2d2d7;border-radius:6px;font-size:12px;">':'€'+Number(it.unitPrice).toFixed(2)}${it.discount&&it.discount.value?' <small style="color:#ff3b30;">(折扣: '+(it.discount.type==='percentage'?it.discount.value+'%':'€'+it.discount.value)+')</small>':''}</td>
+                <td>${isAdmin?'<input type="number" step="0.01" value="'+Number(it.costPrice||0).toFixed(2)+'" data-txid="'+tx._id+'" data-idx="'+idx+'" data-field="costPrice" class="edit-item-field" style="width:70px;padding:3px 5px;border:1px solid #d2d2d7;border-radius:6px;font-size:12px;">':'€'+Number(it.costPrice||0).toFixed(2)}</td>
+                <td>€${Number(it.subtotal).toFixed(2)}</td>
+            </tr>`).join('')}</tbody></table>
+            ${isAdmin?'<button onclick="saveItemEdits(\''+tx._id+'\')" style="margin-top:10px;padding:8px 18px;border:none;border-radius:8px;background:#0071e3;color:#fff;font-size:13px;font-weight:600;cursor:pointer;">💾 Save Changes</button><span id="editSaveStatus" style="margin-left:10px;font-size:12px;color:#34c759;"></span>':''}
+            </div>`;
+        // Partial refund section (only for non-refund transactions)
+        if(tx.totalAmount>=0&&(isAdmin||perms.refund)){
+            html+=`<div style="margin-top:20px;padding-top:16px;border-top:2px solid #e5e5ea;">
+                <h4 style="margin:0 0 10px;font-size:15px;">↩️ Refund from this order</h4>
+                <div id="detailRefundItems" style="max-height:180px;overflow-y:auto;border:1px solid #e5e5ea;border-radius:10px;padding:8px;margin-bottom:12px;">
+                ${(tx.items||[]).map((it,idx)=>{
+                    const price=(it.discountedPrice!=null?it.discountedPrice:it.unitPrice)||0;
+                    const total=price*(it.quantity||1);
+                    return '<label style="display:flex;align-items:center;gap:8px;padding:6px 4px;border-bottom:1px solid #f0f0f0;font-size:13px;cursor:pointer;">'+
+                    '<input type="checkbox" name="detailRefundItem" value="'+idx+'" checked style="width:18px;height:18px;">'+
+                    '<span style="flex:1;">'+esc(it.name)+(it.quantity>1?' x'+it.quantity:'')+'</span>'+
+                    '<strong>€'+total.toFixed(2)+'</strong></label>';
+                }).join('')}
+                </div>
+                <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+                    <button onclick="detailRefund('${esc(tx.receiptNumber)}','cash')" style="padding:10px 20px;border:none;border-radius:10px;background:#34c759;color:#fff;font-size:14px;font-weight:600;cursor:pointer;">💵 Cash Refund</button>
+                    <button onclick="detailRefund('${esc(tx.receiptNumber)}','card')" style="padding:10px 20px;border:none;border-radius:10px;background:#0071e3;color:#fff;font-size:14px;font-weight:600;cursor:pointer;">💳 Card Refund</button>
+                </div>
+                <div id="detailRefundError" style="display:none;color:#ff3b30;font-size:13px;margin-top:8px;"></div>
+            </div>`;
+            // Store items for refund
+            window._detailRefundItems=tx.items||[];
+        }
+        document.getElementById('detailContent').innerHTML=html;
+        document.getElementById('detailModal').classList.add('show');
+    }catch(e){showToast('加载详情失败','error');}
+}
+window.viewDetail=viewDetail;
+
+// Admin: save edited item fields (costPrice, unitPrice)
+window.saveItemEdits=async function(txId){
+    var inputs=document.querySelectorAll('.edit-item-field');
+    var updates=[];
+    inputs.forEach(function(inp){
+        if(inp.dataset.txid===txId){
+            updates.push({idx:parseInt(inp.dataset.idx),field:inp.dataset.field,value:parseFloat(inp.value)||0});
+        }
+    });
+    if(!updates.length)return;
+    try{
+        var r=await apiFetch('/transactions/'+txId+'/edit-items',{
+            method:'PATCH',
+            body:JSON.stringify({updates:updates})
+        });
+        if(!r)return;
+        var resp=await r.json();
+        if(!r.ok){showToast(resp.error||'保存失败','error');return;}
+        var el=document.getElementById('editSaveStatus');
+        if(el){el.textContent='✅ Saved';setTimeout(function(){el.textContent='';},3000);}
+        showToast('已保存 / Saved','success');
+        loadTransactions();
+    }catch(e){showToast('保存失败','error');}
+};
+
+// Refund from detail modal with partial item selection
+window.detailRefund=async function(receiptNumber,method){
+    var errEl=document.getElementById('detailRefundError');
+    if(errEl)errEl.style.display='none';
+    var checkboxes=document.querySelectorAll('#detailRefundItems input[name="detailRefundItem"]');
+    var selectedItems=[];
+    checkboxes.forEach(function(cb){
+        if(cb.checked){
+            var item=window._detailRefundItems[parseInt(cb.value)];
+            if(item)selectedItems.push({product:item.product,name:item.name,quantity:item.quantity});
+        }
+    });
+    if(!selectedItems.length){
+        if(errEl){errEl.textContent='请至少选择一个商品 / Select at least one item';errEl.style.display='block';}
+        return;
+    }
+    // Prevent double-click
+    var btn=document.querySelector('#detailContent [onclick*="detailRefund"]');
+    if(btn){btn.disabled=true;btn.textContent='Processing...';}
+    var body={receiptNumber:receiptNumber,refundMethod:method};
+    // Partial refund if not all items selected
+    if(selectedItems.length<window._detailRefundItems.length){
+        body.items=selectedItems;
+    }
+    try{
+        var r=await apiFetch('/transactions/refund',{method:'POST',body:JSON.stringify(body)});
+        if(!r)return;
+        var data=await r.json();
+        if(!r.ok){if(errEl){errEl.textContent=data.error||'Refund failed';errEl.style.display='block';}if(btn){btn.disabled=false;btn.textContent='↩️ Refund';}return;}
+        showToast('Refund OK: #'+data.refund.receiptNumber);
+        document.getElementById('detailModal').classList.remove('show');
+        loadTransactions();
+        // Auto-print refund receipt
+        printRefundReceipt(data.refund);
+    }catch(e){if(errEl){errEl.textContent='Error: '+e.message;errEl.style.display='block';}if(btn){btn.disabled=false;btn.textContent='↩️ Refund';}}
+};
+
+async function silentDelete(id){
+    if(!confirm('⚠️ 无痕删除\n\n此操作将永久删除该交易记录并恢复库存。\n确定要继续吗？'))return;
+    if(!confirm('再次确认：此操作不可撤销，确定删除？'))return;
+    try{const r=await apiFetch('/transactions/'+id+'/delete',{method:'DELETE',body:JSON.stringify({confirm:true})});if(!r)return;if(!r.ok){const e=await r.json();showToast(e.error,'error');return;}showToast('交易已删除');loadTransactions();}catch(e){showToast('删除失败','error');}
+}
+window.silentDelete=silentDelete;
+
+async function exportTx(format){
+    const start=document.getElementById('startDate').value;
+    const end=document.getElementById('endDate').value;
+    let url='/transactions/export?format='+format;
+    if(start)url+='&startDate='+start;
+    if(end)url+='&endDate='+end;
+    try{
+        const r=await apiFetch(url);if(!r)return;
+        if(!r.ok){const e=await r.json();showToast(e.error,'error');return;}
+        const blob=await r.blob();
+        const a=document.createElement('a');
+        a.href=URL.createObjectURL(blob);
+        a.download='transactions.'+format;
+        a.click();URL.revokeObjectURL(a.href);
+        showToast('导出成功');
+        loadTransactions();
+    }catch(e){showToast('导出失败','error');}
+}
+window.exportTx=exportTx;
+
+async function batchDelete(){
+    if(!confirm('⚠️ 批量删除已导出记录\n\n此操作将删除所有已标记为"已导出"的交易记录。\n确定要继续吗？'))return;
+    if(!confirm('再次确认：此操作不可撤销，确定批量删除？'))return;
+    try{
+        // 先查出当前筛选范围内所有已导出的交易ID
+        const start=document.getElementById('startDate').value;
+        const end=document.getElementById('endDate').value;
+        let url='/transactions?limit=500&exported=true';
+        if(start)url+='&startDate='+start;
+        if(end)url+='&endDate='+end;
+        const listR=await apiFetch(url);if(!listR)return;
+        const listData=await listR.json();
+        const exported=(listData.data||[]).filter(t=>t.exported);
+        if(!exported.length){showToast('没有已导出的记录可删除','error');return;}
+        const ids=exported.map(t=>t._id);
+        const r=await apiFetch('/transactions/batch-delete',{method:'DELETE',body:JSON.stringify({confirm:true,ids:ids})});
+        if(!r)return;if(!r.ok){const e=await r.json();showToast(e.error,'error');return;}
+        const data=await r.json();showToast(data.message||'批量删除完成');loadTransactions();
+    }catch(e){showToast('批量删除失败','error');}
+}
+window.batchDelete=batchDelete;
+
+async function reprintReceipt(id){
+    try{
+        const r=await apiFetch('/transactions/'+id);if(!r)return;
+        const tx=await r.json();
+        // Try Print Agent first
+        try{
+            const pr=await fetch('http://localhost:9100/print',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({transaction:tx}),signal:AbortSignal.timeout(5000)});
+            if(pr.ok){showToast('Sent to printer');return;}
+        }catch(e){}
+        // Fallback: browser print with new receipt format (logo + QR)
+        const pm=tx.paymentMethod==='split'?'Card+Cash':tx.paymentMethod==='card'?'Card':'Cash';
+        let itemsHtml='';
+        (tx.items||[]).forEach(it=>{
+            const price=(it.discountedPrice!=null?it.discountedPrice:it.unitPrice)||0;
+            const total=price*(it.quantity||1);
+            itemsHtml+='<div style="display:flex;justify-content:space-between;width:100%;font-size:13px;padding:2px 0;"><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:10px;">'+(it.quantity>1?it.quantity+'x ':'')+esc(it.name)+'</span><span style="white-space:nowrap;flex-shrink:0;font-weight:700;">\u20AC'+total.toFixed(2)+'</span></div>';
+            if(it.serialNumber)itemsHtml+='<div style="font-size:11px;font-weight:700;padding:1px 0 1px 8px;">SN: '+esc(it.serialNumber)+'</div>';
+        });
+        let receiptHtml='';
+        // Logo
+        if(window._txLogoDataUri)receiptHtml+='<div style="text-align:center;margin-bottom:8px;"><img src="'+window._txLogoDataUri+'" style="max-width:200px;max-height:55px;margin:0 auto;"></div>';
+        // Header
+        receiptHtml+='<div style="text-align:center;padding-bottom:8px;margin-bottom:8px;border-bottom:2px solid #000;font-size:13px;line-height:1.5;">';
+        receiptHtml+='<div>Unit 4, Navan Shopping Centre, Navan, Co. Meath, C15 F658</div>';
+        receiptHtml+='<div>Tel: 046 905 9854 | Mob: 089 482 5300</div>';
+        receiptHtml+='<div>navantechcross@gmail.com</div></div>';
+        // Receipt info
+        receiptHtml+='<div style="margin-bottom:8px;font-size:13px;">';
+        receiptHtml+='<div style="display:flex;justify-content:space-between;width:100%;padding:2px 0;"><span>Receipt #</span><span style="font-weight:700;">'+esc(tx.receiptNumber)+'</span></div>';
+        receiptHtml+='<div style="display:flex;justify-content:space-between;width:100%;padding:2px 0;"><span>Date</span><span>'+new Date(tx.createdAt).toLocaleString('en-IE')+'</span></div></div>';
+        // Items
+        receiptHtml+='<div style="border-top:2px solid #000;border-bottom:2px solid #000;padding:6px 0;margin-bottom:8px;">'+itemsHtml+'</div>';
+        // Total
+        receiptHtml+='<div style="display:flex;justify-content:space-between;width:100%;font-size:18px;font-weight:900;padding:4px 0;margin-bottom:8px;"><span>TOTAL</span><span>\u20AC'+Number(tx.totalAmount).toFixed(2)+'</span></div>';
+        // Payment
+        receiptHtml+='<div style="margin-bottom:8px;font-size:13px;border-bottom:1px dashed #000;padding-bottom:8px;">';
+        if(tx.paymentMethod==='split'){receiptHtml+='<div style="display:flex;justify-content:space-between;width:100%;padding:2px 0;"><span>Card</span><span>\u20AC'+(tx.cardAmount||0).toFixed(2)+'</span></div><div style="display:flex;justify-content:space-between;width:100%;padding:2px 0;"><span>Cash</span><span>\u20AC'+(tx.cashReceived||0).toFixed(2)+'</span></div>';}
+        else if(tx.paymentMethod==='cash'){receiptHtml+='<div style="display:flex;justify-content:space-between;width:100%;padding:2px 0;"><span>Cash</span><span>\u20AC'+(tx.cashReceived||0).toFixed(2)+'</span></div>';}
+        else{receiptHtml+='<div style="padding:2px 0;">Card Payment</div>';}
+        if(tx.changeGiven>0)receiptHtml+='<div style="display:flex;justify-content:space-between;width:100%;padding:2px 0;font-weight:700;"><span>Change</span><span>\u20AC'+Number(tx.changeGiven).toFixed(2)+'</span></div>';
+        receiptHtml+='</div>';
+        // VAT
+        if(tx.standardVatTotal>0||tx.marginVatTotal>0){receiptHtml+='<div style="margin-bottom:8px;font-size:13px;border-bottom:1px dashed #000;padding-bottom:8px;">';if(tx.standardVatTotal>0)receiptHtml+='<div style="display:flex;justify-content:space-between;width:100%;padding:2px 0;"><span>VAT (23%)</span><span>\u20AC'+Number(tx.standardVatTotal).toFixed(2)+'</span></div>';if(tx.marginVatTotal>0)receiptHtml+='<div style="display:flex;justify-content:space-between;width:100%;padding:2px 0;"><span>Margin VAT</span><span>\u20AC'+Number(tx.marginVatTotal).toFixed(2)+'</span></div>';receiptHtml+='</div>';}
+        // T&C
+        receiptHtml+='<div style="font-size:10px;text-align:left;line-height:1.4;margin-bottom:8px;">';
+        receiptHtml+='<div style="font-weight:700;font-size:11px;text-align:center;margin-bottom:4px;">Warranty & Store Policy</div>';
+        receiptHtml+='<div><strong>Repairs - 3 Months</strong> Covers replaced parts for hardware defects only. Void if physical/liquid damage or third-party repair.</div>';
+        if((tx.items||[]).some(i=>i.isSecondHand))receiptHtml+='<div style="margin-top:3px;"><strong>Pre-owned - 7 Days</strong> No physical/liquid damage. Must be fully erased. Locked devices non-refundable.</div>';
+        receiptHtml+='<div style="margin-top:3px;"><strong>Accessories - 14 Days</strong> Exchange/return only if unopened, sealed, and resalable.</div></div>';
+        // QR code
+        if(window._txQrTerms){
+            receiptHtml+='<div style="text-align:center;margin-bottom:8px;">';
+            receiptHtml+='<div style="font-size:9px;font-weight:700;margin-bottom:4px;">Terms & Conditions</div>';
+            receiptHtml+='<img src="'+window._txQrTerms+'" style="width:180px;height:180px;display:block;margin:0 auto;">';
+            receiptHtml+='<div style="font-size:8px;margin-top:4px;">techcross.ie/terms</div>';
+            receiptHtml+='</div>';
+        }
+        receiptHtml+='<div style="text-align:center;font-size:14px;font-weight:900;padding:8px 0;border-top:2px solid #000;">Thank you!</div>';
+        // Print via iframe
+        var iframe=document.getElementById('_txPrintFrame');
+        if(!iframe){iframe=document.createElement('iframe');iframe.id='_txPrintFrame';iframe.style.cssText='position:fixed;top:-9999px;left:-9999px;width:0;height:0;border:none;';document.body.appendChild(iframe);}
+        var doc=iframe.contentDocument||iframe.contentWindow.document;
+        doc.open();
+        doc.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>Receipt</title><style>@page{margin:0;size:auto;}html,body{margin:0;padding:0;width:100%;background:#fff;}body{width:420px;max-width:420px;padding:8px 40px 8px 10px;margin:0 auto;font-family:"Courier New",Courier,monospace;font-size:20px;font-weight:700;line-height:1.4;color:#000;-webkit-print-color-adjust:exact;print-color-adjust:exact;}*{box-sizing:border-box;}img{max-width:100%;height:auto;display:block;}</style></head><body>');
+        doc.write(receiptHtml);
+        doc.write('</body></html>');
+        doc.close();
+        setTimeout(function(){iframe.contentWindow.focus();iframe.contentWindow.print();},200);
+    }catch(e){showToast('Reprint failed','error');}
+}
+window.reprintReceipt=reprintReceipt;
+
+// ─── Print Refund Receipt ───────────────────────────────────────────────────
+function printRefundReceipt(refund){
+    try{
+        var items=refund.items||[];
+        var totalRefund=refund.totalRefund||0;
+        var method=refund.refundMethod||'cash';
+        var receiptNum=refund.receiptNumber||'';
+        var originalReceipt=refund.originalReceipt||'';
+
+        // Try Print Agent first
+        try{
+            fetch('http://localhost:9100/print',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({transaction:{receiptNumber:receiptNum,items:items.map(function(i){return{name:i.name,quantity:i.quantity,unitPrice:i.unitPrice,discountedPrice:i.unitPrice};}),totalAmount:-totalRefund,paymentMethod:method,isRefund:true,originalReceipt:originalReceipt}}),signal:AbortSignal.timeout(5000)}).then(function(pr){if(pr.ok)return;throw new Error();}).catch(function(){browserPrintRefund();});
+            return;
+        }catch(e){}
+        browserPrintRefund();
+
+        function browserPrintRefund(){
+            var h='';
+            // Logo
+            if(window._txLogoDataUri)h+='<div style="text-align:center;margin-bottom:8px;"><img src="'+window._txLogoDataUri+'" style="max-width:200px;max-height:55px;margin:0 auto;"></div>';
+            // Header
+            h+='<div style="text-align:center;padding-bottom:8px;margin-bottom:8px;border-bottom:2px solid #000;font-size:13px;line-height:1.5;">';
+            h+='<div>Unit 4, Navan Shopping Centre, Navan, Co. Meath, C15 F658</div>';
+            h+='<div>Tel: 046 905 9854 | Mob: 089 482 5300</div>';
+            h+='<div>navantechcross@gmail.com</div></div>';
+            // REFUND title
+            h+='<div style="text-align:center;font-size:16px;font-weight:900;margin-bottom:8px;">*** REFUND ***</div>';
+            // Receipt info
+            h+='<div style="margin-bottom:8px;font-size:13px;">';
+            h+='<div style="display:flex;justify-content:space-between;width:100%;padding:2px 0;"><span>Refund #</span><span style="font-weight:700;">'+esc(receiptNum)+'</span></div>';
+            if(originalReceipt)h+='<div style="display:flex;justify-content:space-between;width:100%;padding:2px 0;"><span>Original #</span><span>'+esc(originalReceipt)+'</span></div>';
+            h+='<div style="display:flex;justify-content:space-between;width:100%;padding:2px 0;"><span>Date</span><span>'+new Date().toLocaleString('en-IE')+'</span></div></div>';
+            // Items
+            h+='<div style="border-top:2px solid #000;border-bottom:2px solid #000;padding:6px 0;margin-bottom:8px;">';
+            items.forEach(function(it){
+                var price=it.unitPrice||0;
+                var total=price*(it.quantity||1);
+                h+='<div style="display:flex;justify-content:space-between;width:100%;font-size:13px;padding:2px 0;"><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:10px;">'+(it.quantity>1?it.quantity+'x ':'')+esc(it.name)+'</span><span style="white-space:nowrap;flex-shrink:0;font-weight:700;">-\u20AC'+total.toFixed(2)+'</span></div>';
+            });
+            h+='</div>';
+            // Total
+            h+='<div style="display:flex;justify-content:space-between;width:100%;font-size:18px;font-weight:900;padding:4px 0;margin-bottom:8px;"><span>REFUND TOTAL</span><span>-\u20AC'+totalRefund.toFixed(2)+'</span></div>';
+            // Payment method
+            h+='<div style="margin-bottom:8px;font-size:13px;border-bottom:1px dashed #000;padding-bottom:8px;">';
+            h+='<div>'+(method==='card'?'Refund to Card':'Cash Refund')+'</div></div>';
+            // Footer
+            h+='<div style="text-align:center;font-size:12px;margin-bottom:8px;">This is a refund receipt.</div>';
+            h+='<div style="text-align:center;font-size:14px;font-weight:900;padding:8px 0;border-top:2px solid #000;">Thank you!</div>';
+            // Print via iframe
+            var iframe=document.getElementById('_txPrintFrame');
+            if(!iframe){iframe=document.createElement('iframe');iframe.id='_txPrintFrame';iframe.style.cssText='position:fixed;top:-9999px;left:-9999px;width:0;height:0;border:none;';document.body.appendChild(iframe);}
+            var doc=iframe.contentDocument||iframe.contentWindow.document;
+            doc.open();
+            doc.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>Refund Receipt</title><style>@page{margin:0;size:auto;}html,body{margin:0;padding:0;width:100%;background:#fff;}body{width:420px;max-width:420px;padding:8px 40px 8px 10px;margin:0 auto;font-family:"Courier New",Courier,monospace;font-size:20px;font-weight:700;line-height:1.4;color:#000;-webkit-print-color-adjust:exact;print-color-adjust:exact;}*{box-sizing:border-box;}img{max-width:100%;height:auto;display:block;}</style></head><body>');
+            doc.write(h);
+            doc.write('</body></html>');
+            doc.close();
+            setTimeout(function(){iframe.contentWindow.focus();iframe.contentWindow.print();},200);
+        }
+    }catch(e){console.error('Refund print failed',e);}
+}
+window.printRefundReceipt=printRefundReceipt;
+
+window.loadTransactions=loadTransactions;
+
+function loadToday(){
+    const today=new Date().toISOString().split('T')[0];
+    document.getElementById('startDate').value=today;
+    document.getElementById('endDate').value=today;
+    document.getElementById('searchReceipt').value='';
+    loadTransactions();
+}
+window.loadToday=loadToday;
+
+var _pendingRefundReceipt = null;
+
+async function refundTx(receiptNumber){
+    _pendingRefundReceipt = receiptNumber;
+    document.getElementById('refundDialogInfo').textContent = 'Receipt #' + receiptNumber;
+    document.getElementById('refundDialog').style.display = 'flex';
+}
+window.refundTx=refundTx;
+
+window.confirmRefund = async function(method) {
+    document.getElementById('refundDialog').style.display = 'none';
+    if (!_pendingRefundReceipt) return;
+    try{
+        const r=await apiFetch('/transactions/refund',{method:'POST',body:JSON.stringify({receiptNumber:_pendingRefundReceipt,refundMethod:method})});
+        if(!r)return;
+        const data=await r.json();
+        if(!r.ok){showToast(data.error||'Refund failed','error');return;}
+        showToast('Refund processed: #'+data.refund.receiptNumber);
+        loadTransactions();
+    }catch(e){showToast('Refund error: '+e.message,'error');}
+    _pendingRefundReceipt = null;
+};
+
+window.cancelRefund = function() {
+    document.getElementById('refundDialog').style.display = 'none';
+    _pendingRefundReceipt = null;
+};
+
+// ─── WhatsApp ─────────────────────────────────────────────────────────
+var _waTransactionId = null;
+
+window.showWhatsAppModal = function(txId) {
+    _waTransactionId = txId;
+    document.getElementById('waPhoneInput').value = '';
+    document.getElementById('waPhoneHint').textContent = '';
+    document.getElementById('whatsAppModal').classList.add('show');
+    setTimeout(function() { document.getElementById('waPhoneInput').focus(); }, 100);
+};
+
+window.closeWhatsAppModal = function() {
+    document.getElementById('whatsAppModal').classList.remove('show');
+    _waTransactionId = null;
+};
+
+window.sendWhatsAppReceipt = async function() {
+    var phone = document.getElementById('waPhoneInput').value.trim();
+    if (!phone) { showToast('Enter a phone number', 'error'); return; }
+
+    // Normalize phone
+    if (/^08\d{8}$/.test(phone)) {
+        phone = '+353' + phone.slice(1);
+    } else if (/^\d+$/.test(phone) && !phone.startsWith('+')) {
+        phone = phone.startsWith('8') ? '+353' + phone : '+353' + phone;
+    } else if (!phone.startsWith('+') && !phone.startsWith('00') && !phone.startsWith('*')) {
+        phone = '+353' + phone;
+    }
+
+    document.getElementById('waPhoneHint').textContent = 'Sending to: ' + phone;
+    document.getElementById('waSendBtn').disabled = true;
+
+    try {
+        // Fetch transaction data to build message (no share tokens/server storage)
+        var r = await apiFetch('/transactions/' + _waTransactionId);
+        if (!r) return;
+        if (!r.ok) { showToast('Failed to load transaction', 'error'); return; }
+        var tx = await r.json();
+
+        // Build plain text receipt message
+        var itemsTotal = (tx.items || []).length;
+        var firstItems = (tx.items || []).slice(0, 3).map(function(i) {
+            var total = (i.discountedPrice != null ? i.discountedPrice : i.unitPrice) * (i.quantity || 1);
+            return '  ' + (i.name || 'Item') + ' - €' + total.toFixed(2);
+        }).join('\n');
+        if (itemsTotal > 3) firstItems += '\n  ...and ' + (itemsTotal - 3) + ' more items';
+
+        var text = 'TechCross Repair Centre\n';
+        text += 'Receipt #' + (tx.receiptNumber || '') + '\n';
+        text += 'Total: €' + (tx.totalAmount || 0).toFixed(2) + '\n\n';
+        text += 'Items:\n' + firstItems + '\n\n';
+        text += 'Thank you for your business!\n';
+        text += 'TechCross Repair Centre\n046 905 9854';
+
+        // Build wa.me URL directly — NO share tokens, NO hosted links
+        var waNumber = phone.replace('+', '').replace(/^00/, '');
+        var waUrl = 'https://wa.me/' + waNumber + '?text=' + encodeURIComponent(text);
+        window.open(waUrl, '_blank');
+        showToast('✅ WhatsApp opened', 'success');
+        closeWhatsAppModal();
+    } catch (e) { showToast('Error: ' + e.message, 'error'); }
+    document.getElementById('waSendBtn').disabled = false;
+};
+
+// Close WhatsApp modal on overlay click
+document.addEventListener('click', function(e) {
+    var modal = document.getElementById('whatsAppModal');
+    if (modal && e.target === modal) closeWhatsAppModal();
+});
+
+loadTransactions();
+
+// ─── 店员权限控制 ───────────────────────────────────────────
+if(!isAdmin){
+    // 隐藏批量删除按钮
+    document.querySelectorAll('.btn-danger.btn-sm.admin-only').forEach(function(el){el.style.display='none';});
+    // 监听动态渲染的删除按钮
+    var _staffObs=new MutationObserver(function(){
+        document.querySelectorAll('.btn-danger.btn-sm[onclick*="silentDelete"]').forEach(function(el){el.style.display='none';});
+    });
+    _staffObs.observe(document.getElementById('txTable'),{childList:true,subtree:true});
+}
+
+})();
+</script>
+</body>
+</html>

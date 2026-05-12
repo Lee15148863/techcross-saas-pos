@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>报表中心 - Tech Cross 进销存</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;}
+        html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:antialiased;background:#f5f5f7;color:#1d1d1f;}
+        .layout{display:flex;height:100vh;}
+        .sidebar{width:220px;background:#1d1d1f;color:#f5f5f7;display:flex;flex-direction:column;flex-shrink:0;}
+        .sidebar .logo{padding:20px;text-align:center;border-bottom:1px solid #333;}.sidebar .logo img{height:36px;}.sidebar .logo span{display:block;font-size:12px;color:#86868b;margin-top:4px;}
+        .sidebar nav{flex:1;overflow-y:auto;padding:12px 0;}
+        .sidebar nav a{display:flex;align-items:center;gap:10px;padding:10px 20px;color:#b0b0b5;text-decoration:none;font-size:14px;transition:all .15s;border-left:3px solid transparent;}
+        .sidebar nav a:hover{background:#2a2a2d;color:#f5f5f7;}.sidebar nav a.active{background:#2a2a2d;color:#D4E157;border-left-color:#D4E157;font-weight:600;}
+        .sidebar nav a .icon{width:20px;text-align:center;font-size:16px;}
+        .sidebar .nav-section{padding:16px 20px 6px;font-size:11px;color:#6e6e73;text-transform:uppercase;letter-spacing:1px;}
+        .main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+        .topbar{height:56px;background:#fff;border-bottom:1px solid #e5e5e7;display:flex;align-items:center;justify-content:space-between;padding:0 24px;flex-shrink:0;}
+        .topbar h2{font-size:18px;font-weight:600;}.topbar .user-info{display:flex;align-items:center;gap:12px;font-size:14px;color:#6e6e73;}.topbar .user-info strong{color:#1d1d1f;}
+        .btn-logout{padding:6px 14px;border-radius:980px;border:1px solid #d2d2d7;background:#fff;font-size:13px;cursor:pointer;transition:all .2s;}.btn-logout:hover{background:#ff3b30;color:#fff;border-color:#ff3b30;}
+        .content{flex:1;overflow-y:auto;padding:24px;}
+        .card{background:#fff;border-radius:14px;box-shadow:0 2px 12px rgba(0,0,0,.06);padding:24px;margin-bottom:20px;}
+        .toolbar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:16px;}
+        .toolbar input{padding:8px 14px;border:1px solid #d2d2d7;border-radius:10px;font-size:14px;background:#fff;}
+        .toolbar input:focus{outline:none;border-color:#D4E157;}
+        .btn{padding:8px 18px;border:none;border-radius:10px;font-size:14px;font-weight:500;cursor:pointer;transition:all .2s;}
+        .btn-primary{background:#D4E157;color:#000;}.btn-primary:hover{background:#c5d148;}
+        .btn-secondary{background:#f5f5f7;border:1px solid #d2d2d7;color:#1d1d1f;}.btn-secondary:hover{background:#e5e5e7;}
+        .badge{display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;}
+        .badge-active{background:#e8f5e9;color:#2e7d32;}
+        .tabs{display:flex;gap:4px;margin-bottom:20px;border-bottom:2px solid #e5e5e7;}
+        .tab{padding:10px 20px;font-size:14px;font-weight:500;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;color:#6e6e73;transition:all .15s;}
+        .tab:hover{color:#1d1d1f;}.tab.active{color:#D4E157;border-bottom-color:#D4E157;font-weight:600;}
+        .tab-content{display:none;}.tab-content.active{display:block;}
+        .sum-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px;}
+        .sum-card{background:#f7f8fc;border-radius:10px;padding:16px 12px;text-align:center;border:1px solid #e2e8f0;}
+        .sum-card .sum-label{font-size:12px;color:#64748b;margin-bottom:4px;}
+        .sum-card .sum-value{font-size:20px;font-weight:700;color:#1d1d1f;}
+        .sum-card .sum-value.green{color:#34c759;}.sum-card .sum-value.red{color:#ff3b30;}
+        .tx-table{width:100%;border-collapse:collapse;font-size:13px;background:#fff;}
+        .tx-table th{background:#f5f7fa;padding:11px 8px;text-align:left;font-weight:600;color:#333;font-size:12px;text-transform:uppercase;letter-spacing:.3px;border-bottom:1px solid #e5e5e7;}
+        .tx-table td{padding:9px 8px;border-bottom:1px solid #f0f0f2;vertical-align:middle;}
+        .tx-table tbody tr:hover{background:#f9f9f9;}
+        .tx-table tbody tr:nth-child(even){background:#fbfbfb;}
+        .tx-table .total-row{font-weight:700;background:#f0f4c3 !important;}
+        .tx-no{font-family:Consolas,monospace;font-size:12px;color:#222;}
+        .tx-amount{font-weight:600;text-align:right;}
+        .tx-qty,.tx-pay{text-align:center;}
+        .btn-sm{padding:4px 10px;font-size:12px;border-radius:6px;border:none;cursor:pointer;margin:0 2px;transition:all .15s;}
+        .btn-view{background:#3498db;color:#fff;}.btn-view:hover{background:#2980b9;}
+        .btn-print{background:#e3e3e3;color:#333;}.btn-print:hover{background:#d0d0d0;}
+        .btn-refund{background:#ff9500;color:#fff;}.btn-refund:hover{background:#e68600;}
+        .btn-delete{background:#e74c3c;color:#fff;}.btn-delete:hover{background:#c0392b;}
+        .no-data{text-align:center;padding:40px;color:#86868b;font-size:15px;}
+        .vat-table{width:100%;border-collapse:collapse;font-size:13px;margin-top:16px;}
+        .vat-table th{background:#f5f7fa;padding:10px 8px;text-align:left;font-weight:600;font-size:12px;border-bottom:1px solid #e5e5e7;}
+        .vat-table td{padding:8px;border-bottom:1px solid #f0f0f2;}
+        .vat-table tr.total-row{font-weight:700;background:#f0f4c3;}
+        .toast{position:fixed;top:20px;right:20px;z-index:10000;padding:14px 22px;border-radius:12px;font-size:14px;font-weight:500;box-shadow:0 8px 32px rgba(0,0,0,.15);transform:translateX(120%);transition:transform .3s ease;max-width:400px;}
+        .toast.show{transform:translateX(0);}.toast.success{background:#34c759;color:#fff;}.toast.error{background:#ff3b30;color:#fff;}
+        .detail-overlay{display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.5);backdrop-filter:blur(4px);align-items:center;justify-content:center;}
+        .detail-overlay.show{display:flex;}
+        .detail-box{background:#fff;border-radius:18px;padding:32px;max-width:650px;width:90%;max-height:85vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.2);}
+        .detail-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f0f0f2;font-size:14px;}
+        .detail-row .label{color:#6e6e73;}.detail-row .value{font-weight:500;}
+        @media print{.sidebar,.topbar,.toolbar,.tabs,.btn,.btn-sm{display:none!important;}.layout{display:block;}.main{overflow:visible;}.content{padding:0;}}
+    </style>
+</head>
+<body>
+<div class="toast" id="toast"></div>
+<div class="detail-overlay" id="detailModal"><div class="detail-box"><h3 style="font-size:20px;margin-bottom:20px;">交易详情</h3><div id="detailContent"></div><div style="text-align:right;margin-top:20px;"><button class="btn btn-secondary" id="btnCloseDetail">关闭</button></div></div></div>
+<div class="layout">
+    <aside class="sidebar">
+        <div class="logo"><img src="logo.png" alt="Tech Cross"><span>进销存管理系统</span></div>
+        <nav>
+            <div class="nav-section">业务管理 / Business</div>
+            <a href="inv-pos.html" data-perm="pos"><span class="icon">💰</span>POS 收银 / Checkout</a>
+            <a href="inv-products.html" data-perm="products"><span class="icon">📦</span>商品管理 / Products</a>
+            <a href="inv-stock.html" data-perm="stock"><span class="icon">🏭</span>库存管理 / Stock</a>
+            <a href="inv-suppliers.html" data-perm="suppliers"><span class="icon">🤝</span>供应商 / Suppliers</a>
+            <a href="inv-purchases.html" data-perm="purchases"><span class="icon">🛒</span>采购管理 / Purchases</a>
+            <a href="inv-transactions.html" data-perm="transactions"><span class="icon">📋</span>交易记录 / Transactions</a>
+            <div class="nav-section">报表与发票 / Reports</div>
+            <a href="inv-reports.html" class="active" data-perm="reports"><span class="icon">📊</span>报表中心 / Reports</a>
+            <a href="inv-invoices.html" data-perm="invoices"><span class="icon">🧾</span>发票管理 / VAT Invoice</a>
+            <a href="inv-expenses.html" data-perm="expenses"><span class="icon">💸</span>支出管理 / Expenses</a>
+            <div class="nav-section" id="adminSection" style="display:none;">系统管理 / System</div>
+            <a href="inv-settings.html" class="admin-only" style="display:none;" data-perm="settings"><span class="icon">⚙️</span>系统设置 / Settings</a>
+            <a href="inv-users.html" class="admin-only" style="display:none;" data-perm="users"><span class="icon">👥</span>用户管理 / Users</a>
+        </nav>
+    </aside>
+    <div class="main">
+        <div class="topbar">
+            <h2>报表中心 / Reports</h2>
+            <div class="user-info"><span>欢迎, <strong id="displayName">-</strong></span><span class="badge badge-active" id="roleBadge">-</span><button class="btn-logout" id="btnLogout">退出登录</button></div>
+        </div>
+        <div class="content">
+            <div class="tabs">
+                <div class="tab active" data-tab="daily">日结报表</div>
+                <div class="tab" data-tab="weekly">周报表</div>
+                <div class="tab" data-tab="monthly">月度报税报表</div>
+            </div>
+            <!-- 日结 -->
+            <div class="tab-content active" id="tab-daily"><div class="card">
+                <div class="toolbar"><input type="date" id="dailyDate"><button class="btn btn-primary" id="btnLoadDaily">查询</button><div style="flex:1;"></div><button class="btn btn-secondary" id="btnPrintDaily">🖨️ 打印</button><button class="btn btn-secondary" id="btnExportDaily">📥 导出</button></div>
+                <div class="sum-row" id="dailySummary"></div>
+                <div id="dailyVat"></div>
+                <div style="overflow-x:auto;margin-top:16px;"><table class="tx-table"><thead><tr><th>订单号</th><th>时间</th><th>商品数</th><th>金额</th><th>支付</th><th>操作</th></tr></thead><tbody id="dailyBody"><tr><td colspan="6" class="no-data">请选择日期查询</td></tr></tbody></table></div>
+            </div></div>
+            <!-- 周报 -->
+            <div class="tab-content" id="tab-weekly"><div class="card">
+                <div class="toolbar"><input type="week" id="weeklyDate"><span id="weeklyRange" style="font-size:13px;color:#6e6e73;margin-left:4px;"></span><button class="btn btn-primary" id="btnLoadWeekly">查询</button><div style="flex:1;"></div><button class="btn btn-secondary" id="btnPrintWeekly">🖨️ 打印</button><button class="btn btn-secondary" id="btnExportWeekly">📥 导出</button></div>
+                <div class="sum-row" id="weeklySummary"></div>
+                <div style="overflow-x:auto;margin-top:16px;"><table class="tx-table"><thead><tr><th>日期</th><th>商品销售</th><th>服务维修</th><th>差价税</th><th>现金</th><th>支出</th><th>卡</th></tr></thead><tbody id="weeklyBody"><tr><td colspan="7" class="no-data">选择周查询</td></tr></tbody></table></div>
+            </div></div>
+            <!-- 月报 -->
+            <div class="tab-content" id="tab-monthly"><div class="card">
+                <div class="toolbar"><input type="month" id="monthlyDate"><button class="btn btn-primary" id="btnLoadMonthly">查询</button><div style="flex:1;"></div><button class="btn btn-secondary" id="btnPrintMonthly">🖨️ 打印</button><button class="btn btn-secondary" id="btnExportMonthly">📥 导出</button></div>
+                <div class="sum-row" id="monthlySummary"></div>
+                <div style="overflow-x:auto;margin-top:16px;"><table class="tx-table"><thead><tr><th>日期</th><th>商品销售</th><th>服务维修</th><th>差价税</th><th>23%税额</th><th>13.5%税额</th><th>Margin税额</th><th>现金</th><th>支出</th><th>卡</th></tr></thead><tbody id="monthlyBody"><tr><td colspan="10" class="no-data">选择月份查询</td></tr></tbody></table></div>
+            </div></div>
+        </div>
+    </div>
+</div>
+<script src="auth-guard.js"></script>
+<script>
+(function(){
+'use strict';
+const user = Auth.requireAuth(); if (!user) return;
+document.getElementById('displayName').textContent = Auth.getDisplayName();
+document.getElementById('roleBadge').textContent = Auth.isRoot() ? '店主':'员工';
+var isAdmin = Auth.isRoot();
+if(isAdmin){document.getElementById('adminSection').style.display='';document.querySelectorAll('.admin-only').forEach(function(el){el.style.display='';});}
+var perms=user.permissions||{};
+if(isAdmin){document.querySelectorAll('nav a[data-perm]').forEach(function(a){a.style.display='';});}
+else{document.querySelectorAll('nav a[data-perm]').forEach(function(a){if(!perms[a.dataset.perm])a.style.display='none';});}
+
+var API='/api/inv';
+function hdrs(){return Auth.getHeaders();}
+function toast(msg,type){var t=document.getElementById('toast');t.textContent=msg;t.className='toast '+(type||'success');setTimeout(function(){t.classList.add('show');},10);setTimeout(function(){t.classList.remove('show');},3000);}
+function logout(){Auth.logout();}
+document.getElementById('btnLogout').addEventListener('click',logout);
+async function apiFetch(url,opts){opts=opts||{};opts.headers=hdrs();var r=await fetch(API+url,opts);if(r.status===401){logout();return null;}return r;}
+function esc(s){if(!s)return'';var d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+function fmt(v){return'€'+Number(v||0).toFixed(2);}
+function fN(v){return Number(v||0).toFixed(2);}
+function pmIcon(m){return m==='split'?'💳+💵':m==='card'?'💳 Card':'💵 Cash';}
+function createSumCard(label,value,cls){
+    var card=document.createElement('div');
+    card.className='sum-card';
+    if(cls)card.classList.add(cls);
+    var lbl=document.createElement('div');
+    lbl.className='sum-label';
+    lbl.textContent=label;
+    var val=document.createElement('div');
+    val.className='sum-value';
+    if(cls)val.classList.add(cls);
+    val.textContent=value;
+    card.appendChild(lbl);
+    card.appendChild(val);
+    return card;
+}
+function renderSummaryCards(containerId, items){
+    var container=document.getElementById(containerId);
+    if(!container)return;
+    container.innerHTML='';
+    items.forEach(function(item){
+        container.appendChild(createSumCard(item.label,item.value,item.cls));
+    });
+}
+function createVatTable(rows){
+    var table=document.createElement('table');
+    table.className='vat-table';
+    var thead=document.createElement('thead');
+    var headRow=document.createElement('tr');
+    ['Tax Type','Total Sales','VAT Payable'].forEach(function(text){
+        var th=document.createElement('th');
+        th.textContent=text;
+        headRow.appendChild(th);
+    });
+    thead.appendChild(headRow);
+    table.appendChild(thead);
+    var tbody=document.createElement('tbody');
+    rows.forEach(function(row){
+        var tr=document.createElement('tr');
+        if(row.isTotal) tr.className='total-row';
+        var tdLabel=document.createElement('td'); tdLabel.textContent=row.label; tr.appendChild(tdLabel);
+        var tdSales=document.createElement('td'); tdSales.textContent=row.sales; tr.appendChild(tdSales);
+        var tdVat=document.createElement('td'); tdVat.textContent=row.vat; tr.appendChild(tdVat);
+        tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    return table;
+}
+
+
+var today=new Date();
+document.getElementById('dailyDate').value=today.toISOString().split('T')[0];
+var dd=new Date(today);var dday=dd.getDay()||7;dd.setDate(dd.getDate()+4-dday);var ys=new Date(dd.getFullYear(),0,1);var wn=Math.ceil(((dd-ys)/86400000+1)/7);
+document.getElementById('weeklyDate').value=today.getFullYear()+'-W'+String(wn).padStart(2,'0');
+document.getElementById('monthlyDate').value=today.toISOString().slice(0,7);
+
+document.querySelectorAll('.tab[data-tab]').forEach(function(tab){tab.addEventListener('click',function(){
+    document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active');});
+    document.querySelectorAll('.tab-content').forEach(function(t){t.classList.remove('active');});
+    tab.classList.add('active');document.getElementById('tab-'+tab.dataset.tab).classList.add('active');
+});});
+
+// ═══ 获取支出按天 ═══
+async function getExpensesByDate(startDate,endDate){
+    var map={};
+    try{var r=await apiFetch('/expenses?startDate='+startDate+'&endDate='+endDate);if(!r)return map;
+    var resp=await r.json();(resp.data||[]).forEach(function(ex){var dk=new Date(ex.date).toISOString().split('T')[0];map[dk]=(map[dk]||0)+ex.amount;});}catch(e){}
+    return map;
+}
+
+// ═══ 日报 ═══
+async function loadDaily(){
+    var date=document.getElementById('dailyDate').value;if(!date){toast('请选择日期','error');return;}
+    document.getElementById('dailyBody').innerHTML='<tr><td colspan="6" class="no-data">加载中...</td></tr>';
+    try{
+        var r=await apiFetch('/reports/daily?startDate='+date+'&endDate='+date);if(!r)return;
+        var resp=await r.json();
+        var isToday=(date===new Date().toISOString().split('T')[0]);
+        var sfx=isToday?' (So far)':'';
+
+        if(resp.message||!resp.data){
+            // 即使无交易也显示空汇总（当天显示 So far）
+            if(isToday){
+                renderSummaryCards('dailySummary', [
+                    {label:'销售额（退货前）'+sfx, value:'€0.00'},
+                    {label:'🔻 退款金额'+sfx, value:'€0.00', cls:'red'},
+                    {label:'📊 全天汇总'+sfx, value:'€0.00'},
+                    {label:'商品销售 (23%)'+sfx, value:'€0.00'},
+                    {label:'维修服务 (13.5%)'+sfx, value:'€0.00'},
+                    {label:'差价税销售'+sfx, value:'€0.00'},
+                    {label:'23% 应缴税额'+sfx, value:'€0.00'},
+                    {label:'13.5% 应缴税额'+sfx, value:'€0.00'},
+                    {label:'Margin 应缴税额'+sfx, value:'€0.00'},
+                    {label:'💵 现金收入'+sfx, value:'€0.00'},
+                    {label:'💳 银行卡收入'+sfx, value:'€0.00'}
+                ]);
+            } else {
+                document.getElementById('dailySummary').innerHTML='';
+            }
+            document.getElementById('dailyVat').innerHTML='';
+            document.getElementById('dailyBody').innerHTML='<tr><td colspan="6" class="no-data">📭 当日无交易记录</td></tr>';return;}
+        var d=resp.data;var vat=d.vatBreakdown||{};
+        var std23=vat.standard23||{};var reduced=vat.reduced135||{};var margin=vat.margin||{};var lyca=vat.lycaCredit||{};
+        var cashIn=(d.payment?d.payment.cash:0)||0;var cardIn=(d.payment?d.payment.card:0)||0;
+        var exp=d.expenses||{};var cashOut=exp.cash||0;var cashNet=cashIn-cashOut;
+
+        // 当天未结束显示 So far
+        var isToday=(date===new Date().toISOString().split('T')[0]);
+        var sfx=isToday?' (So far)':'';
+
+renderSummaryCards('dailySummary', [
+            {label:'销售额（退货前）'+sfx, value:fmt(d.grossSales||0)},
+            {label:'🔻 退款金额'+sfx, value:fmt(d.refundTotal||0), cls:'red'},
+            {label:'📊 全天汇总'+sfx, value:fmt(d.totalSales)},
+            {label:'商品销售 (23%)'+sfx, value:fmt(std23.sales)},
+            {label:'维修服务 (13.5%)'+sfx, value:fmt(reduced.sales)},
+            {label:'差价税销售'+sfx, value:fmt(margin.sales)},
+            {label:'23% 应缴税额'+sfx, value:fmt(std23.vatPayable)},
+            {label:'13.5% 应缴税额'+sfx, value:fmt(reduced.vatPayable)},
+            {label:'Margin 应缴税额'+sfx, value:fmt(margin.vatPayable)},
+            {label:'💵 现金收入'+sfx, value:fmt(cashIn)},
+            {label:'💸 现金支出'+sfx, value:fmt(cashOut), cls:'red'},
+            {label:'💰 现金盈余'+sfx, value:fmt(cashNet), cls: cashNet>=0?'green':'red'},
+            {label:'💳 银行卡收入'+sfx, value:fmt(cardIn)}
+        ]);
+
+        var dailyVat = document.getElementById('dailyVat');
+        dailyVat.innerHTML='';
+        dailyVat.appendChild(createVatTable([
+            {label:'Standard 23% (Sales)', sales:fmt(std23.sales), vat:fmt(std23.vatPayable)},
+            {label:'Service & Repair 13.5%', sales:fmt(reduced.sales), vat:fmt(reduced.vatPayable)},
+            {label:'Margin Scheme', sales:fmt(margin.sales), vat:fmt(margin.vatPayable)},
+            {label:'Lyca Credit', sales:fmt(lyca.sales), vat:fmt(lyca.vatPayable)},
+            {label:'TOTAL', sales:fmt(d.totalSales), vat:fmt(d.totalVatPayable), isTotal:true}
+        ]));
+
+        var r2=await apiFetch('/transactions?startDate='+date+'&endDate='+date+'&limit=500');if(!r2)return;
+        var resp2=await r2.json();renderTxList('dailyBody',resp2.data||[]);
+    }catch(e){toast('加载失败','error');}
+}
+document.getElementById('btnLoadDaily').addEventListener('click',loadDaily);
+
+// ═══ 周日期范围计算 ═══
+function calcWeekRange(weekVal){
+    var match=weekVal.match(/^(\d{4})-W(\d{1,2})$/);if(!match)return null;
+    var y=parseInt(match[1]),w=parseInt(match[2]);
+    var j4=new Date(y,0,4);var dow=j4.getDay()||7;
+    var mon=new Date(j4);mon.setDate(j4.getDate()-dow+1+(w-1)*7);
+    var sun=new Date(mon);sun.setDate(mon.getDate()+6);
+    function fd(d){return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0');}
+    function iso(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+    return{mon:mon,sun:sun,start:iso(mon),end:iso(sun),label:fd(mon)+' - '+fd(sun)};
+}
+// 周选择器变化时显示日期范围
+function updateWeekRange(){
+    var week=document.getElementById('weeklyDate').value;
+    var span=document.getElementById('weeklyRange');
+    if(!week){span.textContent='';return;}
+    var rng=calcWeekRange(week);
+    if(rng)span.textContent='('+rng.label+')';
+    else span.textContent='';
+}
+document.getElementById('weeklyDate').addEventListener('change',updateWeekRange);
+updateWeekRange();// 初始化
+
+// ═══ 周报 ═══
+async function loadWeekly(){
+    var week=document.getElementById('weeklyDate').value;if(!week){toast('请选择周','error');return;}
+    document.getElementById('weeklyBody').innerHTML='<tr><td colspan="7" class="no-data">加载中...</td></tr>';
+    try{
+        var rng=calcWeekRange(week);
+        var ws=rng?rng.start:'';var we=rng?rng.end:'';
+        updateWeekRange();
+
+        // 判断是否当前周
+        var now=new Date();var isCurrent=rng&&(now>=rng.mon&&now<=rng.sun);
+        var sfx=isCurrent?' (So far)':'';
+
+        var r=await apiFetch('/reports/weekly?startDate='+ws+'&week='+week);if(!r)return;
+        var resp=await r.json();
+        if(!resp.data){document.getElementById('weeklySummary').innerHTML='';
+            document.getElementById('weeklyBody').innerHTML='<tr><td colspan="7" class="no-data">📭 该周无交易记录</td></tr>';return;}
+        var d=resp.data;var s=d.summary||{};var days=d.dailyData||[];
+        var expMap=await getExpensesByDate(ws,we);
+
+        var gSales=0,gService=0,gMargin=0,gLyca=0,gCashIn=0,gCashOut=0,gCard=0;
+var weeklyBody = document.getElementById('weeklyBody');
+        weeklyBody.innerHTML = '';
+        days.forEach(function(day){
+            var salesAmt=(day.standard23||{}).sales||0;var serviceAmt=(day.reduced135||{}).sales||0;
+            var marginAmt=(day.margin||{}).sales||0;var lycaAmt=(day.lycaCredit||{}).sales||0;
+            var cashIn=day.cash||0;var cashOut=expMap[day.date]||0;var cardAmt=day.card||0;
+            gSales+=salesAmt;gService+=serviceAmt;gMargin+=marginAmt;gLyca+=lycaAmt;
+            gCashIn+=cashIn;gCashOut+=cashOut;gCard+=cardAmt;
+
+            var tr = document.createElement('tr');
+            var tdDate = document.createElement('td'); tdDate.textContent = day.date || ''; tr.appendChild(tdDate);
+            var tdSales = document.createElement('td'); tdSales.textContent = fmt(salesAmt); tr.appendChild(tdSales);
+            var tdService = document.createElement('td'); tdService.textContent = fmt(serviceAmt); tr.appendChild(tdService);
+            var tdMargin = document.createElement('td'); tdMargin.textContent = fmt(marginAmt); tr.appendChild(tdMargin);
+            var tdCash = document.createElement('td'); tdCash.textContent = fmt(cashIn); tr.appendChild(tdCash);
+            var tdOut = document.createElement('td'); tdOut.textContent = fmt(cashOut); tdOut.style.color = '#ff3b30'; tr.appendChild(tdOut);
+            var tdCard = document.createElement('td'); tdCard.textContent = fmt(cardAmt); tr.appendChild(tdCard);
+            weeklyBody.appendChild(tr);
+        });
+        var totalLabel=isCurrent?'TOTAL (So far)':'TOTAL';
+        var totalRow = document.createElement('tr');
+        totalRow.className = 'total-row';
+        var tdLabel = document.createElement('td'); tdLabel.textContent = totalLabel; totalRow.appendChild(tdLabel);
+        var tdTotalSales = document.createElement('td'); tdTotalSales.textContent = fmt(gSales); totalRow.appendChild(tdTotalSales);
+        var tdTotalService = document.createElement('td'); tdTotalService.textContent = fmt(gService); totalRow.appendChild(tdTotalService);
+        var tdTotalMargin = document.createElement('td'); tdTotalMargin.textContent = fmt(gMargin); totalRow.appendChild(tdTotalMargin);
+        var tdTotalCash = document.createElement('td'); tdTotalCash.textContent = fmt(gCashIn); totalRow.appendChild(tdTotalCash);
+        var tdTotalOut = document.createElement('td'); tdTotalOut.textContent = fmt(gCashOut); tdTotalOut.style.color = '#ff3b30'; totalRow.appendChild(tdTotalOut);
+        var tdTotalCard = document.createElement('td'); tdTotalCard.textContent = fmt(gCard); totalRow.appendChild(tdTotalCard);
+        weeklyBody.appendChild(totalRow);
+
+        var cashNet=gCashIn-gCashOut;
+        var totalCardExpected=(s.totalCard||gCard);
+        renderSummaryCards('weeklySummary', [
+            {label:'本周销售（退货前）'+sfx, value:fmt(s.grossSales||0)},
+            {label:'🔻 本周退款'+sfx, value:fmt(s.refundTotal||0), cls:'red'},
+            {label:'本周商品销售'+sfx, value:fmt(gSales)},
+            {label:'本周服务维修'+sfx, value:fmt(gService)},
+            {label:'本周差价税'+sfx, value:fmt(gMargin)},
+            {label:'本周话费 Lyca'+sfx, value:fmt(gLyca)},
+            {label:'💵 现金总收入'+sfx, value:fmt(gCashIn)},
+            {label:'💸 现金总支出'+sfx, value:fmt(gCashOut), cls:'red'},
+            {label:'💰 现金盈余'+sfx, value:fmt(cashNet), cls: cashNet>=0 ? 'green' : 'red'},
+            {label:'💳 银行卡总收入'+sfx, value:fmt(gCard)},
+            {label:'📥 应进卡收款'+sfx, value:fmt(totalCardExpected)}
+        ]);
+    }catch(e){toast('加载失败','error');}
+}
+document.getElementById('btnLoadWeekly').addEventListener('click',loadWeekly);
+
+// ═══ 月报 ═══
+var _mData=[];
+async function loadMonthly(){
+    var month=document.getElementById('monthlyDate').value;if(!month){toast('请选择月份','error');return;}
+    document.getElementById('monthlyBody').innerHTML='<tr><td colspan="10" class="no-data">加载中...</td></tr>';
+    _mData=[];
+    try{
+        var r=await apiFetch('/reports/monthly?month='+month);if(!r)return;
+        var resp=await r.json();
+        if(!resp.data){document.getElementById('monthlySummary').innerHTML='';
+            document.getElementById('monthlyBody').innerHTML='<tr><td colspan="10" class="no-data">📭 该月无交易记录</td></tr>';return;}
+        var d=resp.data;var s=d.summary||{};var days=d.dailyData||[];
+        var parts=month.split('-');var sd=month+'-01';var ed=month+'-'+String(new Date(parseInt(parts[0]),parseInt(parts[1]),0).getDate()).padStart(2,'0');
+        var expMap=await getExpensesByDate(sd,ed);
+
+        // 判断是否当前月（未结束）
+        var now=new Date();var curMonth=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+        var isCurrent=(month===curMonth);
+        var sfx=isCurrent?' (So far / 至今)':'';
+
+        var gSales=0,gService=0,gMargin=0,gV23=0,gV135=0,gVM=0,gCash=0,gOut=0,gCard=0;
+var monthlyBody = document.getElementById('monthlyBody');
+        monthlyBody.innerHTML = '';
+        days.forEach(function(day){
+            var salesAmt=(day.standard23||{}).sales||0;var serviceAmt=(day.reduced135||{}).sales||0;var marginAmt=(day.margin||{}).sales||0;
+            var v23=(day.standard23||{}).vatPayable||0;var v135=(day.reduced135||{}).vatPayable||0;var vm=(day.margin||{}).vatPayable||0;
+            var cashIn=day.cash||0;var cashOut=expMap[day.date]||0;var cardAmt=day.card||0;
+            gSales+=salesAmt;gService+=serviceAmt;gMargin+=marginAmt;gV23+=v23;gV135+=v135;gVM+=vm;
+            gCash+=cashIn;gOut+=cashOut;gCard+=cardAmt;
+            _mData.push({date:day.date,sales:salesAmt,repair:serviceAmt,margin:marginAmt,vat23:v23,vat135:v135,marginVat:vm,cashIn:cashIn,cashOut:cashOut,card:cardAmt});
+
+            var tr = document.createElement('tr');
+            var tdDate = document.createElement('td'); tdDate.textContent = day.date || ''; tr.appendChild(tdDate);
+            var tdSales = document.createElement('td'); tdSales.textContent = fmt(salesAmt); tr.appendChild(tdSales);
+            var tdService = document.createElement('td'); tdService.textContent = fmt(serviceAmt); tr.appendChild(tdService);
+            var tdMargin = document.createElement('td'); tdMargin.textContent = fmt(marginAmt); tr.appendChild(tdMargin);
+            var tdV23 = document.createElement('td'); tdV23.textContent = fmt(v23); tr.appendChild(tdV23);
+            var tdV135 = document.createElement('td'); tdV135.textContent = fmt(v135); tr.appendChild(tdV135);
+            var tdVM = document.createElement('td'); tdVM.textContent = fmt(vm); tr.appendChild(tdVM);
+            var tdCash = document.createElement('td'); tdCash.textContent = fmt(cashIn); tr.appendChild(tdCash);
+            var tdOut = document.createElement('td'); tdOut.textContent = fmt(cashOut); tdOut.style.color = '#ff3b30'; tr.appendChild(tdOut);
+            var tdCard = document.createElement('td'); tdCard.textContent = fmt(cardAmt); tr.appendChild(tdCard);
+            monthlyBody.appendChild(tr);
+        });
+        var totalLabel=isCurrent?'TOTAL (So far)':'TOTAL';
+        var totalRow = document.createElement('tr');
+        totalRow.className = 'total-row';
+        var tdLabel = document.createElement('td'); tdLabel.textContent = totalLabel; totalRow.appendChild(tdLabel);
+        var tdTotalSales = document.createElement('td'); tdTotalSales.textContent = fmt(gSales); totalRow.appendChild(tdTotalSales);
+        var tdTotalService = document.createElement('td'); tdTotalService.textContent = fmt(gService); totalRow.appendChild(tdTotalService);
+        var tdTotalMargin = document.createElement('td'); tdTotalMargin.textContent = fmt(gMargin); totalRow.appendChild(tdTotalMargin);
+        var tdTotalV23 = document.createElement('td'); tdTotalV23.textContent = fmt(gV23); totalRow.appendChild(tdTotalV23);
+        var tdTotalV135 = document.createElement('td'); tdTotalV135.textContent = fmt(gV135); totalRow.appendChild(tdTotalV135);
+        var tdTotalVM = document.createElement('td'); tdTotalVM.textContent = fmt(gVM); totalRow.appendChild(tdTotalVM);
+        var tdTotalCash = document.createElement('td'); tdTotalCash.textContent = fmt(gCash); totalRow.appendChild(tdTotalCash);
+        var tdTotalOut = document.createElement('td'); tdTotalOut.textContent = fmt(gOut); tdTotalOut.style.color = '#ff3b30'; totalRow.appendChild(tdTotalOut);
+        var tdTotalCard = document.createElement('td'); tdTotalCard.textContent = fmt(gCard); totalRow.appendChild(tdTotalCard);
+        monthlyBody.appendChild(totalRow);
+
+        var totalVat=gV23+gV135+gVM;
+        renderSummaryCards('monthlySummary', [
+            {label:'月销售额（退货前）'+sfx, value:fmt(s.grossSales||0)},
+            {label:'🔻 月退款金额'+sfx, value:fmt(s.refundTotal||0), cls:'red'},
+            {label:'月总销售额（汇总）'+sfx, value:fmt(gSales+gService+gMargin)},
+            {label:'23% 应缴税额'+sfx, value:fmt(gV23)},
+            {label:'13.5% 应缴税额'+sfx, value:fmt(gV135)},
+            {label:'Margin 应缴税额'+sfx, value:fmt(gVM)},
+            {label:'当月总应缴税额'+sfx, value:fmt(totalVat), cls:'red'},
+            {label:'💵 现金总收入'+sfx, value:fmt(gCash)},
+            {label:'💸 现金总支出'+sfx, value:fmt(gOut), cls:'red'},
+            {label:'💰 现金盈余'+sfx, value:fmt(gCash-gOut), cls: (gCash-gOut)>=0?'green':'red'},
+            {label:'💳 银行卡总收入'+sfx, value:fmt(gCard)}
+        ]);
+    }catch(e){toast('加载失败','error');}
+}
+document.getElementById('btnLoadMonthly').addEventListener('click',loadMonthly);
+
+// ═══ 交易列表渲染 ═══
+function renderTxList(tbodyId,txs){
+    var tb=document.getElementById(tbodyId);
+    if(!txs||!txs.length){
+        tb.innerHTML='<tr><td colspan="6" class="no-data">📭 暂无交易记录</td></tr>';
+        return;
+    }
+
+    // Clear existing content
+    tb.innerHTML = '';
+
+    // Build DOM elements safely
+    txs.forEach(function(tx){
+        var isR = tx.totalAmount < 0;
+        const tr = document.createElement('tr');
+        tr.setAttribute('data-id', tx._id);
+
+        // Receipt number cell
+        const td1 = document.createElement('td');
+        td1.className = 'tx-no';
+        td1.textContent = (isR ? '↩️ ' : '') + tx.receiptNumber;
+        tr.appendChild(td1);
+
+        // Date cell
+        const td2 = document.createElement('td');
+        td2.textContent = new Date(tx.createdAt).toLocaleString('en-IE');
+        tr.appendChild(td2);
+
+        // Quantity cell
+        const td3 = document.createElement('td');
+        td3.className = 'tx-qty';
+        td3.textContent = tx.items ? tx.items.length : 0;
+        tr.appendChild(td3);
+
+        // Amount cell
+        const td4 = document.createElement('td');
+        td4.className = 'tx-amount';
+        if (isR) td4.style.color = '#ff3b30';
+        td4.textContent = fmt(tx.totalAmount);
+        tr.appendChild(td4);
+
+        // Payment method cell
+        const td5 = document.createElement('td');
+        td5.className = 'tx-pay';
+        td5.innerHTML = pmIcon(tx.paymentMethod); // This is safe as pmIcon returns safe HTML
+        tr.appendChild(td5);
+
+        // Actions cell
+        const td6 = document.createElement('td');
+
+        // View button
+        const viewBtn = document.createElement('button');
+        viewBtn.className = 'btn-sm btn-view';
+        viewBtn.setAttribute('data-action', 'view');
+        viewBtn.setAttribute('data-id', tx._id);
+        viewBtn.textContent = '详情';
+        td6.appendChild(viewBtn);
+
+        // Print button
+        const printBtn = document.createElement('button');
+        printBtn.className = 'btn-sm btn-print';
+        printBtn.setAttribute('data-action', 'reprint');
+        printBtn.setAttribute('data-id', tx._id);
+        printBtn.textContent = '🖨️';
+        td6.appendChild(printBtn);
+
+        // Refund button (if not refund)
+        if (tx.totalAmount >= 0) {
+            const refundBtn = document.createElement('button');
+            refundBtn.className = 'btn-sm btn-refund';
+            refundBtn.setAttribute('data-action', 'refund');
+            refundBtn.setAttribute('data-receipt', tx.receiptNumber);
+            refundBtn.textContent = '退款';
+            td6.appendChild(refundBtn);
+        }
+
+        // Delete button (admin only)
+        if (isAdmin) {
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'btn-sm btn-delete';
+            deleteBtn.setAttribute('data-action', 'delete');
+            deleteBtn.setAttribute('data-id', tx._id);
+            deleteBtn.textContent = '删除';
+            td6.appendChild(deleteBtn);
+        }
+
+        tr.appendChild(td6);
+        tb.appendChild(tr);
+    });
+}
+
+// ═══ 事件委托 ═══
+document.querySelectorAll('.tx-table').forEach(function(t){t.addEventListener('click',function(e){
+    var b=e.target.closest('[data-action]');if(!b)return;
+    if(b.dataset.action==='view')viewDetail(b.dataset.id);
+    else if(b.dataset.action==='reprint')reprintReceipt(b.dataset.id);
+    else if(b.dataset.action==='refund')window.open('/inv-transactions.html','_blank');
+    else if(b.dataset.action==='delete')deleteTx(b.dataset.id);
+});});
+
+// ═══ 详情 ═══
+async function viewDetail(id){
+    try {
+        var r = await apiFetch('/transactions/'+id);
+        if(!r) return;
+        var tx = await r.json();
+
+        var detailContent = document.getElementById('detailContent');
+        detailContent.innerHTML = '';
+
+        function addDetailRow(label, value) {
+            var row = document.createElement('div');
+            row.className = 'detail-row';
+            var labelEl = document.createElement('span');
+            labelEl.className = 'label';
+            labelEl.textContent = label;
+            var valueEl = document.createElement('span');
+            valueEl.className = 'value';
+            valueEl.textContent = value;
+            row.appendChild(labelEl);
+            row.appendChild(valueEl);
+            detailContent.appendChild(row);
+        }
+
+        addDetailRow('单号', tx.receiptNumber || '');
+        addDetailRow('时间', new Date(tx.createdAt).toLocaleString('en-IE'));
+        addDetailRow('支付', pmIcon(tx.paymentMethod));
+        addDetailRow('总金额', fmt(tx.totalAmount));
+        if (tx.cashReceived) addDetailRow('实收', fmt(tx.cashReceived));
+        if (tx.changeGiven > 0) addDetailRow('找零', fmt(tx.changeGiven));
+        if (tx.cardAmount) addDetailRow('卡付', fmt(tx.cardAmount));
+
+        var heading = document.createElement('h4');
+        heading.style.margin = '16px 0 8px';
+        heading.textContent = '商品明细';
+        detailContent.appendChild(heading);
+
+        var table = document.createElement('table');
+        table.className = 'tx-table';
+        var thead = document.createElement('thead');
+        var headerRow = document.createElement('tr');
+        ['商品', '数量', '单价', '小计'].forEach(function(text) {
+            var th = document.createElement('th');
+            th.textContent = text;
+            headerRow.appendChild(th);
+        });
+        thead.appendChild(headerRow);
+        table.appendChild(thead);
+
+        var tbody = document.createElement('tbody');
+        (tx.items || []).forEach(function(it) {
+            var tr = document.createElement('tr');
+            var tdName = document.createElement('td');
+            tdName.textContent = it.name || '';
+            if (it.serialNumber) {
+                var br = document.createElement('br');
+                var sn = document.createElement('small');
+                sn.style.color = '#0071e3';
+                sn.textContent = 'SN:' + it.serialNumber;
+                tdName.appendChild(br);
+                tdName.appendChild(sn);
+            }
+            tr.appendChild(tdName);
+
+            var tdQty = document.createElement('td');
+            tdQty.textContent = it.quantity;
+            tr.appendChild(tdQty);
+
+            var tdUnit = document.createElement('td');
+            tdUnit.textContent = fmt(it.unitPrice);
+            tr.appendChild(tdUnit);
+
+            var tdSubtotal = document.createElement('td');
+            tdSubtotal.textContent = fmt(it.subtotal);
+            tr.appendChild(tdSubtotal);
+
+            tbody.appendChild(tr);
+        });
+        table.appendChild(tbody);
+        detailContent.appendChild(table);
+        document.getElementById('detailModal').classList.add('show');
+    } catch(e) {
+        toast('加载失败','error');
+    }
+}
+document.getElementById('btnCloseDetail').addEventListener('click',function(){document.getElementById('detailModal').classList.remove('show');});
+
+// ═══ 重打印 ═══
+async function reprintReceipt(id){
+    try{var r=await apiFetch('/transactions/'+id);if(!r)return;var tx=await r.json();
+    try{var pr=await fetch('http://localhost:9100/print',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({transaction:tx}),signal:AbortSignal.timeout(5000)});
+    if(pr.ok){toast('已发送到打印机');return;}}catch(e){}
+    toast('Print Agent 未运行','error');}catch(e){toast('打印失败','error');}
+}
+
+// ═══ 删除 ═══
+async function deleteTx(id){
+    if(!confirm('⚠️ 确定删除？不可恢复！'))return;if(!confirm('再次确认删除？'))return;
+    try{var r=await apiFetch('/transactions/'+id+'/delete',{method:'DELETE',body:JSON.stringify({confirm:true})});
+    if(!r)return;if(!r.ok){var e=await r.json();toast(e.error||'失败','error');return;}toast('已删除');
+    var at=document.querySelector('.tab.active');if(at){var t=at.dataset.tab;if(t==='daily')loadDaily();else if(t==='weekly')loadWeekly();else loadMonthly();}
+    }catch(e){toast('失败','error');}
+}
+
+// ═══ 导出日报/周报 ═══
+function exportTableCSV(tabType){
+    var table=document.querySelector('#tab-'+tabType+' .tx-table');if(!table)return;
+    var csv='\uFEFF';table.querySelectorAll('tr').forEach(function(row){var line=[];
+    row.querySelectorAll('th,td').forEach(function(c){line.push('"'+c.innerText.replace(/"/g,'""').replace(/\n/g,' ')+'"');});csv+=line.join(',')+'\n';});
+    var blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});var a=document.createElement('a');a.href=URL.createObjectURL(blob);
+    a.download='report-'+tabType+'-'+new Date().toISOString().split('T')[0]+'.csv';a.click();toast('导出成功');
+}
+
+// ═══ 导出月报（含税金+汇总） ═══
+function exportMonthlyTax(){
+    var month=document.getElementById('monthlyDate').value;
+    if(!_mData.length){toast('请先查询','error');return;}
+    var csv='\uFEFF'+'Date,Sales,Repair,Margin,VAT 23%,VAT 13.5%,Margin VAT,Cash In,Cash Out,Card\n';
+    var tS=0,tR=0,tM=0,tV23=0,tV135=0,tVM=0,tCI=0,tCO=0,tCd=0;
+    _mData.forEach(function(d){csv+=d.date+','+fN(d.sales)+','+fN(d.repair)+','+fN(d.margin)+','+fN(d.vat23)+','+fN(d.vat135)+','+fN(d.marginVat)+','+fN(d.cashIn)+','+fN(d.cashOut)+','+fN(d.card)+'\n';
+    tS+=d.sales;tR+=d.repair;tM+=d.margin;tV23+=d.vat23;tV135+=d.vat135;tVM+=d.marginVat;tCI+=d.cashIn;tCO+=d.cashOut;tCd+=d.card;});
+    csv+='TOTAL,'+fN(tS)+','+fN(tR)+','+fN(tM)+','+fN(tV23)+','+fN(tV135)+','+fN(tVM)+','+fN(tCI)+','+fN(tCO)+','+fN(tCd)+'\n';
+    var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));
+    a.download='Monthly_Tax_'+month+'.csv';a.click();toast('导出: Monthly_Tax_'+month+'.csv');
+}
+
+document.getElementById('btnExportDaily').addEventListener('click',function(){exportTableCSV('daily');});
+document.getElementById('btnExportWeekly').addEventListener('click',function(){exportTableCSV('weekly');});
+document.getElementById('btnExportMonthly').addEventListener('click',function(){exportMonthlyTax();});
+
+// ═══ 静默打印 ═══
+function silentPrint(el){var content=el.closest('.card').innerText;
+fetch('http://localhost:9100/print',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({content:content}),signal:AbortSignal.timeout(5000)})
+.then(function(r){if(r.ok)toast('已发送到打印机');else throw 0;}).catch(function(){window.print();});}
+document.getElementById('btnPrintDaily').addEventListener('click',function(){silentPrint(this);});
+document.getElementById('btnPrintWeekly').addEventListener('click',function(){silentPrint(this);});
+document.getElementById('btnPrintMonthly').addEventListener('click',function(){silentPrint(this);});
+
+loadDaily();
+})();
+</script>
+</body>
+</html>

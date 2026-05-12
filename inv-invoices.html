@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VAT Invoice 管理 - Tech Cross 进销存</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;}
+        html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:antialiased;background:#f5f5f7;color:#1d1d1f;}
+        .layout{display:flex;height:100vh;}
+        .sidebar{width:220px;background:#1d1d1f;color:#f5f5f7;display:flex;flex-direction:column;flex-shrink:0;}
+        .sidebar .logo{padding:20px;text-align:center;border-bottom:1px solid #333;}.sidebar .logo img{height:36px;}.sidebar .logo span{display:block;font-size:12px;color:#86868b;margin-top:4px;}
+        .sidebar nav{flex:1;overflow-y:auto;padding:12px 0;}
+        .sidebar nav a{display:flex;align-items:center;gap:10px;padding:10px 20px;color:#b0b0b5;text-decoration:none;font-size:14px;transition:all .15s;border-left:3px solid transparent;}
+        .sidebar nav a:hover{background:#2a2a2d;color:#f5f5f7;}.sidebar nav a.active{background:#2a2a2d;color:#D4E157;border-left-color:#D4E157;font-weight:600;}
+        .sidebar nav a .icon{width:20px;text-align:center;font-size:16px;}
+        .sidebar .nav-section{padding:16px 20px 6px;font-size:11px;color:#6e6e73;text-transform:uppercase;letter-spacing:1px;}
+        .main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+        .topbar{height:56px;background:#fff;border-bottom:1px solid #e5e5e7;display:flex;align-items:center;justify-content:space-between;padding:0 24px;flex-shrink:0;}
+        .topbar h2{font-size:18px;font-weight:600;}.topbar .user-info{display:flex;align-items:center;gap:12px;font-size:14px;color:#6e6e73;}.topbar .user-info strong{color:#1d1d1f;}
+        .btn-logout{padding:6px 14px;border-radius:980px;border:1px solid #d2d2d7;background:#fff;font-size:13px;cursor:pointer;transition:all .2s;}.btn-logout:hover{background:#ff3b30;color:#fff;border-color:#ff3b30;}
+        .content{flex:1;overflow-y:auto;padding:24px;}
+        .card{background:#fff;border-radius:14px;box-shadow:0 2px 12px rgba(0,0,0,.06);padding:24px;margin-bottom:20px;}
+        .card h3{font-size:16px;font-weight:600;margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid #f0f0f2;}
+        .toolbar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:16px;}
+        .toolbar input,.toolbar select{padding:8px 14px;border:1px solid #d2d2d7;border-radius:10px;font-size:14px;background:#fff;}
+        .toolbar input:focus,.toolbar select:focus{outline:none;border-color:#D4E157;}
+        .btn{padding:8px 18px;border:none;border-radius:10px;font-size:14px;font-weight:500;cursor:pointer;transition:all .2s;}
+        .btn-primary{background:#D4E157;color:#000;}.btn-primary:hover{background:#c5d148;}
+        .btn-secondary{background:#f5f5f7;border:1px solid #d2d2d7;color:#1d1d1f;}.btn-secondary:hover{background:#e5e5e7;}
+        .btn-danger{background:#ff3b30;color:#fff;}.btn-danger:hover{background:#e0342d;}
+        .btn-success{background:#34c759;color:#fff;}.btn-success:hover{background:#2db84e;}
+        .btn-sm{padding:5px 12px;font-size:13px;}
+        table{width:100%;border-collapse:collapse;font-size:14px;}
+        thead th{background:#f5f5f7;padding:10px 12px;text-align:left;font-weight:600;font-size:12px;color:#6e6e73;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #e5e5e7;}
+        tbody td{padding:10px 12px;border-bottom:1px solid #f0f0f2;vertical-align:middle;}
+        tbody tr:hover{background:#fafafa;}
+        .badge{display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;}
+        .badge-active{background:#e8f5e9;color:#2e7d32;}
+        .badge-sent{background:#e8f5e9;color:#2e7d32;}.badge-not-sent{background:#f5f5f7;color:#6e6e73;}.badge-failed{background:#fef2f2;color:#991b1b;}
+        .modal-overlay{display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.5);backdrop-filter:blur(4px);align-items:center;justify-content:center;}
+        .modal-overlay.show{display:flex;}
+        .modal{background:#fff;border-radius:18px;padding:32px;max-width:560px;width:90%;max-height:85vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.2);}
+        .modal h3{font-size:20px;margin-bottom:20px;}
+        .form-group{margin-bottom:16px;}.form-group label{display:block;font-size:14px;font-weight:500;margin-bottom:6px;}
+        .form-group input,.form-group select,.form-group textarea{width:100%;padding:10px 14px;border:1px solid #d2d2d7;border-radius:10px;font-size:14px;font-family:inherit;}
+        .form-group input:focus,.form-group select:focus{outline:none;border-color:#D4E157;}
+        .form-row{display:flex;gap:16px;}.form-row .form-group{flex:1;}
+        .modal-actions{display:flex;gap:12px;justify-content:flex-end;margin-top:24px;}
+        .toast{position:fixed;top:20px;right:20px;z-index:10000;padding:14px 22px;border-radius:12px;font-size:14px;font-weight:500;box-shadow:0 8px 32px rgba(0,0,0,.15);transform:translateX(120%);transition:transform .3s ease;max-width:400px;}
+        .toast.show{transform:translateX(0);}.toast.success{background:#34c759;color:#fff;}.toast.error{background:#ff3b30;color:#fff;}
+    </style>
+</head>
+<body>
+<div class="toast" id="toast"></div>
+<div class="layout">
+    <aside class="sidebar">
+        <div class="logo"><img src="logo.png" alt="Tech Cross"><span>进销存管理系统</span></div>
+        <nav>
+            <div class="nav-section">业务管理 / Business</div>
+            <a href="inv-pos.html" data-perm="pos"><span class="icon">💰</span>POS 收银 / Checkout</a>
+            <a href="inv-products.html" data-perm="products"><span class="icon">📦</span>商品管理 / Products</a>
+            <a href="inv-stock.html" data-perm="stock"><span class="icon">🏭</span>库存管理 / Stock</a>
+            <a href="inv-suppliers.html" data-perm="suppliers"><span class="icon">🤝</span>供应商 / Suppliers</a>
+            <a href="inv-purchases.html" data-perm="purchases"><span class="icon">🛒</span>采购管理 / Purchases</a>
+            <a href="inv-transactions.html" data-perm="transactions"><span class="icon">📋</span>交易记录 / Transactions</a>
+            <div class="nav-section">报表与发票 / Reports</div>
+            <a href="inv-reports.html" data-perm="reports"><span class="icon">📊</span>报表中心 / Reports</a>
+            <a href="inv-invoices.html" class="active" data-perm="invoices"><span class="icon">🧾</span>发票管理 / VAT Invoice</a>
+            <a href="inv-expenses.html" data-perm="expenses"><span class="icon">💸</span>支出管理 / Expenses</a>
+            <div class="nav-section" id="adminSection" style="display:none;">系统管理 / System</div>
+            <a href="inv-settings.html" class="admin-only" style="display:none;" data-perm="settings"><span class="icon">⚙️</span>系统设置 / Settings</a>
+            <a href="inv-users.html" class="admin-only" style="display:none;" data-perm="users"><span class="icon">👥</span>用户管理 / Users</a>
+        </nav>
+    </aside>
+    <div class="main">
+        <div class="topbar">
+            <h2>发票管理 / VAT Invoice</h2>
+            <div class="user-info"><span>欢迎, <strong id="displayName">-</strong></span><span class="badge badge-active" id="roleBadge">-</span><button class="btn-logout" onclick="logout()">退出登录 / Logout</button></div>
+        </div>
+        <div class="content">
+            <div class="card">
+                <div class="toolbar">
+                    <input type="text" id="filterInvoiceNo" placeholder="发票号">
+                    <input type="text" id="filterCustomer" placeholder="客户名称">
+                    <input type="date" id="filterStart">
+                    <input type="date" id="filterEnd">
+                    <button class="btn btn-primary" onclick="loadInvoices()">查询 / Search</button>
+                    <div style="flex:1;"></div>
+                    <button class="btn btn-secondary" onclick="batchSend()">📧 批量发送 / Batch Send</button>
+                </div>
+                <table>
+                    <thead><tr><th>发票号 / Invoice#</th><th>客户 / Customer</th><th>金额 / Amount (€)</th><th>VAT (€)</th><th>日期 / Date</th><th>发送状态 / Email Status</th><th>操作 / Actions</th></tr></thead>
+                    <tbody id="invoiceTable"><tr><td colspan="7" style="text-align:center;color:#86868b;padding:40px;">加载中...</td></tr></tbody>
+                </table>
+            </div>
+
+            <!-- Generate Invoice Section -->
+            <div class="card">
+                <h3>从交易生成 Invoice</h3>
+                <div class="toolbar">
+                    <input type="text" id="txSearch" placeholder="输入交易单号搜索..." style="width:300px;">
+                    <button class="btn btn-primary" onclick="searchTransaction()">搜索 / Search</button>
+                </div>
+                <div id="txResult"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Generate Invoice Modal -->
+<div class="modal-overlay" id="generateModal">
+    <div class="modal">
+        <h3>生成 VAT Invoice</h3>
+        <input type="hidden" id="genTxId">
+        <div class="form-group"><label>客户名称</label><input type="text" id="genCustomerName" placeholder="Customer Name"></div>
+        <div class="form-group"><label>客户地址</label><input type="text" id="genCustomerAddress" placeholder="Customer Address"></div>
+        <div class="form-row">
+            <div class="form-group"><label>客户 VAT 号</label><input type="text" id="genCustomerVat" placeholder="IE1234567X"></div>
+            <div class="form-group"><label>客户邮箱</label><input type="email" id="genCustomerEmail" placeholder="email@example.com"></div>
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-secondary" onclick="document.getElementById('generateModal').classList.remove('show')">取消 / Cancel</button>
+            <button class="btn btn-primary" onclick="generateInvoice()">生成 Invoice / Generate</button>
+        </div>
+    </div>
+</div>
+
+<!-- WhatsApp Modal -->
+<div class="modal-overlay" id="whatsAppModal">
+    <div class="modal" style="max-width:380px;">
+        <h3>📱 Send Invoice via WhatsApp</h3>
+        <p style="font-size:14px;color:#6e6e73;margin-bottom:16px;" id="waCustomerName"></p>
+        <input id="waPhoneInput" type="tel" placeholder="0870908555" style="width:100%;padding:14px 16px;border:1.5px solid #d2d2d7;border-radius:12px;font-size:18px;margin-bottom:8px;">
+        <p id="waPhoneHint" style="font-size:12px;color:#34c759;min-height:18px;"></p>
+        <p style="font-size:12px;color:#86868b;margin-bottom:16px;">Irish mobile: <strong>0870908555</strong> → <strong>+353870908555</strong></p>
+        <div class="modal-actions">
+            <button class="btn btn-secondary" onclick="closeInvoiceWhatsApp()">Cancel</button>
+            <button class="btn btn-primary" onclick="sendInvoiceWhatsApp()" id="waSendBtn" style="background:#25D366;">📤 Send</button>
+        </div>
+    </div>
+</div>
+
+<script src="auth-guard.js"></script>
+<script>
+(function(){
+'use strict';
+const user = Auth.requireAuth(); if (!user) return;
+document.getElementById('displayName').textContent = Auth.getDisplayName();
+document.getElementById('roleBadge').textContent = Auth.isRoot() ? '店主':'员工';
+if(Auth.isRoot()){document.getElementById('adminSection').style.display='';document.querySelectorAll('.admin-only').forEach(el=>el.style.display='');}
+
+// Hide sidebar items based on permissions
+var perms=user.permissions||{};
+if(Auth.isRoot()){document.querySelectorAll('nav a[data-perm]').forEach(function(a){a.style.display='';});}
+else{document.querySelectorAll('nav a[data-perm]').forEach(function(a){if(!perms[a.dataset.perm])a.style.display='none';});}
+
+const API='/api/inv';
+const headers=()=>Auth.getHeaders();
+function showToast(msg,type){const t=document.getElementById('toast');t.textContent=msg;t.className='toast '+(type||'success');setTimeout(()=>t.classList.add('show'),10);setTimeout(()=>t.classList.remove('show'),3000);}
+function logout(){Auth.logout();}
+window.logout=logout;
+async function apiFetch(url,opts){opts=opts||{};opts.headers=headers();const r=await fetch(API+url,opts);if(r.status===401){logout();return null;}return r;}
+function esc(s){if(!s)return'';const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+const emailStatusMap={not_sent:'未发送',sent:'已发送',failed:'发送失败'};
+const emailBadge={not_sent:'badge-not-sent',sent:'badge-sent',failed:'badge-failed'};
+
+async function loadInvoices(){
+    let url='/invoices';
+    const params=[];
+    const no=document.getElementById('filterInvoiceNo').value.trim();
+    const cust=document.getElementById('filterCustomer').value.trim();
+    const start=document.getElementById('filterStart').value;
+    const end=document.getElementById('filterEnd').value;
+    if(no)params.push('invoiceNumber='+encodeURIComponent(no));
+    if(cust)params.push('customer='+encodeURIComponent(cust));
+    if(start)params.push('startDate='+start);
+    if(end)params.push('endDate='+end);
+    if(params.length)url+='?'+params.join('&');
+    try{
+        const r=await apiFetch(url);if(!r)return;
+        const list=await r.json();
+        const tb=document.getElementById('invoiceTable');
+        if(!list.length){tb.innerHTML='<tr><td colspan="7" style="text-align:center;color:#86868b;padding:40px;">暂无 Invoice</td></tr>';return;}
+        // Clear existing content
+        tb.innerHTML = '';
+
+        // Build DOM elements safely
+        list.forEach(inv => {
+            const tr = document.createElement('tr');
+
+            // Invoice number cell
+            const td1 = document.createElement('td');
+            td1.style.fontFamily = 'monospace';
+            td1.textContent = inv.invoiceNumber;
+            tr.appendChild(td1);
+
+            // Customer name cell
+            const td2 = document.createElement('td');
+            td2.textContent = inv.customerName || '-';
+            tr.appendChild(td2);
+
+            // Gross total cell
+            const td3 = document.createElement('td');
+            td3.textContent = '€' + Number(inv.grossTotal || 0).toFixed(2);
+            tr.appendChild(td3);
+
+            // VAT total cell
+            const td4 = document.createElement('td');
+            td4.textContent = '€' + Number(inv.vatTotal || 0).toFixed(2);
+            tr.appendChild(td4);
+
+            // Date cell
+            const td5 = document.createElement('td');
+            td5.textContent = new Date(inv.createdAt).toLocaleDateString('zh-CN');
+            tr.appendChild(td5);
+
+            // Email status cell
+            const td6 = document.createElement('td');
+            const statusSpan = document.createElement('span');
+            statusSpan.className = `badge ${emailBadge[inv.emailStatus] || 'badge-not-sent'}`;
+            statusSpan.textContent = emailStatusMap[inv.emailStatus] || inv.emailStatus;
+            td6.appendChild(statusSpan);
+            tr.appendChild(td6);
+
+            // Actions cell
+            const td7 = document.createElement('td');
+
+            // Download PDF button
+            const pdfBtn = document.createElement('button');
+            pdfBtn.className = 'btn btn-secondary btn-sm';
+            pdfBtn.textContent = '📄 PDF';
+            pdfBtn.onclick = () => downloadPdf(inv._id);
+            td7.appendChild(pdfBtn);
+
+            td7.appendChild(document.createTextNode(' '));
+
+            // Send email button
+            const emailBtn = document.createElement('button');
+            emailBtn.className = 'btn btn-secondary btn-sm';
+            emailBtn.textContent = '📧 发送';
+            emailBtn.onclick = () => sendEmail(inv._id);
+            td7.appendChild(emailBtn);
+
+            td7.appendChild(document.createTextNode(' '));
+
+            // WhatsApp button
+            const waBtn = document.createElement('button');
+            waBtn.className = 'btn btn-secondary btn-sm';
+            waBtn.textContent = '📱';
+            waBtn.title = 'Send via WhatsApp';
+            waBtn.onclick = () => showInvoiceWhatsApp(inv._id, inv.customerName || '', inv.invoiceNumber || '', inv.grossTotal || 0);
+            td7.appendChild(waBtn);
+
+            tr.appendChild(td7);
+            tb.appendChild(tr);
+        });
+    }catch(e){showToast('加载失败','error');}
+}
+
+async function downloadPdf(id){
+    try{
+        const r=await apiFetch('/invoices/'+id+'/pdf');if(!r)return;
+        if(!r.ok){showToast('下载失败','error');return;}
+        const blob=await r.blob();
+        const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='invoice.pdf';a.click();URL.revokeObjectURL(a.href);
+    }catch(e){showToast('下载失败','error');}
+}
+window.downloadPdf=downloadPdf;
+
+async function sendEmail(id){
+    try{
+        const r=await apiFetch('/invoices/'+id+'/send',{method:'POST'});if(!r)return;
+        if(!r.ok){const e=await r.json();showToast(e.error||'发送失败','error');return;}
+        showToast('邮件已发送');loadInvoices();
+    }catch(e){showToast('发送失败','error');}
+}
+window.sendEmail=sendEmail;
+
+async function batchSend(){
+    if(!confirm('确定要批量发送所有未发送的 Invoice 邮件吗？'))return;
+    try{
+        const r=await apiFetch('/invoices/batch-send',{method:'POST'});if(!r)return;
+        if(!r.ok){const e=await r.json();showToast(e.error||'批量发送失败','error');return;}
+        const data=await r.json();showToast(`已发送 ${data.sentCount||0} 封邮件`);loadInvoices();
+    }catch(e){showToast('批量发送失败','error');}
+}
+window.batchSend=batchSend;
+
+// Search transaction for generating invoice
+async function searchTransaction(){
+    const q=document.getElementById('txSearch').value.trim();
+    if(!q){showToast('请输入交易单号','error');return;}
+    try{
+        const r=await apiFetch('/transactions?receiptNumber='+encodeURIComponent(q));if(!r)return;
+        const list=await r.json();
+        const el=document.getElementById('txResult');
+        if(!list.length){el.innerHTML='<p style="color:#86868b;padding:12px;">未找到匹配的交易</p>';return;}
+        // Clear existing content
+        el.innerHTML = '';
+
+        // Build DOM elements safely
+        list.slice(0, 5).forEach(tx => {
+            const div = document.createElement('div');
+            div.style.display = 'flex';
+            div.style.alignItems = 'center';
+            div.style.justifyContent = 'space-between';
+            div.style.padding = '12px';
+            div.style.border = '1px solid #e5e5e7';
+            div.style.borderRadius = '10px';
+            div.style.marginBottom = '8px';
+
+            const infoDiv = document.createElement('div');
+
+            const strong = document.createElement('strong');
+            strong.textContent = tx.receiptNumber;
+            infoDiv.appendChild(strong);
+
+            const dateSpan = document.createElement('span');
+            dateSpan.style.color = '#86868b';
+            dateSpan.style.marginLeft = '12px';
+            dateSpan.textContent = new Date(tx.createdAt).toLocaleString('zh-CN');
+            infoDiv.appendChild(dateSpan);
+
+            const amountSpan = document.createElement('span');
+            amountSpan.style.marginLeft = '12px';
+            amountSpan.textContent = '€' + Number(tx.totalAmount).toFixed(2);
+            infoDiv.appendChild(amountSpan);
+
+            div.appendChild(infoDiv);
+
+            const button = document.createElement('button');
+            button.className = 'btn btn-primary btn-sm';
+            button.textContent = '生成 Invoice';
+            button.onclick = () => showGenerateModal(tx._id);
+            div.appendChild(button);
+
+            el.appendChild(div);
+        });
+    }catch(e){showToast('搜索失败','error');}
+}
+window.searchTransaction=searchTransaction;
+
+function showGenerateModal(txId){
+    document.getElementById('genTxId').value=txId;
+    document.getElementById('genCustomerName').value='';
+    document.getElementById('genCustomerAddress').value='';
+    document.getElementById('genCustomerVat').value='';
+    document.getElementById('genCustomerEmail').value='';
+    document.getElementById('generateModal').classList.add('show');
+}
+window.showGenerateModal=showGenerateModal;
+
+async function generateInvoice(){
+    const txId=document.getElementById('genTxId').value;
+    const body={
+        customerName:document.getElementById('genCustomerName').value.trim(),
+        customerAddress:document.getElementById('genCustomerAddress').value.trim(),
+        customerVatNumber:document.getElementById('genCustomerVat').value.trim(),
+        customerEmail:document.getElementById('genCustomerEmail').value.trim()
+    };
+    try{
+        const r=await apiFetch('/invoices/'+txId+'/generate',{method:'POST',body:JSON.stringify(body)});
+        if(!r)return;if(!r.ok){const e=await r.json();showToast(e.error||'生成失败','error');return;}
+        showToast('Invoice 已生成');
+        document.getElementById('generateModal').classList.remove('show');
+        loadInvoices();
+    }catch(e){showToast('生成失败','error');}
+}
+window.generateInvoice=generateInvoice;
+
+// ─── Invoice WhatsApp ──────────────────────────────────────────────────
+var _waInvoiceId = null;
+var _waInvoiceData = null;
+
+window.showInvoiceWhatsApp = function(invId, customerName, invoiceNumber, grossTotal) {
+    _waInvoiceId = invId;
+    _waInvoiceData = { invoiceNumber: invoiceNumber, grossTotal: grossTotal, customerName: customerName || '' };
+    document.getElementById('waCustomerName').textContent = customerName ? 'Customer: ' + customerName : '';
+    document.getElementById('waPhoneInput').value = '';
+    document.getElementById('waPhoneHint').textContent = '';
+    document.getElementById('whatsAppModal').classList.add('show');
+    setTimeout(function() { document.getElementById('waPhoneInput').focus(); }, 100);
+};
+
+window.closeInvoiceWhatsApp = function() {
+    document.getElementById('whatsAppModal').classList.remove('show');
+    _waInvoiceId = null;
+};
+
+window.sendInvoiceWhatsApp = async function() {
+    var phone = document.getElementById('waPhoneInput').value.trim();
+    if (!phone) { showToast('Enter a phone number', 'error'); return; }
+
+    // Normalize phone
+    if (/^08\d{8}$/.test(phone)) {
+        phone = '+353' + phone.slice(1);
+    } else if (/^\d+$/.test(phone) && !phone.startsWith('+')) {
+        phone = phone.startsWith('8') ? '+353' + phone : '+353' + phone;
+    } else if (!phone.startsWith('+') && !phone.startsWith('00') && !phone.startsWith('*')) {
+        phone = '+353' + phone;
+    }
+
+    document.getElementById('waPhoneHint').textContent = 'Sending to: ' + phone;
+    document.getElementById('waSendBtn').disabled = true;
+
+    try {
+        // Use invoice data from list (no server fetch, no share tokens)
+        var invData = _waInvoiceData || {};
+        var text = 'TechCross Repair Centre\n';
+        text += 'VAT Invoice #' + (invData.invoiceNumber || '') + '\n';
+        text += 'Total: €' + Number(invData.grossTotal || 0).toFixed(2) + '\n';
+        if (invData.customerName) text += 'Customer: ' + invData.customerName + '\n';
+        text += '\nThank you for your business!\n';
+        text += 'TechCross Repair Centre\n046 905 9854';
+
+        // Build wa.me URL directly — NO share tokens, NO hosted links
+        var waNumber = phone.replace('+', '').replace(/^00/, '');
+        var waUrl = 'https://wa.me/' + waNumber + '?text=' + encodeURIComponent(text);
+        window.open(waUrl, '_blank');
+        showToast('✅ WhatsApp opened', 'success');
+        closeInvoiceWhatsApp();
+    } catch (e) { showToast('Error: ' + e.message, 'error'); }
+    document.getElementById('waSendBtn').disabled = false;
+};
+
+// Close WhatsApp modal on overlay click
+document.addEventListener('click', function(e) {
+    var modal = document.getElementById('whatsAppModal');
+    if (modal && e.target === modal) closeInvoiceWhatsApp();
+});
+
+loadInvoices();
+})();
+</script>
+</body>
+</html>

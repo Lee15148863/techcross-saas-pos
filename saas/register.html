@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title data-i18n="saas.register.title">Create Your Store — TechCross SaaS</title>
+  <link rel="icon" type="image/png" href="../logo-sm.png">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'SF Pro Display', sans-serif; font-size: 16px; -webkit-font-smoothing: antialiased; }
+    body { background: #f2f2f7; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 40px 24px; }
+
+    .register-card { background: #fff; border-radius: 24px; padding: 40px 32px; width: 100%; max-width: 520px; box-shadow: 0 2px 20px rgba(0,0,0,.06); position: relative; }
+    .register-logo { display: flex; align-items: center; gap: 10px; justify-content: center; margin-bottom: 32px; text-decoration: none; }
+    .register-logo img { height: 36px; }
+    .register-logo span { font-size: 22px; font-weight: 700; color: #1d1d1f; }
+    h1 { text-align: center; font-size: 24px; font-weight: 700; margin-bottom: 6px; }
+    .register-sub { text-align: center; font-size: 14px; color: #8e8e93; margin-bottom: 28px; }
+
+    .lang-btn { position: absolute; top: 16px; right: 16px; padding: 6px 12px; border: 1.5px solid #d2d2d7; background: #fff; color: #1d1d1f; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; }
+    .lang-btn:hover { background: #f2f2f7; }
+
+    .form-row { display: flex; gap: 14px; }
+    .form-row .form-group { flex: 1; }
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; font-size: 13px; font-weight: 600; color: #3a3a3c; margin-bottom: 6px; }
+    .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 12px 14px; border: 1.5px solid #d2d2d7; border-radius: 10px; font-size: 14px; background: #f9f9fb; outline: none; font-family: inherit; transition: all .2s; }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: #0071e3; box-shadow: 0 0 0 3px rgba(0,113,227,.15); }
+    .form-group textarea { resize: vertical; min-height: 70px; }
+    .form-group select { cursor: pointer; }
+
+    .btn-submit { width: 100%; padding: 14px; background: #0071e3; color: #fff; border: none; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer; transition: background .2s; margin-top: 8px; }
+    .btn-submit:hover { background: #0077ed; }
+    .btn-submit:disabled { opacity: .5; cursor: not-allowed; }
+
+    .success-msg { background: #e8f5e9; color: #2e7d32; padding: 16px; border-radius: 12px; text-align: center; display: none; }
+    .success-msg.show { display: block; }
+    .success-msg h3 { font-size: 18px; margin-bottom: 6px; }
+    .success-msg p { font-size: 14px; line-height: 1.5; }
+
+    .error-msg { background: #fef2f2; color: #dc2626; padding: 12px 16px; border-radius: 10px; font-size: 14px; margin-bottom: 16px; display: none; }
+    .error-msg.show { display: block; }
+
+    .back-link { text-align: center; margin-top: 20px; font-size: 13px; }
+    .back-link a { color: #8e8e93; text-decoration: none; }
+    .back-link a:hover { color: #555; }
+
+    @media (max-width: 480px) {
+      .register-card { padding: 24px 18px; border-radius: 16px; }
+      .form-row { flex-direction: column; gap: 0; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="register-card" id="formCard">
+  <button class="lang-btn" id="langToggle" onclick="toggleLang()">中</button>
+  <a href="/saas" class="register-logo">
+    <img src="../logo-sm.png" alt="TechCross">
+    <span>TechCross SaaS</span>
+  </a>
+  <h1 data-i18n="saas.register.title">Create Your Store</h1>
+  <p class="register-sub" data-i18n="saas.register.subtitle">Fill in the details below. We'll review and activate your account.</p>
+
+  <div class="error-msg" id="errorMsg"></div>
+
+  <form id="registerForm">
+    <div class="form-row">
+      <div class="form-group">
+        <label data-i18n="saas.register.storeName">Store Name *</label>
+        <input type="text" id="storeName" data-i18n-placeholder="saas.register.storeNamePlaceholder" placeholder="e.g. Navan Repairs" required>
+      </div>
+      <div class="form-group">
+        <label data-i18n="saas.register.businessType">Business Type</label>
+        <select id="businessType">
+          <option value="" data-i18n="saas.register.businessTypePlaceholder">Select...</option>
+          <option value="phone_repair" data-i18n="saas.register.phoneRepair">Phone Repair</option>
+          <option value="computer_repair" data-i18n="saas.register.computerRepair">Computer Repair</option>
+          <option value="electronics_retail" data-i18n="saas.register.electronicsRetail">Electronics Retail</option>
+          <option value="phone_accessories" data-i18n="saas.register.phoneAccessories">Phone Accessories</option>
+          <option value="other" data-i18n="saas.register.other">Other</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label data-i18n="saas.register.ownerName">Owner Name *</label>
+        <input type="text" id="ownerName" data-i18n-placeholder="saas.register.ownerNamePlaceholder" placeholder="Your full name" required>
+      </div>
+      <div class="form-group">
+        <label data-i18n="saas.register.email">Email *</label>
+        <input type="email" id="email" data-i18n-placeholder="saas.register.emailPlaceholder" placeholder="your@email.com" required>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label data-i18n="saas.register.phone">Phone</label>
+        <input type="tel" id="phone" data-i18n-placeholder="saas.register.phonePlaceholder" placeholder="+353 8X XXX XXXX">
+      </div>
+      <div class="form-group">
+        <label data-i18n="saas.register.country">Country</label>
+        <input type="text" id="country" data-i18n-placeholder="saas.register.countryPlaceholder" placeholder="e.g. Ireland" value="Ireland">
+      </div>
+    </div>
+    <div class="form-group">
+      <label data-i18n="saas.register.notes">Notes / Special Requirements</label>
+      <textarea id="notes" data-i18n-placeholder="saas.register.notesPlaceholder" placeholder="Tell us about your business and any specific needs..."></textarea>
+    </div>
+    <button type="submit" class="btn-submit" id="submitBtn" data-i18n="saas.register.btn">Submit Registration</button>
+  </form>
+
+  <div class="back-link">
+    <a href="/saas" data-i18n="saas.register.backHome">&larr; Back to homepage</a>
+  </div>
+</div>
+
+<div class="register-card" id="successCard" style="display:none;">
+  <button class="lang-btn" id="langToggle2" onclick="toggleLang()">中</button>
+  <div class="success-msg show">
+    <h3 data-i18n="saas.register.success.title">✅ Registration Submitted!</h3>
+    <p data-i18n="saas.register.success.body">Thank you for your interest in TechCross SaaS.<br><br>
+    We'll review your application and get back to you at <strong id="successEmail"></strong>.<br><br>
+    In the meantime, feel free to <a href="/saas" style="color:#0071e3;">learn more</a> about the platform.</p>
+  </div>
+  <div class="back-link" style="margin-top:24px;">
+    <a href="/saas" data-i18n="saas.register.backHome">&larr; Back to homepage</a>
+  </div>
+</div>
+
+<script src="../lang.js"></script>
+<script>
+document.getElementById('registerForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  var btn = document.getElementById('submitBtn');
+  var err = document.getElementById('errorMsg');
+  btn.disabled = true; btn.textContent = __('saas.register.submitting');
+  err.classList.remove('show');
+  try {
+    var res = await fetch('/api/saas/signup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        storeName: document.getElementById('storeName').value,
+        ownerName: document.getElementById('ownerName').value,
+        email: document.getElementById('email').value,
+        phone: document.getElementById('phone').value,
+        country: document.getElementById('country').value,
+        businessType: document.getElementById('businessType').value,
+        notes: document.getElementById('notes').value
+      })
+    });
+    // res.json() may throw on some browsers even with valid JSON;
+    // treat 2xx as success regardless
+    try { var data = await res.json(); } catch(_) { var data = {}; }
+    if (!res.ok) { err.textContent = __('saas.register.error.duplicate'); err.classList.add('show'); btn.disabled = false; btn.textContent = __('saas.register.btn'); return; }
+    document.getElementById('successEmail').textContent = document.getElementById('email').value;
+    document.getElementById('formCard').style.display = 'none';
+    document.getElementById('successCard').style.display = 'block';
+  } catch(e) { console.error('Signup error:', e); err.textContent = __('saas.register.error.network'); err.classList.add('show'); btn.disabled = false; btn.textContent = __('saas.register.btn'); }
+});
+
+applyLang();
+</script>
+
+</body>
+</html>

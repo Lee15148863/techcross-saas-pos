@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>系统设置 - Tech Cross 进销存</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;}
+        html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:antialiased;background:#f5f5f7;color:#1d1d1f;}
+        .layout{display:flex;height:100vh;}
+        .sidebar{width:220px;background:#1d1d1f;color:#f5f5f7;display:flex;flex-direction:column;flex-shrink:0;}
+        .sidebar .logo{padding:20px;text-align:center;border-bottom:1px solid #333;}.sidebar .logo img{height:36px;}.sidebar .logo span{display:block;font-size:12px;color:#86868b;margin-top:4px;}
+        .sidebar nav{flex:1;overflow-y:auto;padding:12px 0;}
+        .sidebar nav a{display:flex;align-items:center;gap:10px;padding:10px 20px;color:#b0b0b5;text-decoration:none;font-size:14px;transition:all .15s;border-left:3px solid transparent;}
+        .sidebar nav a:hover{background:#2a2a2d;color:#f5f5f7;}.sidebar nav a.active{background:#2a2a2d;color:#D4E157;border-left-color:#D4E157;font-weight:600;}
+        .sidebar nav a .icon{width:20px;text-align:center;font-size:16px;}
+        .sidebar .nav-section{padding:16px 20px 6px;font-size:11px;color:#6e6e73;text-transform:uppercase;letter-spacing:1px;}
+        .main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+        .topbar{height:56px;background:#fff;border-bottom:1px solid #e5e5e7;display:flex;align-items:center;justify-content:space-between;padding:0 24px;flex-shrink:0;}
+        .topbar h2{font-size:18px;font-weight:600;}.topbar .user-info{display:flex;align-items:center;gap:12px;font-size:14px;color:#6e6e73;}.topbar .user-info strong{color:#1d1d1f;}
+        .btn-logout{padding:6px 14px;border-radius:980px;border:1px solid #d2d2d7;background:#fff;font-size:13px;cursor:pointer;transition:all .2s;}.btn-logout:hover{background:#ff3b30;color:#fff;border-color:#ff3b30;}
+        .content{flex:1;overflow-y:auto;padding:24px;}
+        .card{background:#fff;border-radius:14px;box-shadow:0 2px 12px rgba(0,0,0,.06);padding:24px;margin-bottom:20px;}
+        .card h3{font-size:16px;font-weight:600;margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid #f0f0f2;}
+        .btn{padding:8px 18px;border:none;border-radius:10px;font-size:14px;font-weight:500;cursor:pointer;transition:all .2s;}
+        .btn-primary{background:#D4E157;color:#000;}.btn-primary:hover{background:#c5d148;}
+        .btn-secondary{background:#f5f5f7;border:1px solid #d2d2d7;color:#1d1d1f;}.btn-secondary:hover{background:#e5e5e7;}
+        .btn-sm{padding:5px 12px;font-size:13px;}
+        .badge{display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;}
+        .badge-active{background:#e8f5e9;color:#2e7d32;}
+        .form-group{margin-bottom:16px;}.form-group label{display:block;font-size:14px;font-weight:500;margin-bottom:6px;}
+        .form-group input,.form-group select,.form-group textarea{width:100%;padding:10px 14px;border:1px solid #d2d2d7;border-radius:10px;font-size:14px;font-family:inherit;}
+        .form-group input:focus,.form-group select:focus,.form-group textarea:focus{outline:none;border-color:#D4E157;box-shadow:0 0 0 3px rgba(212,225,87,.15);}
+        .form-row{display:flex;gap:16px;}.form-row .form-group{flex:1;}
+        .form-group .hint{font-size:12px;color:#86868b;margin-top:4px;}
+        .tabs{display:flex;gap:4px;margin-bottom:20px;border-bottom:2px solid #e5e5e7;}
+        .tab{padding:10px 20px;font-size:14px;font-weight:500;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;color:#6e6e73;transition:all .15s;}
+        .tab:hover{color:#1d1d1f;}.tab.active{color:#D4E157;border-bottom-color:#D4E157;font-weight:600;}
+        .tab-content{display:none;}.tab-content.active{display:block;}
+        table{width:100%;border-collapse:collapse;font-size:14px;}
+        thead th{background:#f5f5f7;padding:10px 12px;text-align:left;font-weight:600;font-size:12px;color:#6e6e73;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #e5e5e7;}
+        tbody td{padding:10px 12px;border-bottom:1px solid #f0f0f2;vertical-align:middle;}
+        tbody tr:hover{background:#fafafa;}
+        .setting-value{font-size:24px;font-weight:700;color:#D4E157;margin-bottom:4px;}
+        .toast{position:fixed;top:20px;right:20px;z-index:10000;padding:14px 22px;border-radius:12px;font-size:14px;font-weight:500;box-shadow:0 8px 32px rgba(0,0,0,.15);transform:translateX(120%);transition:transform .3s ease;max-width:400px;}
+        .toast.show{transform:translateX(0);}.toast.success{background:#34c759;color:#fff;}.toast.error{background:#ff3b30;color:#fff;}
+    </style>
+</head>
+<body>
+<div class="toast" id="toast"></div>
+<div class="layout">
+    <aside class="sidebar">
+        <div class="logo"><img src="logo.png" alt="Tech Cross"><span>进销存管理系统</span></div>
+        <nav>
+            <div class="nav-section">业务管理 / Business</div>
+            <a href="inv-pos.html" data-perm="pos"><span class="icon">💰</span>POS 收银 / Checkout</a>
+            <a href="inv-products.html" data-perm="products"><span class="icon">📦</span>商品管理 / Products</a>
+            <a href="inv-stock.html" data-perm="stock"><span class="icon">🏭</span>库存管理 / Stock</a>
+            <a href="inv-suppliers.html" data-perm="suppliers"><span class="icon">🤝</span>供应商 / Suppliers</a>
+            <a href="inv-purchases.html" data-perm="purchases"><span class="icon">🛒</span>采购管理 / Purchases</a>
+            <a href="inv-transactions.html" data-perm="transactions"><span class="icon">📋</span>交易记录 / Transactions</a>
+            <div class="nav-section">报表与发票 / Reports</div>
+            <a href="inv-reports.html" data-perm="reports"><span class="icon">📊</span>报表中心 / Reports</a>
+            <a href="inv-invoices.html" data-perm="invoices"><span class="icon">🧾</span>发票管理 / VAT Invoice</a>
+            <a href="inv-expenses.html" data-perm="expenses"><span class="icon">💸</span>支出管理 / Expenses</a>
+            <div class="nav-section">系统管理 / System</div>
+            <a href="inv-settings.html" class="active" data-perm="settings"><span class="icon">⚙️</span>系统设置 / Settings</a>
+            <a href="inv-users.html" data-perm="users"><span class="icon">👥</span>用户管理 / Users</a>
+            <a href="pos-shortcuts-admin.html" data-perm="settings"><span class="icon">⚡</span>POS 快捷键 / Shortcuts</a>
+            <div class="nav-section">网站管理 / Website</div>
+            <a href="admin-brands.html" data-perm="settings"><span class="icon">🔧</span>维修报价管理 / Pricing</a>
+            <a href="admin-reviews.html" data-perm="settings"><span class="icon">⭐</span>评论管理 / Reviews</a>
+        </nav>
+    </aside>
+    <div class="main">
+        <div class="topbar">
+            <h2>系统设置 / Settings</h2>
+            <div class="user-info"><span>欢迎, <strong id="displayName">-</strong></span><span class="badge badge-active" id="roleBadge">店主</span><button class="btn-logout" onclick="logout()">退出登录 / Logout</button></div>
+        </div>
+        <div class="content">
+            <div class="tabs">
+                <div class="tab active" onclick="switchTab('vat')">VAT 税率</div>
+                <div class="tab" onclick="switchTab('stock')">库存阈值</div>
+                <div class="tab" onclick="switchTab('company')">公司信息</div>
+                <div class="tab" onclick="switchTab('audit')">审计日志</div>
+            </div>
+
+            <!-- VAT Rate -->
+            <div class="tab-content active" id="tab-vat">
+                <div class="card">
+                    <h3>VAT 税率配置</h3>
+                    <p style="color:#6e6e73;margin-bottom:16px;">修改 VAT 税率将影响所有后续交易的税额计算。请谨慎操作。</p>
+                    <div class="form-group">
+                        <label>当前 VAT 税率</label>
+                        <div class="setting-value" id="currentVatRate">-</div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label>新税率 (%)</label><input type="number" id="newVatRate" step="0.1" min="0" max="100" placeholder="23"><div class="hint">爱尔兰标准税率: 23%</div></div>
+                    </div>
+                    <button class="btn btn-primary" onclick="updateVatRate()">更新税率 / Update</button>
+                </div>
+            </div>
+
+            <!-- Stock Thresholds -->
+            <div class="tab-content" id="tab-stock">
+                <div class="card">
+                    <h3>低库存预警阈值默认值</h3>
+                    <p style="color:#6e6e73;margin-bottom:16px;">设置各品类的默认低库存预警阈值。新建商品将自动使用对应品类的默认值。</p>
+                    <div class="form-row">
+                        <div class="form-group"><label>手机</label><input type="number" id="threshPhone" min="0" value="10"></div>
+                        <div class="form-group"><label>配件</label><input type="number" id="threshAccessory" min="0" value="30"></div>
+                        <div class="form-group"><label>平板</label><input type="number" id="threshTablet" min="0" value="5"></div>
+                    </div>
+                    <button class="btn btn-primary" onclick="updateThresholds()">保存阈值 / Save</button>
+                </div>
+            </div>
+
+            <!-- Company Info -->
+            <div class="tab-content" id="tab-company">
+                <div class="card">
+                    <h3>公司信息配置</h3>
+                    <div class="form-group"><label>公司名称</label><input type="text" id="compName" placeholder="Tech Cross"></div>
+                    <div class="form-group"><label>地址</label><input type="text" id="compAddress" placeholder="公司地址"></div>
+                    <div class="form-row">
+                        <div class="form-group"><label>电话</label><input type="text" id="compPhone" placeholder="电话号码"></div>
+                        <div class="form-group"><label>VAT 注册号</label><input type="text" id="compVat" placeholder="IE1234567X"></div>
+                    </div>
+                    <div class="form-group"><label>Logo URL</label><input type="text" id="compLogo" placeholder="logo.png"></div>
+                    <button class="btn btn-primary" onclick="updateCompanyInfo()">保存公司信息 / Save</button>
+                </div>
+            </div>
+
+            <!-- Audit Log -->
+            <div class="tab-content" id="tab-audit">
+                <div class="card">
+                    <h3>审计日志</h3>
+                    <table>
+                        <thead><tr><th>时间 / Time</th><th>操作 / Action</th><th>操作人 / Operator</th><th>目标类型 / Target Type</th><th>目标ID / Target ID</th></tr></thead>
+                        <tbody id="auditTable"><tr><td colspan="5" style="text-align:center;color:#86868b;padding:40px;">加载中...</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script src="auth-guard.js"></script>
+<script>
+(function(){
+'use strict';
+const user = Auth.requireRole('root'); if (!user) return;
+document.getElementById('displayName').textContent = Auth.getDisplayName();
+
+// Hide sidebar items based on permissions (admin pages - admin sees all)
+document.querySelectorAll('nav a[data-perm]').forEach(function(a){a.style.display='';});
+
+const API='/api/inv';
+const headers=()=>Auth.getHeaders();
+function showToast(msg,type){const t=document.getElementById('toast');t.textContent=msg;t.className='toast '+(type||'success');setTimeout(()=>t.classList.add('show'),10);setTimeout(()=>t.classList.remove('show'),3000);}
+function logout(){Auth.logout();}
+window.logout=logout;
+async function apiFetch(url,opts){opts=opts||{};opts.headers=headers();const r=await fetch(API+url,opts);if(r.status===401){logout();return null;}return r;}
+function esc(s){if(!s)return'';const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+
+function switchTab(name){
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+    document.querySelector(`.tab[onclick="switchTab('${name}')"]`).classList.add('active');
+    document.getElementById('tab-'+name).classList.add('active');
+    if(name==='audit')loadAuditLog();
+}
+window.switchTab=switchTab;
+
+// Load settings
+async function loadSettings(){
+    try{
+        const r=await apiFetch('/settings');if(!r)return;
+        const settings=await r.json();
+        // VAT rate
+        if(settings.vatRate!==undefined){
+            const rate=typeof settings.vatRate==='object'?settings.vatRate.value:settings.vatRate;
+            document.getElementById('currentVatRate').textContent=(rate*100).toFixed(1)+'%';
+            document.getElementById('newVatRate').value=(rate*100).toFixed(1);
+        }
+        // Thresholds
+        const thresholds=settings.lowStockDefaults||(typeof settings.lowStockDefaults==='object'?settings.lowStockDefaults:{});
+        const th=thresholds.value||thresholds;
+        if(th){
+            if(th.phone!==undefined)document.getElementById('threshPhone').value=th.phone;
+            if(th.accessory!==undefined)document.getElementById('threshAccessory').value=th.accessory;
+            if(th.tablet!==undefined)document.getElementById('threshTablet').value=th.tablet;
+        }
+        // Company info
+        const company=settings.companyInfo||(typeof settings.companyInfo==='object'?settings.companyInfo:{});
+        const ci=company.value||company;
+        if(ci){
+            if(ci.name)document.getElementById('compName').value=ci.name;
+            if(ci.address)document.getElementById('compAddress').value=ci.address;
+            if(ci.phone)document.getElementById('compPhone').value=ci.phone;
+            if(ci.vatNumber)document.getElementById('compVat').value=ci.vatNumber;
+            if(ci.logo)document.getElementById('compLogo').value=ci.logo;
+        }
+    }catch(e){showToast('加载设置失败','error');}
+}
+
+async function updateVatRate(){
+    const rate=parseFloat(document.getElementById('newVatRate').value);
+    if(isNaN(rate)||rate<0||rate>100){showToast('请输入有效的税率','error');return;}
+    if(!confirm(`⚠️ 确定要将 VAT 税率修改为 ${rate}% 吗？\n\n此操作将影响所有后续交易的税额计算。`))return;
+    try{
+        const r=await apiFetch('/settings',{method:'PUT',body:JSON.stringify({vatRate:rate/100})});
+        if(!r)return;if(!r.ok){const e=await r.json();showToast(e.error,'error');return;}
+        showToast('VAT 税率已更新');loadSettings();
+    }catch(e){showToast('更新失败','error');}
+}
+window.updateVatRate=updateVatRate;
+
+async function updateThresholds(){
+    const body={lowStockDefaults:{phone:parseInt(document.getElementById('threshPhone').value)||10,accessory:parseInt(document.getElementById('threshAccessory').value)||30,tablet:parseInt(document.getElementById('threshTablet').value)||5}};
+    try{
+        const r=await apiFetch('/settings',{method:'PUT',body:JSON.stringify(body)});
+        if(!r)return;if(!r.ok){const e=await r.json();showToast(e.error,'error');return;}
+        showToast('阈值已更新');
+    }catch(e){showToast('更新失败','error');}
+}
+window.updateThresholds=updateThresholds;
+
+async function updateCompanyInfo(){
+    const body={settings:{companyInfo:{name:document.getElementById('compName').value.trim(),address:document.getElementById('compAddress').value.trim(),phone:document.getElementById('compPhone').value.trim(),vatNumber:document.getElementById('compVat').value.trim(),logo:document.getElementById('compLogo').value.trim()}}};
+    try{
+        const r=await apiFetch('/settings',{method:'PUT',body:JSON.stringify(body)});
+        if(!r)return;if(!r.ok){const e=await r.json();showToast(e.error,'error');return;}
+        showToast('公司信息已更新');
+    }catch(e){showToast('更新失败','error');}
+}
+window.updateCompanyInfo=updateCompanyInfo;
+
+async function loadAuditLog(){
+    try{
+        const r=await apiFetch('/settings/audit-log');if(!r)return;
+        const logs=await r.json();
+        const tb=document.getElementById('auditTable');
+        tb.innerHTML = '';
+        if(!logs.length){
+            tb.innerHTML='<tr><td colspan="5" style="text-align:center;color:#86868b;padding:40px;">暂无审计日志</td></tr>';
+            return;
+        }
+
+        logs.forEach(log => {
+            const tr = document.createElement('tr');
+
+            const tdDate = document.createElement('td');
+            tdDate.textContent = new Date(log.createdAt).toLocaleString('zh-CN');
+            tr.appendChild(tdDate);
+
+            const tdAction = document.createElement('td');
+            tdAction.textContent = log.action;
+            tr.appendChild(tdAction);
+
+            const tdOperator = document.createElement('td');
+            tdOperator.textContent = log.operator ? (log.operator.displayName || log.operator.username || '') : '-';
+            tr.appendChild(tdOperator);
+
+            const tdTargetType = document.createElement('td');
+            tdTargetType.textContent = log.targetType || '-';
+            tr.appendChild(tdTargetType);
+
+            const tdTargetId = document.createElement('td');
+            tdTargetId.style.fontFamily = 'monospace';
+            tdTargetId.style.fontSize = '12px';
+            tdTargetId.textContent = log.targetId || '-';
+            tr.appendChild(tdTargetId);
+
+            tb.appendChild(tr);
+        });
+    }catch(e){showToast('加载审计日志失败','error');}
+}
+
+loadSettings();
+})();
+</script>
+</body>
+</html>

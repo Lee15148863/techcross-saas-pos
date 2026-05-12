@@ -1,0 +1,22 @@
+# Git files
+.git
+.gitignore
+.github/
+
+# Documentation
+README.md
+DEPLOY.md
+
+# Development files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Temporary files
+*.log
+*.tmp
+
+# Scripts
+start-server.ps1
+open-browser.bat

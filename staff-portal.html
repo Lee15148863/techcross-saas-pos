@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Staff Portal</title>
+    <meta name="robots" content="noindex, nofollow">
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;}
+        body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:antialiased;background:#f5f5f7;color:#1d1d1f;min-height:100vh;display:flex;align-items:center;justify-content:center;}
+        .portal{width:100%;max-width:520px;padding:20px;}
+        .logo-area{text-align:center;margin-bottom:32px;}
+        .logo-area img{height:48px;margin-bottom:8px;}
+        .logo-area p{font-size:13px;color:#86868b;}
+        .card{background:#fff;border-radius:18px;padding:32px;box-shadow:0 4px 24px rgba(0,0,0,.08);}
+        .card h2{font-size:22px;font-weight:600;text-align:center;margin-bottom:6px;}
+        .card .subtitle{font-size:14px;color:#86868b;text-align:center;margin-bottom:24px;}
+        .form-group{margin-bottom:16px;}
+        .form-group label{display:block;font-size:14px;font-weight:500;margin-bottom:6px;}
+        .form-group input{width:100%;padding:12px 16px;border:1px solid #d2d2d7;border-radius:12px;font-size:16px;transition:all .2s;}
+        .form-group input:focus{outline:none;border-color:#D4E157;box-shadow:0 0 0 3px rgba(212,225,87,.15);}
+        .btn-login{width:100%;padding:14px;border:none;border-radius:12px;background:#D4E157;color:#000;font-size:16px;font-weight:600;cursor:pointer;transition:all .2s;margin-top:8px;}
+        .btn-login:hover{background:#c5d148;}
+        .btn-login:disabled{opacity:.4;cursor:not-allowed;}
+        .error-msg{display:none;background:#fef2f2;color:#991b1b;padding:10px 14px;border-radius:10px;font-size:13px;margin-bottom:12px;text-align:center;}
+        .error-msg.show{display:block;}
+        .portal-menu{display:block;}
+        .portal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+        .portal-header .user-info{font-size:14px;color:#6e6e73;}
+        .portal-header .user-info strong{color:#1d1d1f;}
+        .badge{display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;margin-left:6px;}
+        .badge-root{background:#e3f2fd;color:#1565c0;}
+        .badge-staff{background:#f5f5f7;color:#6e6e73;}
+        .btn-logout{padding:6px 14px;border-radius:980px;border:1px solid #d2d2d7;background:#fff;font-size:13px;cursor:pointer;transition:all .2s;}
+        .btn-logout:hover{background:#ff3b30;color:#fff;border-color:#ff3b30;}
+        /* Tabs */
+        .tabs{display:flex;gap:4px;margin-bottom:16px;border-bottom:2px solid #e5e5e7;}
+        .tab{padding:10px 20px;font-size:14px;font-weight:500;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;color:#6e6e73;transition:all .15s;}
+        .tab:hover{color:#1d1d1f;}
+        .tab.active{color:#D4E157;border-bottom-color:#D4E157;font-weight:600;}
+        .tab-content{display:none;}
+        .tab-content.active{display:block;}
+        /* Menu items */
+        .menu-section{margin-bottom:12px;}
+        .menu-section h3{font-size:11px;color:#86868b;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;padding-left:4px;}
+        .menu-item{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:12px;text-decoration:none;color:#1d1d1f;font-size:14px;font-weight:500;transition:all .15s;border:1px solid #e5e5e7;margin-bottom:6px;background:#fff;}
+        .menu-item:hover{border-color:#D4E157;background:#fafff0;transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.06);}
+        .menu-item .icon{font-size:18px;width:24px;text-align:center;}
+        .menu-item .desc{font-size:11px;color:#86868b;font-weight:400;margin-top:1px;}
+        .back-link{display:block;text-align:center;margin-top:16px;font-size:13px;color:#86868b;text-decoration:none;}
+        .back-link:hover{color:#0071e3;}
+    </style>
+</head>
+<body>
+<div class="portal">
+    <div class="logo-area">
+        <img src="logo.png" alt="Till POS" onerror="this.style.display='none'">
+        <p>Staff Portal</p>
+    </div>
+
+    <!-- Portal Menu -->
+    <div class="card" id="portalMenu">
+        <div class="portal-header">
+            <div class="user-info"><span id="welcomeText">Welcome, </span><strong id="displayName">-</strong><span class="badge" id="roleBadge">-</span></div>
+            <button class="btn-logout" id="btnLogout" onclick="doLogout()">Logout</button>
+        </div>
+
+        <!-- Tabs (admin sees both, staff sees only 进销存) -->
+        <div class="tabs" id="portalTabs">
+            <div class="tab active" onclick="switchTab('inv')">进销存系统 / Inventory</div>
+            <div class="tab" onclick="switchTab('mgmt')" id="tabMgmt" style="display:none;">管理系统 / Management</div>
+        </div>
+
+        <!-- Tab 1: 进销存系统 (permissions-based) -->
+        <div class="tab-content active" id="tab-inv">
+            <div class="menu-section" id="menuInv"></div>
+        </div>
+
+        <!-- Tab 2: 管理系统 (admin only) -->
+        <div class="tab-content" id="tab-mgmt">
+            <div class="menu-section">
+                <h3>System / 系统</h3>
+                <a href="/inv-users.html" class="menu-item"><span class="icon">👥</span><div>User Management / 用户管理<div class="desc">Create, edit, permissions</div></div></a>
+                <a href="/inv-settings.html" class="menu-item"><span class="icon">⚙️</span><div>Settings / 系统设置<div class="desc">Company info, config</div></div></a>
+                <a href="/inv-expenses.html" class="menu-item"><span class="icon">💸</span><div>Expenses / 每日支出<div class="desc">Lyca Credit, misc costs</div></div></a>
+            </div>
+            <div class="menu-section">
+                <h3>Website / 网站</h3>
+                <a href="/admin-reviews.html" class="menu-item"><span class="icon">⭐</span><div>Reviews / 评价管理<div class="desc">主网站管理（报价 滚轮 评价）</div></div></a>
+            </div>
+        </div>
+    </div>
+
+    <a href="/" class="back-link" id="backLink">← Back to Home</a>
+</div>
+
+<script src="auth-guard.js"></script>
+<script>
+(function(){
+    // Menu items with permission keys
+    var menuItems = [
+        { perm: 'pos', icon: '💰', label: 'POS Checkout / POS 收银', desc: 'Sales & checkout / 销售收银', href: '/inv-pos.html' },
+        { perm: 'products', icon: '📦', label: 'Products / 商品管理', desc: 'Add, edit products / 商品录入编辑', href: '/inv-products.html' },
+        { perm: 'stock', icon: '🏭', label: 'Stock / 库存管理', desc: 'Entry, exit, alerts / 入库出库', href: '/inv-stock.html' },
+        { perm: 'suppliers', icon: '🤝', label: 'Suppliers / 供应商', desc: 'Supplier info / 供应商信息', href: '/inv-suppliers.html' },
+        { perm: 'purchases', icon: '🛒', label: 'Purchases / 采购', desc: 'Purchase orders / 采购订单', href: '/inv-purchases.html' },
+        { perm: 'transactions', icon: '📋', label: 'Transactions / 交易记录', desc: 'Sales records, refund / 销售记录退款', href: '/inv-transactions.html' },
+        { perm: 'reports', icon: '📊', label: 'Reports / 报表', desc: 'Daily, monthly, VAT / 日报月报', href: '/inv-reports.html' },
+        { perm: 'invoices', icon: '🧾', label: 'VAT Invoice / 发票', desc: 'Generate & send / 生成发送', href: '/inv-invoices.html' }
+    ];
+
+    var user = Auth.requireAuth();
+    if (user) showPortal(user);
+
+    function showPortal(u) {
+        document.getElementById('displayName').textContent = u.displayName || u.username;
+
+        var perms = u.permissions || {};
+        var isAdmin = u.role === 'root';
+
+        // If admin, all permissions
+        if (isAdmin) {
+            menuItems.forEach(function(m) { perms[m.perm] = true; });
+            document.getElementById('tabMgmt').style.display = '';
+            document.getElementById('roleBadge').textContent = '店主 Root';
+            document.getElementById('roleBadge').className = 'badge badge-root';
+            document.getElementById('welcomeText').textContent = '欢迎 Welcome, ';
+            document.getElementById('btnLogout').textContent = '退出 Logout';
+            document.getElementById('backLink').textContent = '← 返回主页 / Back';
+        } else {
+            document.getElementById('tabMgmt').style.display = 'none';
+            document.getElementById('roleBadge').textContent = 'Staff';
+            document.getElementById('roleBadge').className = 'badge badge-staff';
+        }
+
+        // Build menu based on permissions
+        var menuHtml = '';
+        menuItems.forEach(function(m) {
+            if (perms[m.perm]) {
+                menuHtml += '<a href="' + m.href + '" class="menu-item"><span class="icon">' + m.icon + '</span><div>' + m.label + '<div class="desc">' + m.desc + '</div></div></a>';
+            }
+        });
+        // Always show WhatsApp Center (communication tool for all staff)
+        menuHtml += '<a href="/whatsapp-center.html" class="menu-item"><span class="icon">💬</span><div>WhatsApp Center<div class="desc">Send messages, manage customers / 发送消息</div></div></a>';
+        if (!menuHtml) menuHtml = '<p style="color:#86868b;text-align:center;padding:20px;">No permissions assigned. Contact admin.</p>';
+        document.getElementById('menuInv').innerHTML = menuHtml;
+    }
+
+    window.switchTab = function(name) {
+        document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
+        document.querySelectorAll('.tab-content').forEach(function(t) { t.classList.remove('active'); });
+        document.querySelector('.tab[onclick="switchTab(\'' + name + '\')"]').classList.add('active');
+        document.getElementById('tab-' + name).classList.add('active');
+    };
+
+    window.doLogout = function() {
+        Auth.logout();
+    };
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Receipt — TechCross</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif; background: #f5f5f7; color: #1d1d1f; -webkit-font-smoothing: antialiased; padding: 16px; }
+.card { background: #fff; border-radius: 20px; max-width: 480px; margin: 0 auto; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,.08); }
+.header { background: #1E7F5C; padding: 24px 20px; text-align: center; color: #fff; }
+.header h1 { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+.header .receipt-no { font-size: 13px; opacity: .85; }
+.header .date { font-size: 12px; opacity: .7; margin-top: 2px; }
+.body { padding: 20px; }
+.items { width: 100%; border-collapse: collapse; font-size: 14px; }
+.items th { text-align: left; padding: 8px 4px; border-bottom: 2px solid #1E7F5C; color: #1E7F5C; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; }
+.items th:last-child { text-align: right; }
+.items td { padding: 10px 4px; border-bottom: 1px solid #f0f0f0; }
+.items td:last-child { text-align: right; font-weight: 600; }
+.items .item-name { font-weight: 500; }
+.items .item-qty { color: #6e6e73; font-size: 12px; }
+.total-row { display: flex; justify-content: space-between; padding: 14px 0 8px; border-top: 2px solid #1E7F5C; margin-top: 4px; font-size: 20px; font-weight: 700; }
+.payment { background: #f9f9f9; border-radius: 12px; padding: 14px; margin-top: 12px; font-size: 13px; }
+.payment-row { display: flex; justify-content: space-between; padding: 3px 0; color: #6e6e73; }
+.payment-row.total { font-weight: 600; color: #1d1d1f; }
+.vat-row { display: flex; justify-content: space-between; padding: 2px 0; font-size: 12px; color: #86868b; }
+.footer-note { text-align: center; padding: 20px; font-size: 13px; color: #6e6e73; border-top: 1px solid #e5e5e7; line-height: 1.6; }
+.footer-note .brand { color: #1E7F5C; font-weight: 600; }
+.status-badge { display: inline-block; background: #e8f5e9; color: #1E7F5C; font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px; margin-top: 8px; }
+@media (max-width: 480px) { body { padding: 8px; } .card { border-radius: 16px; } .header { padding: 20px 16px; } .body { padding: 16px; } }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="header">
+    <h1>TechCross Repair Centre</h1>
+    <div class="receipt-no" id="receiptNo">—</div>
+    <div class="date" id="receiptDate">—</div>
+  </div>
+  <div class="body">
+    <table class="items">
+      <thead><tr><th>Item</th><th>Total</th></tr></thead>
+      <tbody id="itemsBody"></tbody>
+    </table>
+    <div class="total-row"><span>TOTAL</span><span id="totalAmount">€0.00</span></div>
+    <div class="payment" id="paymentSection"></div>
+    <div id="vatSection"></div>
+  </div>
+  <div class="footer-note">
+    <div class="brand">TechCross Repair Centre</div>
+    <div>Navan, Co. Meath, Ireland</div>
+    <div id="accessCount" style="font-size:11px;margin-top:6px;color:#c0c0c0;"></div>
+  </div>
+</div>
+<script>
+(function() {
+  var token = window.location.pathname.split('/').pop();
+  fetch('/api/share/receipt/' + token + '/data')
+    .then(function(r) {
+      if (r.status === 410) { window.location.href = '/share-expired.html?ref=' + token; return null; }
+      return r.json();
+    })
+    .then(function(data) {
+      if (!data) return;
+      var txn = data.transaction;
+      document.getElementById('receiptNo').textContent = 'Receipt #' + (txn.receiptNumber || '—');
+      document.getElementById('receiptDate').textContent = txn.createdAt ? new Date(txn.createdAt).toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric', hour:'2-digit', minute:'2-digit' }) : '—';
+      document.getElementById('totalAmount').textContent = '€' + (txn.totalAmount || 0).toFixed(2);
+
+      var itemsHtml = '';
+      (txn.items || []).forEach(function(item) {
+        var total = (item.discountedPrice != null ? item.discountedPrice : item.unitPrice) * (item.quantity || 1);
+        itemsHtml += '<tr><td><div class="item-name">' + esc(item.name) + '</div>' + (item.quantity > 1 ? '<div class="item-qty">' + item.quantity + ' x €' + Number(item.unitPrice).toFixed(2) + '</div>' : '') + (item.serialNumber ? '<div class="item-qty">SN: ' + esc(item.serialNumber) + '</div>' : '') + '</td><td>€' + total.toFixed(2) + '</td></tr>';
+      });
+      document.getElementById('itemsBody').innerHTML = itemsHtml;
+
+      var pmLabel = txn.paymentMethod === 'split' ? 'Card + Cash' : txn.paymentMethod === 'card' ? 'Card' : 'Cash';
+      var payHtml = '<div class="payment-row" style="font-weight:600;"><span>Payment</span><span>' + pmLabel + '</span></div>';
+      if (txn.cashReceived != null) payHtml += '<div class="payment-row"><span>Cash</span><span>€' + Number(txn.cashReceived).toFixed(2) + '</span></div>';
+      if (txn.cardAmount != null) payHtml += '<div class="payment-row"><span>Card</span><span>€' + Number(txn.cardAmount).toFixed(2) + '</span></div>';
+      if (txn.changeGiven > 0) payHtml += '<div class="payment-row" style="font-weight:600;"><span>Change</span><span>€' + Number(txn.changeGiven).toFixed(2) + '</span></div>';
+      document.getElementById('paymentSection').innerHTML = payHtml;
+
+      var vatHtml = '';
+      if (txn.standardVatTotal > 0) vatHtml += '<div class="vat-row"><span>VAT (23%)</span><span>€' + Number(txn.standardVatTotal).toFixed(2) + '</span></div>';
+      if (txn.marginVatTotal > 0) vatHtml += '<div class="vat-row"><span>Margin VAT</span><span>€' + Number(txn.marginVatTotal).toFixed(2) + '</span></div>';
+      if (vatHtml) { document.getElementById('vatSection').innerHTML = '<div style="border-top:1px solid #e5e5e7;padding:6px 0;margin-top:4px;">' + vatHtml + '</div>'; }
+
+      if (data.accessCount) { document.getElementById('accessCount').textContent = 'Opened ' + data.accessCount + ' times'; }
+    })
+    .catch(function() { window.location.href = '/share-expired.html'; });
+
+  function esc(s) {
+    if (typeof s !== 'string') return String(s || '');
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+})();
+</script>
+</body>
+</html>

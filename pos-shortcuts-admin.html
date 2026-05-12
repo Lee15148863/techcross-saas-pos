@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>POS 快捷按键配置 - Tech Cross 进销存</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;}
+        html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:antialiased;background:#f5f5f7;color:#1d1d1f;}
+        .layout{display:flex;height:100vh;}
+        .sidebar{width:220px;background:#1d1d1f;color:#f5f5f7;display:flex;flex-direction:column;flex-shrink:0;}
+        .sidebar .logo{padding:20px;text-align:center;border-bottom:1px solid #333;}.sidebar .logo img{height:36px;}.sidebar .logo span{display:block;font-size:12px;color:#86868b;margin-top:4px;}
+        .sidebar nav{flex:1;overflow-y:auto;padding:12px 0;}
+        .sidebar nav a{display:flex;align-items:center;gap:10px;padding:10px 20px;color:#b0b0b5;text-decoration:none;font-size:14px;transition:all .15s;border-left:3px solid transparent;}
+        .sidebar nav a:hover{background:#2a2a2d;color:#f5f5f7;}.sidebar nav a.active{background:#2a2a2d;color:#D4E157;border-left-color:#D4E157;font-weight:600;}
+        .sidebar nav a .icon{width:20px;text-align:center;font-size:16px;}
+        .sidebar .nav-section{padding:16px 20px 6px;font-size:11px;color:#6e6e73;text-transform:uppercase;letter-spacing:1px;}
+        .main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+        .topbar{height:56px;background:#fff;border-bottom:1px solid #e5e5e7;display:flex;align-items:center;justify-content:space-between;padding:0 24px;flex-shrink:0;}
+        .topbar h2{font-size:18px;font-weight:600;}.topbar .user-info{display:flex;align-items:center;gap:12px;font-size:14px;color:#6e6e73;}.topbar .user-info strong{color:#1d1d1f;}
+        .btn-logout{padding:6px 14px;border-radius:980px;border:1px solid #d2d2d7;background:#fff;font-size:13px;cursor:pointer;transition:all .2s;}.btn-logout:hover{background:#ff3b30;color:#fff;border-color:#ff3b30;}
+        .content{flex:1;overflow-y:auto;padding:24px;}
+        .card{background:#fff;border-radius:14px;box-shadow:0 2px 12px rgba(0,0,0,.06);padding:24px;margin-bottom:20px;}
+        .card h3{font-size:16px;font-weight:600;margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid #f0f0f2;}
+        .btn{padding:8px 18px;border:none;border-radius:10px;font-size:14px;font-weight:500;cursor:pointer;transition:all .2s;}
+        .btn-primary{background:#D4E157;color:#000;}.btn-primary:hover{background:#c5d148;}
+        .btn-secondary{background:#f5f5f7;border:1px solid #d2d2d7;color:#1d1d1f;}.btn-secondary:hover{background:#e5e5e7;}
+        .btn-danger{background:#ff3b30;color:#fff;}.btn-danger:hover{background:#e0342d;}
+        .badge{display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;}
+        .badge-active{background:#e8f5e9;color:#2e7d32;}
+        .toast{position:fixed;top:20px;right:20px;z-index:10000;padding:14px 22px;border-radius:12px;font-size:14px;font-weight:500;box-shadow:0 8px 32px rgba(0,0,0,.15);transform:translateX(120%);transition:transform .3s ease;max-width:400px;}
+        .toast.show{transform:translateX(0);}.toast.success{background:#34c759;color:#fff;}.toast.error{background:#ff3b30;color:#fff;}
+
+        /* Shortcut Config Table */
+        .sc-table{width:100%;border-collapse:collapse;font-size:13px;}
+        .sc-table thead th{background:#f5f5f7;padding:10px 8px;text-align:left;font-weight:600;font-size:12px;color:#6e6e73;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #e5e5e7;}
+        .sc-table tbody td{padding:8px;border-bottom:1px solid #f0f0f2;vertical-align:middle;}
+        .sc-table tbody tr:hover{background:#fafafa;}
+        .sc-table .col-no{width:40px;text-align:center;font-weight:600;color:#86868b;}
+        .sc-table input[type="text"]{width:100%;padding:7px 10px;border:1px solid #d2d2d7;border-radius:8px;font-size:13px;font-family:inherit;}
+        .sc-table input:focus{outline:none;border-color:#D4E157;box-shadow:0 0 0 3px rgba(212,225,87,.15);}
+        .sc-table .col-price,.sc-table .col-vat,.sc-table .col-sku{width:80px;}
+        .sc-table .col-title{width:120px;}
+        .sc-table .col-product{min-width:180px;position:relative;}
+        .sc-table .col-action{width:50px;text-align:center;}
+        .btn-clear-row{background:none;border:none;color:#ff3b30;cursor:pointer;font-size:16px;padding:4px 8px;border-radius:6px;transition:all .15s;}
+        .btn-clear-row:hover{background:rgba(255,59,48,.1);}
+        .search-dropdown{position:absolute;top:100%;left:0;right:0;z-index:100;background:#fff;border:1px solid #d2d2d7;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);max-height:200px;overflow-y:auto;display:none;}
+        .search-dropdown.show{display:block;}
+        .search-dropdown .dd-item{padding:8px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid #f0f0f2;transition:background .1s;}
+        .search-dropdown .dd-item:hover{background:#f0f7ff;}
+        .search-dropdown .dd-item:last-child{border-bottom:none;}
+        .search-dropdown .dd-name{font-weight:500;}
+        .search-dropdown .dd-meta{font-size:11px;color:#86868b;margin-top:2px;}
+        .header-actions{display:flex;align-items:center;gap:12px;margin-bottom:20px;}
+        .header-actions h3{flex:1;margin-bottom:0;padding-bottom:0;border-bottom:none;}
+    </style>
+</head>
+<body>
+<div class="toast" id="toast"></div>
+<div class="layout">
+    <aside class="sidebar">
+        <div class="logo"><img src="logo.png" alt="Tech Cross"><span>进销存管理系统</span></div>
+        <nav>
+            <div class="nav-section">业务管理 / Business</div>
+            <a href="inv-pos.html"><span class="icon">💰</span>POS 收银 / Checkout</a>
+            <a href="inv-products.html"><span class="icon">📦</span>商品管理 / Products</a>
+            <a href="inv-stock.html"><span class="icon">🏭</span>库存管理 / Stock</a>
+            <a href="inv-suppliers.html"><span class="icon">🤝</span>供应商 / Suppliers</a>
+            <a href="inv-purchases.html"><span class="icon">🛒</span>采购管理 / Purchases</a>
+            <a href="inv-transactions.html"><span class="icon">📋</span>交易记录 / Transactions</a>
+            <div class="nav-section">报表与发票 / Reports</div>
+            <a href="inv-reports.html"><span class="icon">📊</span>报表中心 / Reports</a>
+            <a href="inv-invoices.html"><span class="icon">🧾</span>发票管理 / VAT Invoice</a>
+            <a href="inv-expenses.html"><span class="icon">💸</span>支出管理 / Expenses</a>
+            <div class="nav-section">系统管理 / System</div>
+            <a href="inv-settings.html"><span class="icon">⚙️</span>系统设置 / Settings</a>
+            <a href="inv-users.html"><span class="icon">👥</span>用户管理 / Users</a>
+            <a href="pos-shortcuts-admin.html" class="active"><span class="icon">⚡</span>POS 快捷键 / Shortcuts</a>
+        </nav>
+    </aside>
+    <div class="main">
+        <div class="topbar">
+            <h2>POS 快捷按键配置 / POS Shortcuts</h2>
+            <div class="user-info"><span>欢迎, <strong id="displayName">-</strong></span><span class="badge badge-active" id="roleBadge">店主</span><button class="btn-logout" onclick="logout()">退出登录 / Logout</button></div>
+        </div>
+        <div class="content">
+            <div class="card">
+                <div class="header-actions">
+                    <h3>快捷按键配置（1-20）</h3>
+                    <button class="btn btn-primary" onclick="saveAll()">💾 保存全部 / Save All</button>
+                </div>
+                <p style="color:#6e6e73;margin-bottom:16px;font-size:13px;">配置 POS 页面左侧 20 个快捷按钮，绑定商品后收银员可一键加购。搜索商品后选择即可自动填充信息。</p>
+                <table class="sc-table">
+                    <thead>
+                        <tr>
+                            <th class="col-no">#</th>
+                            <th class="col-product">商品搜索 / Product</th>
+                            <th class="col-title">按钮名称 / Title</th>
+                            <th class="col-price">售价 / Price</th>
+                            <th class="col-vat">税率 / VAT</th>
+                            <th class="col-sku">SKU</th>
+                            <th class="col-action"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="scBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="auth-guard.js"></script>
+<script>
+(function() {
+'use strict';
+var user = Auth.requireRole('root');
+if (!user) return;
+
+document.getElementById('displayName').textContent = user.displayName || user.name || user.username || '-';
+document.getElementById('roleBadge').textContent = user.role === 'root' ? '店主' : '店员';
+
+const API_BASE = '/api/inv';
+const headers = () => Auth.getHeaders();
+
+// State: 20 shortcut configs
+let shortcuts = [];
+
+function showToast(msg, type) {
+  var t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast ' + (type || 'success');
+  t.classList.add('show');
+  setTimeout(function() { t.classList.remove('show'); }, 3000);
+}
+
+function logout() {
+  Auth.logout();
+}
+window.logout = logout;
+
+// Load shortcuts
+async function loadShortcuts() {
+  try {
+    var res = await fetch(API_BASE + '/pos-shortcuts', { headers: headers() });
+    if (res.status === 401) { window.location.href = 'inv-login.html'; return; }
+    shortcuts = await res.json();
+  } catch(e) {
+    shortcuts = [];
+    for (var i = 1; i <= 20; i++) shortcuts.push({ sort_no: i, title: '', product_id: null, price: 0, vat: 0.23, sku: '' });
+  }
+  renderTable();
+}
+
+function renderTable() {
+  var body = document.getElementById('scBody');
+  var html = '';
+  for (var i = 0; i < 20; i++) {
+    var s = shortcuts[i] || { sort_no: i+1, title: '', product_id: null, price: 0, vat: 0.23, sku: '' };
+    var productName = s._productName || '';
+    html += '<tr data-idx="' + i + '">' +
+      '<td class="col-no">' + s.sort_no + '</td>' +
+      '<td class="col-product"><div style="position:relative;">' +
+        '<input type="text" class="product-search" data-idx="' + i + '" placeholder="搜索商品..." value="' + escHtml(productName) + '" autocomplete="off">' +
+        '<div class="search-dropdown" id="dd-' + i + '"></div>' +
+      '</div></td>' +
+      '<td class="col-title"><input type="text" class="title-input" data-idx="' + i + '" value="' + escHtml(s.title) + '" placeholder="按钮名称"></td>' +
+      '<td class="col-price"><input type="text" class="price-input" data-idx="' + i + '" value="' + (s.price || '') + '" placeholder="0.00" readonly></td>' +
+      '<td class="col-vat"><input type="text" class="vat-input" data-idx="' + i + '" value="' + ((s.vat || 0.23) * 100).toFixed(0) + '%" readonly></td>' +
+      '<td class="col-sku"><input type="text" class="sku-input" data-idx="' + i + '" value="' + escHtml(s.sku) + '" readonly></td>' +
+      '<td class="col-action"><button class="btn-clear-row" onclick="clearRow(' + i + ')" title="清除">✕</button></td>' +
+    '</tr>';
+  }
+  body.innerHTML = html;
+  bindSearchEvents();
+}
+
+function escHtml(str) {
+  if (!str) return '';
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function bindSearchEvents() {
+  var inputs = document.querySelectorAll('.product-search');
+  var timer = null;
+  inputs.forEach(function(input) {
+    input.addEventListener('input', function() {
+      var idx = parseInt(this.dataset.idx);
+      var q = this.value.trim();
+      clearTimeout(timer);
+      if (!q || q.length < 2) { hideDropdown(idx); return; }
+      timer = setTimeout(function() { searchProducts(q, idx); }, 300);
+    });
+    input.addEventListener('focus', function() {
+      var idx = parseInt(this.dataset.idx);
+      if (this.value.trim().length >= 2) searchProducts(this.value.trim(), idx);
+    });
+    input.addEventListener('blur', function() {
+      var idx = parseInt(this.dataset.idx);
+      setTimeout(function() { hideDropdown(idx); }, 200);
+    });
+  });
+
+  // Title inputs: update state on change
+  document.querySelectorAll('.title-input').forEach(function(input) {
+    input.addEventListener('input', function() {
+      var idx = parseInt(this.dataset.idx);
+      shortcuts[idx].title = this.value;
+    });
+  });
+}
+
+async function searchProducts(q, idx) {
+  try {
+    var res = await fetch(API_BASE + '/products/search?q=' + encodeURIComponent(q), { headers: headers() });
+    if (!res.ok) return;
+    var products = await res.json();
+    showDropdown(idx, products);
+  } catch(e) {}
+}
+
+function showDropdown(idx, products) {
+  var dd = document.getElementById('dd-' + idx);
+  if (!products || products.length === 0) {
+    dd.innerHTML = '<div class="dd-item" style="color:#86868b;">未找到商品</div>';
+    dd.classList.add('show');
+    return;
+  }
+  var html = '';
+  products.forEach(function(p) {
+    html += '<div class="dd-item" data-id="' + p._id + '" data-name="' + escHtml(p.name) + '" data-price="' + p.sellingPrice + '" data-vat="' + (p.vatRate || 0.23) + '" data-sku="' + escHtml(p.sku) + '" onclick="selectProduct(' + idx + ', this)">' +
+      '<div class="dd-name">' + escHtml(p.name) + '</div>' +
+      '<div class="dd-meta">SKU: ' + escHtml(p.sku) + ' | €' + (p.sellingPrice || 0).toFixed(2) + ' | Stock: ' + (p.stock || 0) + '</div>' +
+    '</div>';
+  });
+  dd.innerHTML = html;
+  dd.classList.add('show');
+}
+
+function hideDropdown(idx) {
+  var dd = document.getElementById('dd-' + idx);
+  if (dd) dd.classList.remove('show');
+}
+
+window.selectProduct = function(idx, el) {
+  var id = el.dataset.id;
+  var name = el.dataset.name;
+  var price = parseFloat(el.dataset.price) || 0;
+  var vat = parseFloat(el.dataset.vat) || 0.23;
+  var sku = el.dataset.sku || '';
+
+  shortcuts[idx].product_id = id;
+  shortcuts[idx].title = shortcuts[idx].title || name;
+  shortcuts[idx].price = price;
+  shortcuts[idx].vat = vat;
+  shortcuts[idx].sku = sku;
+  shortcuts[idx]._productName = name;
+
+  // Update UI
+  var row = document.querySelector('tr[data-idx="' + idx + '"]');
+  row.querySelector('.product-search').value = name;
+  row.querySelector('.title-input').value = shortcuts[idx].title;
+  row.querySelector('.price-input').value = price.toFixed(2);
+  row.querySelector('.vat-input').value = (vat * 100).toFixed(0) + '%';
+  row.querySelector('.sku-input').value = sku;
+
+  hideDropdown(idx);
+};
+
+window.clearRow = function(idx) {
+  shortcuts[idx] = { sort_no: idx + 1, title: '', product_id: null, price: 0, vat: 0.23, sku: '', _productName: '' };
+  var row = document.querySelector('tr[data-idx="' + idx + '"]');
+  row.querySelector('.product-search').value = '';
+  row.querySelector('.title-input').value = '';
+  row.querySelector('.price-input').value = '';
+  row.querySelector('.vat-input').value = '23%';
+  row.querySelector('.sku-input').value = '';
+};
+
+window.saveAll = async function() {
+  var payload = shortcuts.map(function(s, i) {
+    return {
+      sort_no: i + 1,
+      title: s.title || '',
+      product_id: s.product_id || null,
+      price: s.price || 0,
+      vat: s.vat || 0.23,
+      sku: s.sku || ''
+    };
+  });
+
+  try {
+    var res = await fetch(API_BASE + '/pos-shortcuts', {
+      method: 'PUT',
+      headers: headers(),
+      body: JSON.stringify({ shortcuts: payload })
+    });
+    if (res.status === 401) { window.location.href = 'inv-login.html'; return; }
+    if (res.status === 403) { showToast('权限不足，仅店主可操作', 'error'); return; }
+    if (!res.ok) {
+      var err = await res.json();
+      showToast(err.error || '保存失败', 'error');
+      return;
+    }
+    shortcuts = await res.json();
+    showToast('保存成功！快捷按键配置已更新', 'success');
+    renderTable();
+  } catch(e) {
+    showToast('网络错误，保存失败', 'error');
+  }
+};
+
+// Init
+loadShortcuts();
+})();
+</script>
+</body>
+</html>

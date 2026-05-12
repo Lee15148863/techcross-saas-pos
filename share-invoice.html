@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Invoice — TechCross</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif; background: #f5f5f7; color: #1d1d1f; -webkit-font-smoothing: antialiased; padding: 16px; }
+.card { background: #fff; border-radius: 20px; max-width: 480px; margin: 0 auto; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,.08); }
+.header { background: #1E7F5C; padding: 24px 20px; text-align: center; color: #fff; }
+.header .label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; opacity: .8; margin-bottom: 2px; }
+.header h1 { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+.header .inv-no { font-size: 14px; opacity: .9; }
+.header .meta { font-size: 12px; opacity: .7; margin-top: 2px; }
+.body { padding: 20px; }
+.download-btn { display: block; width: 100%; padding: 16px; background: #0071e3; color: #fff; border: none; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer; text-align: center; text-decoration: none; -webkit-tap-highlight-color: transparent; transition: opacity .15s; }
+.download-btn:active { opacity: .8; }
+.download-btn .icon { font-size: 20px; margin-right: 6px; }
+.summary { background: #f9f9f9; border-radius: 12px; padding: 16px; margin: 16px 0; }
+.summary-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 14px; }
+.summary-row.label { color: #6e6e73; }
+.summary-row.total { border-top: 2px solid #1E7F5C; margin-top: 8px; padding-top: 10px; font-size: 18px; font-weight: 700; }
+.items-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 12px; }
+.items-table th { text-align: left; padding: 6px 4px; border-bottom: 1px solid #e5e5e7; color: #6e6e73; font-size: 11px; font-weight: 600; text-transform: uppercase; }
+.items-table th:last-child { text-align: right; }
+.items-table td { padding: 8px 4px; border-bottom: 1px solid #f0f0f0; }
+.items-table td:last-child { text-align: right; font-weight: 600; }
+.items-table .vat-badge { display: inline-block; font-size: 10px; padding: 1px 6px; border-radius: 4px; background: #f0f0f0; color: #6e6e73; margin-left: 4px; }
+.footer-note { text-align: center; padding: 20px; font-size: 12px; color: #6e6e73; border-top: 1px solid #e5e5e7; line-height: 1.6; }
+.footer-note .brand { color: #1E7F5C; font-weight: 600; }
+@media (max-width: 480px) { body { padding: 8px; } .card { border-radius: 16px; } .header { padding: 20px 16px; } .body { padding: 16px; } }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="header">
+    <div class="label">VAT Invoice</div>
+    <h1>TechCross Repair Centre</h1>
+    <div class="inv-no" id="invoiceNo">—</div>
+    <div class="meta" id="invoiceMeta">—</div>
+  </div>
+  <div class="body">
+    <a class="download-btn" id="downloadLink" href="#" download><span class="icon">⬇️</span> Download PDF</a>
+    <div class="summary" id="summarySection"></div>
+    <table class="items-table">
+      <thead><tr><th>Item</th><th>VAT</th><th>Total</th></tr></thead>
+      <tbody id="itemsBody"></tbody>
+    </table>
+  </div>
+  <div class="footer-note">
+    <div class="brand">TechCross Repair Centre</div>
+    <div>Navan, Co. Meath, Ireland</div>
+    <div>VAT: IE3330982OH</div>
+  </div>
+</div>
+<script>
+(function() {
+  var token = window.location.pathname.split('/').pop();
+  var pdfUrl = '/share/invoice/' + token + '/pdf';
+  document.getElementById('downloadLink').href = pdfUrl;
+
+  fetch('/api/share/invoice/' + token + '/data')
+    .then(function(r) {
+      if (r.status === 410) { window.location.href = '/share-expired.html?ref=' + token; return null; }
+      return r.json();
+    })
+    .then(function(data) {
+      if (!data) return;
+      var inv = data.invoice;
+      document.getElementById('invoiceNo').textContent = inv.invoiceNumber || '—';
+      document.getElementById('invoiceMeta').textContent = 'Receipt #' + (inv.receiptNumber || '—') + '  |  ' + (inv.transactionDate ? new Date(inv.transactionDate).toLocaleDateString('en-GB') : '');
+
+      var summaryHtml = '';
+      summaryHtml += '<div class="summary-row label"><span>Subtotal (ex VAT)</span><span>€' + (inv.subtotalExVat || 0).toFixed(2) + '</span></div>';
+      if (inv.standardVatTotal > 0) summaryHtml += '<div class="summary-row label"><span>VAT (23%)</span><span>€' + Number(inv.standardVatTotal).toFixed(2) + '</span></div>';
+      if (inv.reducedVatTotal > 0) summaryHtml += '<div class="summary-row label"><span>VAT (13.5%)</span><span>€' + Number(inv.reducedVatTotal).toFixed(2) + '</span></div>';
+      if (inv.hasMarginItems) summaryHtml += '<div class="summary-row label"><span>Margin Scheme</span><span>Included</span></div>';
+      summaryHtml += '<div class="summary-row total"><span>TOTAL</span><span>€' + (inv.grossTotal || 0).toFixed(2) + '</span></div>';
+      document.getElementById('summarySection').innerHTML = summaryHtml;
+
+      var itemsHtml = '';
+      (inv.items || []).forEach(function(item) {
+        var vatLabel = item.vatType === 'margin' ? 'Margin' : item.vatType === 'reduced' ? '13.5%' : '23%';
+        itemsHtml += '<tr><td>' + esc(item.name) + (item.quantity > 1 ? ' <span style="color:#6e6e73;font-size:11px;">×' + item.quantity + '</span>' : '') + '</td><td><span class="vat-badge">' + vatLabel + '</span></td><td>€' + (item.lineTotal || 0).toFixed(2) + '</td></tr>';
+      });
+      document.getElementById('itemsBody').innerHTML = itemsHtml;
+    })
+    .catch(function() { window.location.href = '/share-expired.html'; });
+
+  function esc(s) {
+    if (typeof s !== 'string') return String(s || '');
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+})();
+</script>
+</body>
+</html>

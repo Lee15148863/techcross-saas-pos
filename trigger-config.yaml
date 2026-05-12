@@ -1,0 +1,14 @@
+# Cloud Build 触发器配置文件
+# 使用此文件创建新的触发器
+
+name: techcross-static-deploy
+description: Deploy Tech Cross website to Cloud Storage
+filename: cloudbuild.yaml
+
+github:
+  owner: Lee15148863
+  name: teschcross
+  push:
+    branch: ^main$
+
+# 不使用 substitutions，直接在 cloudbuild.yaml 中硬编码存储桶名称

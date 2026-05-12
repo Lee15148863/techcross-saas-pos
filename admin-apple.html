@@ -1,0 +1,447 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Apple Admin - Tech Cross</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body { background: #f5f5f7; }
+        
+        .admin-container { max-width: 1400px; margin: 0 auto; padding: 120px 22px 80px; display: none; }
+        .admin-container.show { display: block; }
+        .admin-header { margin-bottom: 40px; }
+        .admin-tabs { display: flex; gap: 16px; margin-bottom: 32px; border-bottom: 1px solid #d2d2d7; flex-wrap: wrap; }
+        .admin-tab { padding: 12px 24px; background: none; border: none; font-size: 17px; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.3s; }
+        .admin-tab.active { border-bottom-color: #0071e3; color: #0071e3; }
+        .admin-content { display: none; }
+        .admin-content.active { display: block; }
+        .device-selector { display: flex; gap: 16px; margin-bottom: 24px; }
+        .device-btn { padding: 12px 24px; border: 2px solid #d2d2d7; border-radius: 12px; background: #fff; cursor: pointer; font-size: 17px; transition: all 0.3s; }
+        .device-btn.active { border-color: #0071e3; background: #0071e3; color: #fff; }
+        .pricing-table { background: #fff; border-radius: 18px; overflow-x: auto; box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06); }
+        .pricing-table table { width: 100%; border-collapse: collapse; min-width: 800px; }
+        .pricing-table th { background: #f5f5f7; padding: 16px; text-align: left; font-size: 14px; font-weight: 600; position: sticky; top: 0; }
+        .pricing-table td { padding: 16px; border-bottom: 1px solid #f5f5f7; }
+        .pricing-table input[type="number"] { width: 80px; padding: 8px; border: 1px solid #d2d2d7; border-radius: 8px; }
+        .pricing-table input[type="text"] { padding: 8px; border: 1px solid #d2d2d7; border-radius: 8px; }
+        .btn-save { background: #0071e3; color: #fff; padding: 14px 32px; border: none; border-radius: 980px; font-size: 17px; cursor: pointer; margin-top: 24px; }
+        .btn-save:hover { background: #0077ed; }
+        .btn-add { background: #34c759; color: #fff; padding: 12px 24px; border: none; border-radius: 12px; font-size: 15px; cursor: pointer; margin-bottom: 16px; }
+        .btn-add:hover { background: #30b350; }
+        .btn-delete { background: #ff3b30; color: #fff; padding: 6px 12px; border: none; border-radius: 8px; font-size: 13px; cursor: pointer; }
+        .btn-delete:hover { background: #ff453a; }
+        .success-message { background: #d4edda; color: #155724; padding: 16px; border-radius: 12px; margin-top: 16px; display: none; }
+        .success-message.show { display: block; }
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); }
+        .modal.show { display: flex; align-items: center; justify-content: center; }
+        .modal-content { background: #fff; border-radius: 24px; padding: 32px; max-width: 500px; width: 90%; }
+        .modal-content h2 { margin-bottom: 24px; }
+        .modal-content input, .modal-content select { width: 100%; padding: 12px; border: 1px solid #d2d2d7; border-radius: 8px; margin-bottom: 16px; font-size: 15px; }
+        .modal-buttons { display: flex; gap: 12px; justify-content: flex-end; }
+        .btn-cancel { background: #8e8e93; color: #fff; padding: 12px 24px; border: none; border-radius: 12px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <!-- Admin Panel -->
+    <nav class="nav" id="adminNav" style="display: none;">
+        <div class="nav-content">
+            <div class="nav-logo"><a href="index.html"><img src="logo-sm.png" alt="Tech Cross"></a></div>
+            <ul class="nav-list">
+                <li><a href="pricing-apple.html">Back to Apple</a></li>
+                <li><button onclick="logout()" style="background: none; border: none; color: #1d1d1f; font-size: 14px; cursor: pointer;">Logout</button></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="admin-container" id="adminContainer">
+        <div class="admin-header">
+            <h1>Apple Pricing Management</h1>
+            <p style="color: #6e6e73;">Manage iPhone and iPad models and pricing</p>
+        </div>
+
+        <div class="admin-tabs">
+            <button class="admin-tab active" data-tab="pricing">Edit Pricing</button>
+            <button class="admin-tab" data-tab="models">Manage Models</button>
+            <button class="admin-tab" data-tab="services">Manage Services</button>
+        </div>
+
+        <!-- Edit Pricing Tab -->
+        <div class="admin-content active" id="pricing-tab">
+            <div class="device-selector">
+                <button class="device-btn active" data-device="iphone">iPhone</button>
+                <button class="device-btn" data-device="ipad">iPad</button>
+            </div>
+            <div id="pricing-editor"></div>
+            <button class="btn-save" onclick="savePricing()">Save All Changes</button>
+            <div class="success-message" id="save-message">Pricing updated successfully!</div>
+        </div>
+
+        <!-- Manage Models Tab -->
+        <div class="admin-content" id="models-tab">
+            <div class="device-selector">
+                <button class="device-btn active" data-device="iphone">iPhone</button>
+                <button class="device-btn" data-device="ipad">iPad</button>
+            </div>
+            <button class="btn-add" onclick="showAddModelModal()">+ Add New Model</button>
+            <div id="models-editor"></div>
+        </div>
+
+        <!-- Manage Services Tab -->
+        <div class="admin-content" id="services-tab">
+            <div class="device-selector">
+                <button class="device-btn active" data-device="iphone">iPhone Services</button>
+                <button class="device-btn" data-device="ipad">iPad Services</button>
+            </div>
+            <button class="btn-add" onclick="showAddServiceModal()">+ Add New Service</button>
+            <div id="services-editor"></div>
+            <button class="btn-save" onclick="saveServices()">Save Service Changes</button>
+            <div class="success-message" id="services-message">Services updated successfully!</div>
+        </div>
+    </div>
+
+    <!-- Add Model Modal -->
+    <div class="modal" id="addModelModal">
+        <div class="modal-content">
+            <h2>Add New Model</h2>
+            <input type="text" id="newModelId" placeholder="Model ID (e.g., iphone-17-pro-max)">
+            <input type="text" id="newModelName" placeholder="Model Name (e.g., iPhone 17 Pro Max (A3526))">
+            <div class="modal-buttons">
+                <button class="btn-cancel" onclick="closeModal('addModelModal')">Cancel</button>
+                <button class="btn-save" onclick="addNewModel()">Add Model</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Service Modal -->
+    <div class="modal" id="addServiceModal">
+        <div class="modal-content">
+            <h2>Add New Service</h2>
+            <input type="text" id="newServiceId" placeholder="Service ID (e.g., screen_compatible)">
+            <input type="text" id="newServiceName" placeholder="Service Name (e.g., Screen (Compatible))">
+            <input type="text" id="newServiceDesc" placeholder="Description">
+            <div class="modal-buttons">
+                <button class="btn-cancel" onclick="closeModal('addServiceModal')">Cancel</button>
+                <button class="btn-save" onclick="addNewService()">Add Service</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="auth-guard.js"></script>
+    <script src="/api-client.js"></script>
+    <script src="pricing-data-apple.js"></script>
+    <script>
+        // Auth: inventory admin only.
+        if (!Auth.isRoot()) { window.location.href = 'inv-login.html'; return; }
+
+        let currentDevice = 'iphone';
+        let pricingData = null;
+
+        // Load from API on startup
+        const pricingDataReady = PricingAPI.get('apple').then(data => {
+            pricingData = data;
+        }).catch(() => {
+            pricingData = loadApplePricingData(); // fallback
+        });
+
+        async function showAppleAdmin() {
+            document.getElementById('adminNav').style.display = 'block';
+            document.getElementById('adminContainer').classList.add('show');
+            await pricingDataReady;
+            renderPricingEditor();
+        }
+
+        showAppleAdmin();
+
+
+
+        // Logout
+        function logout() {
+            Auth.logout();
+        }
+
+        // Tab switching
+        document.querySelectorAll('.admin-tab').forEach(tab => {
+            tab.addEventListener('click', function() {
+                document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
+                this.classList.add('active');
+                
+                document.querySelectorAll('.admin-content').forEach(c => c.classList.remove('active'));
+                document.getElementById(`${this.dataset.tab}-tab`).classList.add('active');
+                
+                if (this.dataset.tab === 'pricing') {
+                    renderPricingEditor();
+                } else if (this.dataset.tab === 'models') {
+                    renderModelsEditor();
+                } else {
+                    renderServicesEditor();
+                }
+            });
+        });
+
+        // Device switching
+        document.querySelectorAll('.device-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                this.parentElement.querySelectorAll('.device-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                currentDevice = this.dataset.device;
+                
+                const activeTab = document.querySelector('.admin-tab.active').dataset.tab;
+                if (activeTab === 'pricing') {
+                    renderPricingEditor();
+                } else if (activeTab === 'models') {
+                    renderModelsEditor();
+                } else {
+                    renderServicesEditor();
+                }
+            });
+        });
+
+        // Render pricing editor
+        function renderPricingEditor() {
+            const editor = document.getElementById('pricing-editor');
+            const models = pricingData[currentDevice].models;
+            const serviceTypes = pricingData[currentDevice].serviceTypes;
+            
+            let html = '<div class="pricing-table"><table><thead><tr>';
+            html += '<th>Model</th>';
+            
+            for (const [key, service] of Object.entries(serviceTypes)) {
+                html += `<th>${service.name}</th>`;
+            }
+            
+            html += '</tr></thead><tbody>';
+            
+            for (const [modelKey, model] of Object.entries(models)) {
+                html += `<tr><td><strong>${model.name}</strong></td>`;
+                
+                for (const serviceKey of Object.keys(serviceTypes)) {
+                    const price = model.services[serviceKey] || 0;
+                    html += `<td><input type="number" value="${price}" data-model="${modelKey}" data-service="${serviceKey}" min="0"></td>`;
+                }
+                
+                html += '</tr>';
+            }
+            
+            html += '</tbody></table></div>';
+            editor.innerHTML = html;
+        }
+
+        // Render models editor
+        function renderModelsEditor() {
+            const editor = document.getElementById('models-editor');
+            const models = pricingData[currentDevice].models;
+            
+            let html = '<div class="pricing-table"><table><thead><tr>';
+            html += '<th>Model ID</th><th>Model Name</th><th>Actions</th>';
+            html += '</tr></thead><tbody>';
+            
+            for (const [modelKey, model] of Object.entries(models)) {
+                html += `<tr>`;
+                html += `<td><code>${modelKey}</code></td>`;
+                html += `<td><input type="text" value="${model.name}" data-model="${modelKey}" style="width: 300px;"></td>`;
+                html += `<td><button class="btn-delete" onclick="deleteModel('${modelKey}')">Delete</button></td>`;
+                html += `</tr>`;
+            }
+            
+            html += '</tbody></table></div>';
+            html += '<button class="btn-save" onclick="saveModelNames()" style="margin-top: 16px;">Save Model Names</button>';
+            editor.innerHTML = html;
+        }
+
+        // Render services editor
+        function renderServicesEditor() {
+            const editor = document.getElementById('services-editor');
+            const serviceTypes = pricingData[currentDevice].serviceTypes;
+            
+            let html = '<div class="pricing-table"><table><thead><tr><th>Service ID</th><th>Service Name</th><th>Description</th><th>Actions</th></tr></thead><tbody>';
+            for (const [key, service] of Object.entries(serviceTypes)) {
+                html += `<tr><td><code>${key}</code></td>`;
+                html += `<td><input type="text" value="${service.name}" data-service="${key}" data-field="name" style="width: 200px;"></td>`;
+                html += `<td><input type="text" value="${service.description}" data-service="${key}" data-field="description" style="width: 300px;"></td>`;
+                html += `<td><button class="btn-delete" onclick="deleteService('${key}')">Delete</button></td></tr>`;
+            }
+            html += '</tbody></table></div>';
+            editor.innerHTML = html;
+        }
+
+        // Save pricing
+        function savePricing() {
+            const inputs = document.querySelectorAll('#pricing-editor input[type="number"]');
+            const now = new Date().toISOString();
+            
+            inputs.forEach(input => {
+                const modelKey = input.dataset.model;
+                const serviceKey = input.dataset.service;
+                const newPrice = parseInt(input.value) || 0;
+                const oldPrice = pricingData[currentDevice].models[modelKey].services[serviceKey] || 0;
+                
+                // Only update timestamp if price changed
+                if (newPrice !== oldPrice) {
+                    pricingData[currentDevice].models[modelKey].services[serviceKey] = newPrice;
+                    
+                    // Track individual service update time
+                    if (!pricingData[currentDevice].models[modelKey].serviceUpdates) {
+                        pricingData[currentDevice].models[modelKey].serviceUpdates = {};
+                    }
+                    pricingData[currentDevice].models[modelKey].serviceUpdates[serviceKey] = now;
+                }
+            });
+            
+            PricingAPI.save('apple', pricingData).catch(e => console.error('Save failed:', e));
+            
+            const message = document.getElementById('save-message');
+            message.classList.add('show');
+            setTimeout(() => message.classList.remove('show'), 3000);
+        }
+
+        // Save model names
+        function saveModelNames() {
+            const inputs = document.querySelectorAll('#models-editor input[type="text"]');
+            inputs.forEach(input => {
+                const modelKey = input.dataset.model;
+                pricingData[currentDevice].models[modelKey].name = input.value;
+            });
+            PricingAPI.save('apple', pricingData).catch(e => console.error('Save failed:', e));
+            alert('Model names saved successfully!');
+        }
+
+        // Save services
+        function saveServices() {
+            const inputs = document.querySelectorAll('#services-editor input[type="text"]');
+            inputs.forEach(input => {
+                const serviceKey = input.dataset.service;
+                const field = input.dataset.field;
+                pricingData[currentDevice].serviceTypes[serviceKey][field] = input.value;
+            });
+            PricingAPI.save('apple', pricingData).catch(e => console.error('Save failed:', e));
+            const message = document.getElementById('services-message');
+            message.classList.add('show');
+            setTimeout(() => message.classList.remove('show'), 3000);
+        }
+
+        // Modal functions
+        function showAddModelModal() {
+            document.getElementById('addModelModal').classList.add('show');
+        }
+
+        function showAddServiceModal() {
+            document.getElementById('addServiceModal').classList.add('show');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('show');
+        }
+
+        // Add new model
+        function addNewModel() {
+            const modelId = document.getElementById('newModelId').value.trim();
+            const modelName = document.getElementById('newModelName').value.trim();
+            
+            if (!modelId || !modelName) {
+                alert('Please fill in all fields');
+                return;
+            }
+            
+            if (pricingData[currentDevice].models[modelId]) {
+                alert('Model ID already exists');
+                return;
+            }
+            
+            // Create default services for new model
+            const services = {};
+            const serviceUpdates = {};
+            for (const key of Object.keys(pricingData[currentDevice].serviceTypes)) {
+                services[key] = 0;
+                serviceUpdates[key] = new Date().toISOString();
+            }
+            
+            pricingData[currentDevice].models[modelId] = {
+                name: modelName,
+                services: services,
+                serviceUpdates: serviceUpdates,
+                lastUpdated: new Date().toISOString()
+            };
+            
+            PricingAPI.save('apple', pricingData).catch(e => console.error('Save failed:', e));
+            closeModal('addModelModal');
+            renderModelsEditor();
+            alert('Model added successfully!');
+            
+            // Clear inputs
+            document.getElementById('newModelId').value = '';
+            document.getElementById('newModelName').value = '';
+        }
+
+        // Delete model
+        function deleteModel(modelKey) {
+            if (confirm(`Are you sure you want to delete ${pricingData[currentDevice].models[modelKey].name}?`)) {
+                delete pricingData[currentDevice].models[modelKey];
+                PricingAPI.save('apple', pricingData).catch(e => console.error('Save failed:', e));
+                renderModelsEditor();
+                alert('Model deleted successfully!');
+            }
+        }
+
+        // Add new service
+        function addNewService() {
+            const serviceId = document.getElementById('newServiceId').value.trim();
+            const serviceName = document.getElementById('newServiceName').value.trim();
+            const serviceDesc = document.getElementById('newServiceDesc').value.trim();
+            
+            if (!serviceId || !serviceName) {
+                alert('Please fill in Service ID and Name');
+                return;
+            }
+            
+            if (pricingData[currentDevice].serviceTypes[serviceId]) {
+                alert('Service ID already exists');
+                return;
+            }
+            
+            pricingData[currentDevice].serviceTypes[serviceId] = {
+                name: serviceName,
+                description: serviceDesc || serviceName
+            };
+            
+            // Add this service to all existing models with price 0
+            for (const modelKey in pricingData[currentDevice].models) {
+                pricingData[currentDevice].models[modelKey].services[serviceId] = 0;
+                if (!pricingData[currentDevice].models[modelKey].serviceUpdates) {
+                    pricingData[currentDevice].models[modelKey].serviceUpdates = {};
+                }
+                pricingData[currentDevice].models[modelKey].serviceUpdates[serviceId] = new Date().toISOString();
+            }
+            
+            PricingAPI.save('apple', pricingData).catch(e => console.error('Save failed:', e));
+            closeModal('addServiceModal');
+            renderServicesEditor();
+            alert('Service added successfully!');
+            
+            // Clear inputs
+            document.getElementById('newServiceId').value = '';
+            document.getElementById('newServiceName').value = '';
+            document.getElementById('newServiceDesc').value = '';
+        }
+
+        // Delete service
+        function deleteService(serviceKey) {
+            if (confirm(`Are you sure you want to delete ${pricingData[currentDevice].serviceTypes[serviceKey].name}? This will remove it from all models.`)) {
+                delete pricingData[currentDevice].serviceTypes[serviceKey];
+                
+                // Remove from all models
+                for (const modelKey in pricingData[currentDevice].models) {
+                    delete pricingData[currentDevice].models[modelKey].services[serviceKey];
+                    if (pricingData[currentDevice].models[modelKey].serviceUpdates) {
+                        delete pricingData[currentDevice].models[modelKey].serviceUpdates[serviceKey];
+                    }
+                }
+                
+                PricingAPI.save('apple', pricingData).catch(e => console.error('Save failed:', e));
+                renderServicesEditor();
+                alert('Service deleted successfully!');
+            }
+        }
+    </script>
+</body>
+</html>

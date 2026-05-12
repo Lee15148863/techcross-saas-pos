@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>商品管理 - Tech Cross 进销存</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;}
+        html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:antialiased;background:#f5f5f7;color:#1d1d1f;}
+        .layout{display:flex;height:100vh;}
+        /* ─── Sidebar ─── */
+        .sidebar{width:220px;background:#1d1d1f;color:#f5f5f7;display:flex;flex-direction:column;flex-shrink:0;}
+        .sidebar .logo{padding:20px;text-align:center;border-bottom:1px solid #333;}
+        .sidebar .logo img{height:36px;}
+        .sidebar .logo span{display:block;font-size:12px;color:#86868b;margin-top:4px;}
+        .sidebar nav{flex:1;overflow-y:auto;padding:12px 0;}
+        .sidebar nav a{display:flex;align-items:center;gap:10px;padding:10px 20px;color:#b0b0b5;text-decoration:none;font-size:14px;transition:all .15s;border-left:3px solid transparent;}
+        .sidebar nav a:hover{background:#2a2a2d;color:#f5f5f7;}
+        .sidebar nav a.active{background:#2a2a2d;color:#D4E157;border-left-color:#D4E157;font-weight:600;}
+        .sidebar nav a .icon{width:20px;text-align:center;font-size:16px;}
+        .sidebar .nav-section{padding:16px 20px 6px;font-size:11px;color:#6e6e73;text-transform:uppercase;letter-spacing:1px;}
+        /* ─── Main ─── */
+        .main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+        .topbar{height:56px;background:#fff;border-bottom:1px solid #e5e5e7;display:flex;align-items:center;justify-content:space-between;padding:0 24px;flex-shrink:0;}
+        .topbar h2{font-size:18px;font-weight:600;}
+        .topbar .user-info{display:flex;align-items:center;gap:12px;font-size:14px;color:#6e6e73;}
+        .topbar .user-info strong{color:#1d1d1f;}
+        .btn-logout{padding:6px 14px;border-radius:980px;border:1px solid #d2d2d7;background:#fff;font-size:13px;cursor:pointer;transition:all .2s;}
+        .btn-logout:hover{background:#ff3b30;color:#fff;border-color:#ff3b30;}
+        .content{flex:1;overflow-y:auto;padding:24px;}
+        /* ─── Common ─── */
+        .card{background:#fff;border-radius:14px;box-shadow:0 2px 12px rgba(0,0,0,.06);padding:24px;margin-bottom:20px;}
+        .toolbar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:20px;}
+        .toolbar input,.toolbar select{padding:8px 14px;border:1px solid #d2d2d7;border-radius:10px;font-size:14px;background:#fff;}
+        .toolbar input:focus,.toolbar select:focus{outline:none;border-color:#D4E157;box-shadow:0 0 0 3px rgba(212,225,87,.15);}
+        .btn{padding:8px 18px;border:none;border-radius:10px;font-size:14px;font-weight:500;cursor:pointer;transition:all .2s;}
+        .btn-primary{background:#D4E157;color:#000;}.btn-primary:hover{background:#c5d148;}
+        .btn-secondary{background:#f5f5f7;border:1px solid #d2d2d7;color:#1d1d1f;}.btn-secondary:hover{background:#e5e5e7;}
+        .btn-danger{background:#ff3b30;color:#fff;}.btn-danger:hover{background:#e0342d;}
+        .btn-success{background:#34c759;color:#fff;}.btn-success:hover{background:#2db84e;}
+        .btn-sm{padding:5px 12px;font-size:13px;}
+        table{width:100%;border-collapse:collapse;font-size:14px;}
+        thead th{background:#f5f5f7;padding:10px 12px;text-align:left;font-weight:600;font-size:12px;color:#6e6e73;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #e5e5e7;}
+        tbody td{padding:10px 12px;border-bottom:1px solid #f0f0f2;vertical-align:middle;}
+        tbody tr:hover{background:#fafafa;}
+        .badge{display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;}
+        .badge-active{background:#e8f5e9;color:#2e7d32;}
+        .badge-inactive{background:#fef2f2;color:#991b1b;}
+        .badge-secondhand{background:#fff3cd;color:#856404;}
+        .pagination{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:20px;}
+        .pagination button{padding:6px 14px;border:1px solid #d2d2d7;border-radius:8px;background:#fff;cursor:pointer;font-size:13px;transition:all .15s;}
+        .pagination button:hover:not(:disabled){background:#D4E157;border-color:#D4E157;}
+        .pagination button:disabled{opacity:.4;cursor:not-allowed;}
+        .pagination span{font-size:13px;color:#6e6e73;}
+        /* ─── Modal ─── */
+        .modal-overlay{display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.5);backdrop-filter:blur(4px);align-items:center;justify-content:center;}
+        .modal-overlay.show{display:flex;}
+        .modal{background:#fff;border-radius:18px;padding:32px;max-width:600px;width:90%;max-height:85vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.2);}
+        .modal h3{font-size:20px;margin-bottom:20px;}
+        .form-group{margin-bottom:16px;}
+        .form-group label{display:block;font-size:14px;font-weight:500;margin-bottom:6px;color:#1d1d1f;}
+        .form-group input,.form-group select,.form-group textarea{width:100%;padding:10px 14px;border:1px solid #d2d2d7;border-radius:10px;font-size:14px;font-family:inherit;}
+        .form-group input:focus,.form-group select:focus,.form-group textarea:focus{outline:none;border-color:#D4E157;box-shadow:0 0 0 3px rgba(212,225,87,.15);}
+        .form-group .hint{font-size:12px;color:#86868b;margin-top:4px;}
+        .form-group .error{font-size:12px;color:#ff3b30;margin-top:4px;}
+        .form-row{display:flex;gap:16px;}
+        .form-row .form-group{flex:1;}
+        .modal-actions{display:flex;gap:12px;justify-content:flex-end;margin-top:24px;}
+        .secondhand-fields{display:none;background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:16px;margin-top:12px;}
+        .secondhand-fields.show{display:block;}
+        .margin-info{font-size:14px;color:#856404;font-weight:500;margin-top:8px;}
+        .attrs-section{margin-top:12px;}
+        .attr-row{display:flex;gap:8px;align-items:center;margin-bottom:8px;}
+        .attr-row input{flex:1;}
+        .attr-row .btn-remove-attr{background:none;border:none;color:#ff3b30;cursor:pointer;font-size:18px;padding:4px;}
+        .toast{position:fixed;top:20px;right:20px;z-index:10000;padding:14px 22px;border-radius:12px;font-size:14px;font-weight:500;box-shadow:0 8px 32px rgba(0,0,0,.15);transform:translateX(120%);transition:transform .3s ease;max-width:400px;}
+        .toast.show{transform:translateX(0);}.toast.success{background:#34c759;color:#fff;}.toast.error{background:#ff3b30;color:#fff;}
+    </style>
+</head>
+<body>
+<div class="toast" id="toast"></div>
+<div class="layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="logo"><img src="logo.png" alt="Tech Cross"><span>进销存管理系统</span></div>
+        <nav>
+            <div class="nav-section">业务管理 / Business</div>
+            <a href="inv-pos.html" data-perm="pos"><span class="icon">💰</span>POS 收银 / Checkout</a>
+            <a href="inv-products.html" class="active" data-perm="products"><span class="icon">📦</span>商品管理 / Products</a>
+            <a href="inv-stock.html" data-perm="stock"><span class="icon">🏭</span>库存管理 / Stock</a>
+            <a href="inv-suppliers.html" data-perm="suppliers"><span class="icon">🤝</span>供应商 / Suppliers</a>
+            <a href="inv-purchases.html" data-perm="purchases"><span class="icon">🛒</span>采购管理 / Purchases</a>
+            <a href="inv-transactions.html" data-perm="transactions"><span class="icon">📋</span>交易记录 / Transactions</a>
+            <div class="nav-section">报表与发票 / Reports</div>
+            <a href="inv-reports.html" data-perm="reports"><span class="icon">📊</span>报表中心 / Reports</a>
+            <a href="inv-invoices.html" data-perm="invoices"><span class="icon">🧾</span>发票管理 / VAT Invoice</a>
+            <a href="inv-expenses.html" data-perm="expenses"><span class="icon">💸</span>支出管理 / Expenses</a>
+            <div class="nav-section" id="adminSection" style="display:none;">系统管理 / System</div>
+            <a href="inv-settings.html" class="admin-only" style="display:none;" data-perm="settings"><span class="icon">⚙️</span>系统设置 / Settings</a>
+            <a href="inv-users.html" class="admin-only" style="display:none;" data-perm="users"><span class="icon">👥</span>用户管理 / Users</a>
+        </nav>
+    </aside>
+    <!-- Main -->
+    <div class="main">
+        <div class="topbar">
+            <h2>商品管理 / Products</h2>
+            <div class="user-info">
+                <span>欢迎, <strong id="displayName">-</strong></span>
+                <span class="badge badge-active" id="roleBadge">-</span>
+                <button class="btn-logout" onclick="logout()">退出登录 / Logout</button>
+            </div>
+        </div>
+        <div class="content">
+            <div class="card">
+                <div class="toolbar">
+                    <input type="text" id="searchInput" placeholder="搜索商品名称/SKU/Barcode..." style="width:260px;">
+                    <select id="categoryFilter"><option value="">全部分类</option></select>
+                    <select id="activeFilter"><option value="">全部状态</option><option value="true">启用</option><option value="false">停用</option></select>
+                    <div style="flex:1;"></div>
+                    <button class="btn btn-primary" onclick="showAddModal()">+ 新增 / Add</button>
+                </div>
+                <table>
+                    <thead><tr><th>商品名称 / Name</th><th>SKU/Barcode</th><th>分类 / Category</th><th>库存 / Stock</th><th>售价 / Price (€)</th><th>状态 / Status</th><th>操作 / Actions</th></tr></thead>
+                    <tbody id="productTable"><tr><td colspan="7" style="text-align:center;color:#86868b;padding:40px;">加载中...</td></tr></tbody>
+                </table>
+                <div class="pagination" id="pagination"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Modal -->
+<div class="modal-overlay" id="productModal">
+    <div class="modal">
+        <h3 id="modalTitle">新增商品</h3>
+        <form id="productForm" onsubmit="return false;">
+            <input type="hidden" id="editId">
+            <div class="form-row">
+                <div class="form-group"><label>商品名称 <span style="color:#ff3b30;">*</span></label><input type="text" id="fName" required></div>
+                <div class="form-group"><label>SKU/Barcode <span style="color:#ff3b30;">*</span></label><input type="text" id="fSku" required><div class="hint">支持任意格式，如条码、自定义编号等</div></div>
+            </div>
+            <div class="form-row">
+                <div class="form-group"><label>分类 <span style="color:#ff3b30;">*</span></label>
+                    <select id="fCategory" onchange="onCategoryChange()"><option value="">请选择</option><option value="销售">销售</option><option value="维修">维修</option><option value="服务">服务</option><option value="新机">新手机平板等电器</option><option value="二手">二手手机平板等电器</option><option value="Lyca Credit">Lyca Credit</option></select>
+                </div>
+                <div class="form-group"><label>VAT 税率 (%)</label>
+                    <div style="display:flex;gap:8px;align-items:center;">
+                        <input type="number" id="fVatRate" step="0.1" min="0" max="100" value="23" style="flex:1;">
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('fVatRate').value='23'">23%</button>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('fVatRate').value='13.5'">13.5%</button>
+                    </div>
+                    <div class="hint">不填默认 23%，维修/服务类默认 13.5%</div>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group"><label>成本价 (€) <span id="costRequired" style="color:#ff3b30;display:none;">*</span></label><input type="number" id="fCost" step="0.01" min="0"><div class="hint" id="costHint">填写成本价可启用 Margin VAT（仅对利润部分报税）</div></div>
+                <div class="form-group"><label>售价 (€) <span style="color:#ff3b30;">*</span></label><input type="number" id="fPrice" step="0.01" min="0" required></div>
+            </div>
+            <div class="form-group"><label>低库存阈值</label><input type="number" id="fThreshold" value="10" min="0"></div>
+            <div class="form-group" id="secondHandCheckGroup">
+                <label><input type="checkbox" id="fSecondHand" onchange="toggleSecondHand()"> 二手商品</label>
+            </div>
+            <div class="secondhand-fields" id="secondHandFields">
+                <div class="form-group"><label>来源</label>
+                    <select id="fSource" style="width:100%;padding:10px 14px;border:1px solid #d2d2d7;border-radius:10px;font-size:14px;">
+                        <option value="customer">从客人收购</option>
+                        <option value="dealer">从其他二手商人进货</option>
+                        <option value="other">其他来源</option>
+                    </select>
+                </div>
+                <div class="form-group"><label><input type="checkbox" id="fMarginScheme" checked> 适用 Margin Scheme VAT（仅对利润差价缴税）</label><div class="hint">适用于从非 VAT 注册方（客人或其他二手商人）购入的商品</div></div>
+                <div class="form-group"><label>序列号 (IMEI/SN) <span style="color:#ff3b30;">*</span></label><input type="text" id="fSerial"></div>
+                <div class="margin-info" id="marginInfo"></div>
+            </div>
+            <div class="form-group"><label>初始库存</label><input type="number" id="fStock" value="0" min="0"></div>
+            <!-- Custom Attributes -->
+            <div class="attrs-section" id="attrsSection">
+                <label style="font-weight:600;margin-bottom:8px;display:block;">自定义属性</label>
+                <div id="attrRows"></div>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="addAttrRow()">+ 添加属性</button>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeModal()">取消 / Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="saveProduct()">保存 / Save</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="auth-guard.js"></script>
+<script>
+(function(){
+'use strict';
+const user = Auth.requireAuth(); if (!user) return;
+
+document.getElementById('displayName').textContent = Auth.getDisplayName();
+document.getElementById('roleBadge').textContent = Auth.isRoot() ? '店主':'员工';
+var isAdmin = Auth.isRoot();
+if(isAdmin){document.getElementById('adminSection').style.display='';document.querySelectorAll('.admin-only').forEach(el=>el.style.display='');}
+
+// Hide sidebar items based on permissions
+var perms=user.permissions||{};
+if(isAdmin){document.querySelectorAll('nav a[data-perm]').forEach(function(a){a.style.display='';});}
+else{document.querySelectorAll('nav a[data-perm]').forEach(function(a){if(!perms[a.dataset.perm])a.style.display='none';});}
+
+const API='/api/inv';
+const headers=()=>Auth.getHeaders();
+let currentPage=1,totalPages=1,categories=new Set();
+
+function showToast(msg,type){const t=document.getElementById('toast');t.textContent=msg;t.className='toast '+(type||'success');setTimeout(()=>t.classList.add('show'),10);setTimeout(()=>t.classList.remove('show'),3000);}
+function logout(){Auth.logout();}
+window.logout=logout;
+
+async function apiFetch(url,opts){opts=opts||{};opts.headers=headers();const r=await fetch(API+url,opts);if(r.status===401){logout();return null;}return r;}
+
+// Load products
+async function loadProducts(page){
+    currentPage=page||1;
+    const q=document.getElementById('searchInput').value.trim();
+    const cat=document.getElementById('categoryFilter').value;
+    const act=document.getElementById('activeFilter').value;
+    let url='/products?page='+currentPage+'&limit=20';
+    if(q)url+='&q='+encodeURIComponent(q);
+    if(cat)url+='&category='+encodeURIComponent(cat);
+    if(act)url+='&active='+act;
+    try{
+        const r=await apiFetch(url);if(!r)return;
+        const data=await r.json();
+        totalPages=data.pagination.totalPages||1;
+        const tb=document.getElementById('productTable');
+        if(!data.data||data.data.length===0){tb.innerHTML='<tr><td colspan="7" style="text-align:center;color:#86868b;padding:40px;">暂无商品数据</td></tr>';renderPagination();return;}
+        // Clear existing content
+        tb.innerHTML = '';
+
+        // Build DOM elements safely
+        data.data.forEach(p => {
+            if (p.category) categories.add(p.category);
+
+            const tr = document.createElement('tr');
+            if (p.deadStock) tr.style.background = '#fef2f2';
+
+            // Name cell
+            const td1 = document.createElement('td');
+            const strong = document.createElement('strong');
+            strong.textContent = p.name;
+            td1.appendChild(strong);
+
+            if (p.isSecondHand) {
+                const secondHandBadge = document.createElement('span');
+                secondHandBadge.className = 'badge badge-secondhand';
+                secondHandBadge.textContent = '二手';
+                td1.appendChild(document.createTextNode(' '));
+                td1.appendChild(secondHandBadge);
+            }
+
+            if (p.deadStock) {
+                const deadBadge = document.createElement('span');
+                deadBadge.className = 'badge';
+                deadBadge.style.background = '#fef2f2';
+                deadBadge.style.color = '#991b1b';
+                deadBadge.style.marginLeft = '4px';
+                deadBadge.textContent = '死库存';
+                td1.appendChild(deadBadge);
+            }
+            tr.appendChild(td1);
+
+            // SKU cell
+            const td2 = document.createElement('td');
+            td2.style.fontFamily = 'monospace';
+            td2.style.fontSize = '13px';
+            td2.textContent = p.sku;
+            tr.appendChild(td2);
+
+            // Category cell
+            const td3 = document.createElement('td');
+            td3.textContent = p.category || '-';
+            tr.appendChild(td3);
+
+            // Stock cell
+            const td4 = document.createElement('td');
+            if (p.stock > 4) {
+                const warnSpan = document.createElement('span');
+                warnSpan.style.color = '#ff9500';
+                warnSpan.style.fontWeight = '600';
+                warnSpan.title = '库存>4，检查是否死库存';
+                warnSpan.textContent = '⚠️ ' + p.stock;
+                td4.appendChild(warnSpan);
+            } else if (p.stock > 0 && p.stock <= p.lowStockThreshold) {
+                const lowSpan = document.createElement('span');
+                lowSpan.style.color = '#ff3b30';
+                lowSpan.style.fontWeight = '600';
+                lowSpan.textContent = p.stock;
+                td4.appendChild(lowSpan);
+            } else {
+                td4.textContent = p.stock;
+            }
+            tr.appendChild(td4);
+
+            // Price cell
+            const td5 = document.createElement('td');
+            td5.textContent = '€' + Number(p.sellingPrice).toFixed(2);
+            tr.appendChild(td5);
+
+            // Active status cell
+            const td6 = document.createElement('td');
+            const statusSpan = document.createElement('span');
+            statusSpan.className = `badge ${p.active ? 'badge-active' : 'badge-inactive'}`;
+            statusSpan.textContent = p.active ? '启用' : '停用';
+            td6.appendChild(statusSpan);
+            tr.appendChild(td6);
+
+            // Actions cell
+            const td7 = document.createElement('td');
+
+            // Edit button
+            const editBtn = document.createElement('button');
+            editBtn.className = 'btn btn-secondary btn-sm';
+            editBtn.textContent = '编辑';
+            editBtn.onclick = () => editProduct(p._id);
+            td7.appendChild(editBtn);
+
+            // Dead stock button
+            if ((p.stock > 4 || p.deadStock) && isAdmin) {
+                const deadBtn = document.createElement('button');
+                deadBtn.className = 'btn btn-sm';
+                deadBtn.style.background = p.deadStock ? '#34c759' : '#ff9500';
+                deadBtn.style.color = '#fff';
+                deadBtn.textContent = p.deadStock ? '取消死库存' : '标记死库存';
+                deadBtn.onclick = () => toggleDeadStock(p._id, !!p.deadStock);
+                td7.appendChild(document.createTextNode(' '));
+                td7.appendChild(deadBtn);
+            }
+
+            // Toggle active button
+            const toggleBtn = document.createElement('button');
+            toggleBtn.className = `btn ${p.active ? 'btn-danger' : 'btn-success'} btn-sm`;
+            toggleBtn.textContent = p.active ? '停用' : '启用';
+            toggleBtn.onclick = () => toggleProduct(p._id, p.active);
+            td7.appendChild(document.createTextNode(' '));
+            td7.appendChild(toggleBtn);
+
+            // Delete button
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'btn btn-sm';
+            deleteBtn.style.background = '#6e6e73';
+            deleteBtn.style.color = '#fff';
+            deleteBtn.textContent = '删除';
+            deleteBtn.onclick = () => deleteProduct(p._id, p.name);
+            td7.appendChild(document.createTextNode(' '));
+            td7.appendChild(deleteBtn);
+
+            tr.appendChild(td7);
+            tb.appendChild(tr);
+        });
+
+        renderPagination();
+        updateCategoryFilter();
+    }catch(e){showToast('加载失败','error');}
+}
+
+function renderPagination(){
+    const pg=document.getElementById('pagination');
+    pg.innerHTML = '';
+
+    const prevBtn = document.createElement('button');
+    prevBtn.disabled = currentPage <= 1;
+    prevBtn.textContent = '上一页';
+    prevBtn.onclick = () => loadProducts(currentPage - 1);
+    pg.appendChild(prevBtn);
+
+    const span = document.createElement('span');
+    span.textContent = `第 ${currentPage} / ${totalPages} 页`;
+    pg.appendChild(span);
+
+    const nextBtn = document.createElement('button');
+    nextBtn.disabled = currentPage >= totalPages;
+    nextBtn.textContent = '下一页';
+    nextBtn.onclick = () => loadProducts(currentPage + 1);
+    pg.appendChild(nextBtn);
+}
+
+function updateCategoryFilter(){
+    const sel=document.getElementById('categoryFilter');
+    const cur=sel.value;
+    sel.innerHTML = '';
+
+    const optAll = document.createElement('option');
+    optAll.value = '';
+    optAll.textContent = '全部分类';
+    sel.appendChild(optAll);
+
+    categories.forEach(c => {
+        const option = document.createElement('option');
+        option.value = c;
+        option.textContent = c;
+        sel.appendChild(option);
+    });
+    sel.value = cur;
+}
+
+function addAttrRow(key,val){
+    const div=document.createElement('div');div.className='attr-row';
+
+    const inputKey = document.createElement('input');
+    inputKey.type = 'text';
+    inputKey.placeholder = '属性名';
+    inputKey.className = 'attr-key';
+    inputKey.value = key || '';
+    div.appendChild(inputKey);
+
+    const inputVal = document.createElement('input');
+    inputVal.type = 'text';
+    inputVal.placeholder = '属性值';
+    inputVal.className = 'attr-val';
+    inputVal.value = val || '';
+    div.appendChild(inputVal);
+
+    const removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.className = 'btn-remove-attr';
+    removeBtn.textContent = '✕';
+    removeBtn.onclick = function() { this.parentElement.remove(); };
+    div.appendChild(removeBtn);
+
+    document.getElementById('attrRows').appendChild(div);
+}
+
+function esc(s){if(!s)return'';const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+
+// Search & filter
+let searchTimer;
+document.getElementById('searchInput').addEventListener('input',()=>{clearTimeout(searchTimer);searchTimer=setTimeout(()=>loadProducts(1),300);});
+document.getElementById('categoryFilter').addEventListener('change',()=>loadProducts(1));
+document.getElementById('activeFilter').addEventListener('change',()=>loadProducts(1));
+
+// Category change handler
+function onCategoryChange(){
+    const cat=document.getElementById('fCategory').value;
+    const vatInput=document.getElementById('fVatRate');
+    const secondHandCheck=document.getElementById('fSecondHand');
+    const secondHandGroup=document.getElementById('secondHandCheckGroup');
+    const costRequired=document.getElementById('costRequired');
+    
+    // Set default VAT rate based on category
+    if(cat==='维修'||cat==='服务'){
+        vatInput.value='13.5';
+    }else{
+        vatInput.value='23';
+    }
+    
+    // Auto-check second-hand for 二手 category
+    if(cat==='二手'){
+        secondHandCheck.checked=true;
+        secondHandGroup.style.display='none'; // hide checkbox, always second-hand
+        toggleSecondHand();
+        costRequired.style.display='';
+    }else{
+        secondHandGroup.style.display='';
+        if(cat==='新机'){
+            costRequired.style.display='none'; // not required for new electronics
+        }else{
+            costRequired.style.display='none'; // optional for all non-second-hand
+        }
+    }
+}
+window.onCategoryChange=onCategoryChange;
+
+// Second-hand toggle
+function toggleSecondHand(){
+    const checked=document.getElementById('fSecondHand').checked;
+    document.getElementById('secondHandFields').classList.toggle('show',checked);
+    updateMarginInfo();
+}
+window.toggleSecondHand=toggleSecondHand;
+
+function updateMarginInfo(){
+    const cost=parseFloat(document.getElementById('fCost').value)||0;
+    const price=parseFloat(document.getElementById('fPrice').value)||0;
+    const margin=price-cost;
+    const useMargin=document.getElementById('fMarginScheme').checked;
+    if(useMargin){
+        document.getElementById('marginInfo').textContent=`差价: €${margin.toFixed(2)} | Margin VAT: €${Math.max(0,margin*0.23/1.23).toFixed(2)}`;
+    }else{
+        document.getElementById('marginInfo').textContent=`Standard VAT: €${(price*0.23/1.23).toFixed(2)}（适用标准税率）`;
+    }
+}
+document.getElementById('fCost').addEventListener('input',updateMarginInfo);
+document.getElementById('fPrice').addEventListener('input',updateMarginInfo);
+document.getElementById('fMarginScheme').addEventListener('change',updateMarginInfo);
+
+// Category template auto-load
+document.getElementById('fCategory').addEventListener('change',async function(){
+    const cat=this.value;
+    if(!cat)return;
+    try{
+        const r=await apiFetch('/products/templates?category='+encodeURIComponent(cat));
+        if(!r)return;
+        const tmpl=await r.json();
+        const rows=document.getElementById('attrRows');
+        rows.innerHTML='';
+        Object.keys(tmpl).forEach(k=>addAttrRow(k,tmpl[k]));
+    }catch(e){}
+});
+
+// Attribute rows
+window.addAttrRow=addAttrRow;
+
+function getAttributes(){
+    const attrs={};
+    document.querySelectorAll('.attr-row').forEach(row=>{
+        const k=row.querySelector('.attr-key').value.trim();
+        const v=row.querySelector('.attr-val').value.trim();
+        if(k)attrs[k]=v;
+    });
+    return attrs;
+}
+
+// Modal
+function showAddModal(){
+    document.getElementById('modalTitle').textContent='新增商品';
+    document.getElementById('editId').value='';
+    document.getElementById('productForm').reset();
+    document.getElementById('secondHandFields').classList.remove('show');
+    document.getElementById('attrRows').innerHTML='';
+    document.getElementById('fStock').parentElement.style.display='';
+    document.getElementById('productModal').classList.add('show');
+}
+window.showAddModal=showAddModal;
+
+function closeModal(){document.getElementById('productModal').classList.remove('show');}
+window.closeModal=closeModal;
+
+async function editProduct(id){
+    try{
+        const r=await apiFetch('/products/'+id);if(!r)return;
+        const p=await r.json();
+        document.getElementById('modalTitle').textContent='编辑商品';
+        document.getElementById('editId').value=p._id;
+        document.getElementById('fName').value=p.name;
+        document.getElementById('fSku').value=p.sku;
+        document.getElementById('fCategory').value=p.category||'';
+        document.getElementById('fVatRate').value=p.vatRate?Math.round(p.vatRate*1000)/10:23;
+        document.getElementById('fCost').value=p.costPrice;
+        document.getElementById('fPrice').value=p.sellingPrice;
+        document.getElementById('fThreshold').value=p.lowStockThreshold||10;
+        document.getElementById('fStock').value=p.stock;
+        document.getElementById('fStock').parentElement.style.display='none';
+        document.getElementById('fSecondHand').checked=p.isSecondHand;
+        document.getElementById('fSerial').value=p.serialNumber||'';
+        document.getElementById('fSource').value=p.source||'customer';
+        document.getElementById('fMarginScheme').checked=p.marginScheme!==false;
+        document.getElementById('secondHandFields').classList.toggle('show',p.isSecondHand);
+        updateMarginInfo();
+        // Load attributes
+        const rows=document.getElementById('attrRows');rows.innerHTML='';
+        if(p.attributes&&typeof p.attributes==='object'){Object.entries(p.attributes).forEach(([k,v])=>addAttrRow(k,v));}
+        document.getElementById('productModal').classList.add('show');
+    }catch(e){showToast('加载商品失败','error');}
+}
+window.editProduct=editProduct;
+
+async function saveProduct(){
+    const id=document.getElementById('editId').value;
+    const vatRateVal=parseFloat(document.getElementById('fVatRate').value);
+    const body={
+        name:document.getElementById('fName').value.trim(),
+        sku:document.getElementById('fSku').value.trim(),
+        category:document.getElementById('fCategory').value,
+        costPrice:parseFloat(document.getElementById('fCost').value)||0,
+        sellingPrice:parseFloat(document.getElementById('fPrice').value),
+        vatRate:(!isNaN(vatRateVal)&&vatRateVal>=0)?vatRateVal/100:0.23,
+        isSecondHand:document.getElementById('fSecondHand').checked,
+        lowStockThreshold:parseInt(document.getElementById('fThreshold').value)||10,
+        attributes:getAttributes()
+    };
+    if(body.isSecondHand){
+        body.serialNumber=document.getElementById('fSerial').value.trim();
+        body.purchasedFromCustomer=document.getElementById('fSource').value==='customer';
+        body.source=document.getElementById('fSource').value;
+        body.marginScheme=document.getElementById('fMarginScheme').checked;
+    }
+    if(!id)body.stock=parseInt(document.getElementById('fStock').value)||0;
+    if(!body.name||!body.sku||!body.category||isNaN(body.sellingPrice)){showToast('请填写商品名称、SKU、分类和售价','error');return;}
+    try{
+        const r=await apiFetch('/products'+(id?'/'+id:''),{method:id?'PUT':'POST',body:JSON.stringify(body)});
+        if(!r)return;
+        if(!r.ok){const e=await r.json();showToast(e.error||'保存失败','error');return;}
+        showToast(id?'商品已更新':'商品已创建','success');
+        closeModal();loadProducts(currentPage);
+    }catch(e){showToast('保存失败','error');}
+}
+window.saveProduct=saveProduct;
+
+async function toggleProduct(id,isActive){
+    if(isActive){
+        if(!confirm('确定要停用该商品吗？'))return;
+        try{const r=await apiFetch('/products/'+id+'/disable',{method:'PUT'});if(!r)return;if(!r.ok){const e=await r.json();showToast(e.error,'error');return;}showToast('商品已停用');loadProducts(currentPage);}catch(e){showToast('操作失败','error');}
+    }else{
+        try{const r=await apiFetch('/products/'+id,{method:'PUT',body:JSON.stringify({active:true})});if(!r)return;if(!r.ok){const e=await r.json();showToast(e.error,'error');return;}showToast('商品已启用');loadProducts(currentPage);}catch(e){showToast('操作失败','error');}
+    }
+}
+window.toggleProduct=toggleProduct;
+
+async function deleteProduct(id,name){
+    if(!confirm(`确定要永久删除商品「${name}」吗？\n\n⚠️ 此操作不可恢复！`))return;
+    if(!confirm('再次确认：删除后无法恢复，确定继续？'))return;
+    try{
+        const r=await apiFetch('/products/'+id,{method:'DELETE'});
+        if(!r)return;
+        if(!r.ok){const e=await r.json();showToast(e.error||'删除失败','error');return;}
+        showToast('商品已永久删除');
+        loadProducts(currentPage);
+    }catch(e){showToast('删除失败','error');}
+}
+window.deleteProduct=deleteProduct;
+
+async function toggleDeadStock(id,currentlyDead){
+    var action=currentlyDead?'取消死库存标记':'标记为死库存';
+    if(!confirm(action+'？'))return;
+    try{
+        var r=await apiFetch('/products/'+id+'/dead-stock',{method:'PUT'});
+        if(!r)return;
+        if(!r.ok){var e=await r.json();showToast(e.error||'操作失败','error');return;}
+        var data=await r.json();
+        showToast(data.name+' → '+(data.deadStock?'已标记死库存':'已取消死库存'));
+        loadProducts(currentPage);
+    }catch(e){showToast('操作失败','error');}
+}
+window.toggleDeadStock=toggleDeadStock;
+
+window.loadProducts=loadProducts;
+loadProducts(1);
+
+// ─── 店员权限控制 ───────────────────────────────────────────
+if(!isAdmin){
+    // 监听商品列表渲染，隐藏删除按钮和成本价
+    var _staffObs=new MutationObserver(function(){
+        // 隐藏删除按钮（永久删除 + 死库存标记）
+        document.querySelectorAll('#productTable [onclick*="deleteProduct"]').forEach(function(el){el.style.display='none';});
+        document.querySelectorAll('#productTable [onclick*="toggleDeadStock"]').forEach(function(el){el.style.display='none';});
+    });
+    _staffObs.observe(document.getElementById('productTable'),{childList:true,subtree:true});
+}
+
+})();
+</script>
+</body>
+</html>

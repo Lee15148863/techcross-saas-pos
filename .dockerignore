@@ -1,0 +1,34 @@
+# Git files
+.git
+.gitignore
+.github/
+
+# Documentation
+README.md
+DEPLOY.md
+GOOGLE_CLOUD_SETUP.md
+
+# Development files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Build files
+cloudbuild.yaml
+trigger-config.yaml
+.gcloudignore
+
+# Scripts
+start-server.ps1
+open-browser.bat
+
+# Logs
+*.log
+
+# Secrets
+.env
+.env.*
+
+# Node dev dependencies
+node_modules/

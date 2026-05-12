@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>采购管理 - Tech Cross 进销存</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;}
+        html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:antialiased;background:#f5f5f7;color:#1d1d1f;}
+        .layout{display:flex;height:100vh;}
+        .sidebar{width:220px;background:#1d1d1f;color:#f5f5f7;display:flex;flex-direction:column;flex-shrink:0;}
+        .sidebar .logo{padding:20px;text-align:center;border-bottom:1px solid #333;}.sidebar .logo img{height:36px;}.sidebar .logo span{display:block;font-size:12px;color:#86868b;margin-top:4px;}
+        .sidebar nav{flex:1;overflow-y:auto;padding:12px 0;}
+        .sidebar nav a{display:flex;align-items:center;gap:10px;padding:10px 20px;color:#b0b0b5;text-decoration:none;font-size:14px;transition:all .15s;border-left:3px solid transparent;}
+        .sidebar nav a:hover{background:#2a2a2d;color:#f5f5f7;}.sidebar nav a.active{background:#2a2a2d;color:#D4E157;border-left-color:#D4E157;font-weight:600;}
+        .sidebar nav a .icon{width:20px;text-align:center;font-size:16px;}
+        .sidebar .nav-section{padding:16px 20px 6px;font-size:11px;color:#6e6e73;text-transform:uppercase;letter-spacing:1px;}
+        .main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+        .topbar{height:56px;background:#fff;border-bottom:1px solid #e5e5e7;display:flex;align-items:center;justify-content:space-between;padding:0 24px;flex-shrink:0;}
+        .topbar h2{font-size:18px;font-weight:600;}.topbar .user-info{display:flex;align-items:center;gap:12px;font-size:14px;color:#6e6e73;}.topbar .user-info strong{color:#1d1d1f;}
+        .btn-logout{padding:6px 14px;border-radius:980px;border:1px solid #d2d2d7;background:#fff;font-size:13px;cursor:pointer;transition:all .2s;}.btn-logout:hover{background:#ff3b30;color:#fff;border-color:#ff3b30;}
+        .content{flex:1;overflow-y:auto;padding:24px;}
+        .card{background:#fff;border-radius:14px;box-shadow:0 2px 12px rgba(0,0,0,.06);padding:24px;margin-bottom:20px;}
+        .card h3{font-size:16px;font-weight:600;margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid #f0f0f2;}
+        .toolbar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:16px;}
+        .toolbar input,.toolbar select{padding:8px 14px;border:1px solid #d2d2d7;border-radius:10px;font-size:14px;background:#fff;}
+        .toolbar input:focus,.toolbar select:focus{outline:none;border-color:#D4E157;}
+        .btn{padding:8px 18px;border:none;border-radius:10px;font-size:14px;font-weight:500;cursor:pointer;transition:all .2s;}
+        .btn-primary{background:#D4E157;color:#000;}.btn-primary:hover{background:#c5d148;}
+        .btn-secondary{background:#f5f5f7;border:1px solid #d2d2d7;color:#1d1d1f;}.btn-secondary:hover{background:#e5e5e7;}
+        .btn-danger{background:#ff3b30;color:#fff;}.btn-danger:hover{background:#e0342d;}
+        .btn-success{background:#34c759;color:#fff;}.btn-success:hover{background:#2db84e;}
+        .btn-sm{padding:5px 12px;font-size:13px;}
+        table{width:100%;border-collapse:collapse;font-size:14px;}
+        thead th{background:#f5f5f7;padding:10px 12px;text-align:left;font-weight:600;font-size:12px;color:#6e6e73;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #e5e5e7;}
+        tbody td{padding:10px 12px;border-bottom:1px solid #f0f0f2;vertical-align:middle;}
+        tbody tr:hover{background:#fafafa;}
+        .badge{display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;}
+        .badge-pending{background:#fff3cd;color:#856404;}.badge-received{background:#e8f5e9;color:#2e7d32;}.badge-cancelled{background:#fef2f2;color:#991b1b;}
+        .badge-active{background:#e8f5e9;color:#2e7d32;}
+        .modal-overlay{display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.5);backdrop-filter:blur(4px);align-items:center;justify-content:center;}
+        .modal-overlay.show{display:flex;}
+        .modal{background:#fff;border-radius:18px;padding:32px;max-width:700px;width:90%;max-height:85vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.2);}
+        .modal h3{font-size:20px;margin-bottom:20px;}
+        .form-group{margin-bottom:16px;}.form-group label{display:block;font-size:14px;font-weight:500;margin-bottom:6px;}
+        .form-group input,.form-group select,.form-group textarea{width:100%;padding:10px 14px;border:1px solid #d2d2d7;border-radius:10px;font-size:14px;font-family:inherit;}
+        .form-group input:focus,.form-group select:focus{outline:none;border-color:#D4E157;}
+        .form-row{display:flex;gap:16px;}.form-row .form-group{flex:1;}
+        .modal-actions{display:flex;gap:12px;justify-content:flex-end;margin-top:24px;}
+        .po-item-row{display:flex;gap:8px;align-items:center;margin-bottom:8px;padding:8px;background:#f5f5f7;border-radius:8px;}
+        .po-item-row select,.po-item-row input{padding:8px;border:1px solid #d2d2d7;border-radius:8px;font-size:13px;}
+        .po-item-row select{flex:2;}.po-item-row input{flex:1;}
+        .po-item-row .btn-remove{background:none;border:none;color:#ff3b30;cursor:pointer;font-size:18px;padding:4px;}
+        .po-total{font-size:18px;font-weight:700;margin-top:12px;text-align:right;}
+        .toast{position:fixed;top:20px;right:20px;z-index:10000;padding:14px 22px;border-radius:12px;font-size:14px;font-weight:500;box-shadow:0 8px 32px rgba(0,0,0,.15);transform:translateX(120%);transition:transform .3s ease;max-width:400px;}
+        .toast.show{transform:translateX(0);}.toast.success{background:#34c759;color:#fff;}.toast.error{background:#ff3b30;color:#fff;}
+    </style>
+</head>
+<body>
+<div class="toast" id="toast"></div>
+<div class="layout">
+    <aside class="sidebar">
+        <div class="logo"><img src="logo.png" alt="Tech Cross"><span>进销存管理系统</span></div>
+        <nav>
+            <div class="nav-section">业务管理 / Business</div>
+            <a href="inv-pos.html" data-perm="pos"><span class="icon">💰</span>POS 收银 / Checkout</a>
+            <a href="inv-products.html" data-perm="products"><span class="icon">📦</span>商品管理 / Products</a>
+            <a href="inv-stock.html" data-perm="stock"><span class="icon">🏭</span>库存管理 / Stock</a>
+            <a href="inv-suppliers.html" data-perm="suppliers"><span class="icon">🤝</span>供应商 / Suppliers</a>
+            <a href="inv-purchases.html" class="active" data-perm="purchases"><span class="icon">🛒</span>采购管理 / Purchases</a>
+            <a href="inv-transactions.html" data-perm="transactions"><span class="icon">📋</span>交易记录 / Transactions</a>
+            <div class="nav-section">报表与发票 / Reports</div>
+            <a href="inv-reports.html" data-perm="reports"><span class="icon">📊</span>报表中心 / Reports</a>
+            <a href="inv-invoices.html" data-perm="invoices"><span class="icon">🧾</span>发票管理 / VAT Invoice</a>
+            <a href="inv-expenses.html" data-perm="expenses"><span class="icon">💸</span>支出管理 / Expenses</a>
+            <div class="nav-section" id="adminSection" style="display:none;">系统管理 / System</div>
+            <a href="inv-settings.html" class="admin-only" style="display:none;" data-perm="settings"><span class="icon">⚙️</span>系统设置 / Settings</a>
+            <a href="inv-users.html" class="admin-only" style="display:none;" data-perm="users"><span class="icon">👥</span>用户管理 / Users</a>
+        </nav>
+    </aside>
+    <div class="main">
+        <div class="topbar">
+            <h2>采购管理 / Purchases</h2>
+            <div class="user-info"><span>欢迎, <strong id="displayName">-</strong></span><span class="badge badge-active" id="roleBadge">-</span><button class="btn-logout" onclick="logout()">退出登录 / Logout</button></div>
+        </div>
+        <div class="content">
+            <div class="card">
+                <div class="toolbar">
+                    <select id="statusFilter"><option value="">全部状态</option><option value="pending">待收货</option><option value="received">已收货</option><option value="cancelled">已取消</option></select>
+                    <div style="flex:1;"></div>
+                    <button class="btn btn-primary" onclick="showCreateModal()">+ 创建采购单 / Create PO</button>
+                </div>
+                <table>
+                    <thead><tr><th>采购单号 / PO#</th><th>供应商 / Supplier</th><th>商品数 / Items</th><th>总金额 / Total (€)</th><th>状态 / Status</th><th>日期 / Date</th><th>操作 / Actions</th></tr></thead>
+                    <tbody id="poTable"><tr><td colspan="7" style="text-align:center;color:#86868b;padding:40px;">加载中...</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create PO Modal -->
+<div class="modal-overlay" id="poModal">
+    <div class="modal">
+        <h3>创建采购单</h3>
+        <div class="form-group"><label>供应商 <span style="color:#ff3b30;">*</span></label><select id="poSupplier"><option value="">请选择供应商</option></select></div>
+        <div class="form-group"><label>预计到货日期</label><input type="date" id="poExpected"></div>
+        <div class="form-group"><label>备注</label><input type="text" id="poNote" placeholder="可选"></div>
+        <div style="margin-bottom:12px;">
+            <label style="font-weight:600;margin-bottom:8px;display:block;">采购商品</label>
+            <div id="poItems"></div>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="addPoItem()">+ 添加商品</button>
+        </div>
+        <div class="po-total">总计: €<span id="poTotal">0.00</span></div>
+        <div class="modal-actions">
+            <button class="btn btn-secondary" onclick="closeModal()">取消 / Cancel</button>
+            <button class="btn btn-primary" onclick="createPO()">创建采购单 / Create PO</button>
+        </div>
+    </div>
+</div>
+
+<script src="auth-guard.js"></script>
+<script>
+(function(){
+'use strict';
+const user = Auth.requireAuth(); if (!user) return;
+document.getElementById('displayName').textContent = Auth.getDisplayName();
+document.getElementById('roleBadge').textContent = Auth.isRoot() ? '店主':'员工';
+if(Auth.isRoot()){document.getElementById('adminSection').style.display='';document.querySelectorAll('.admin-only').forEach(el=>el.style.display='');}
+
+// Hide sidebar items based on permissions
+var perms=user.permissions||{};
+if(Auth.isRoot()){document.querySelectorAll('nav a[data-perm]').forEach(function(a){a.style.display='';});}
+else{document.querySelectorAll('nav a[data-perm]').forEach(function(a){if(!perms[a.dataset.perm])a.style.display='none';});}
+
+const API='/api/inv';
+const headers=()=>Auth.getHeaders();
+function showToast(msg,type){const t=document.getElementById('toast');t.textContent=msg;t.className='toast '+(type||'success');setTimeout(()=>t.classList.add('show'),10);setTimeout(()=>t.classList.remove('show'),3000);}
+function logout(){Auth.logout();}
+window.logout=logout;
+async function apiFetch(url,opts){opts=opts||{};opts.headers=headers();const r=await fetch(API+url,opts);if(r.status===401){logout();return null;}return r;}
+function esc(s){if(!s)return'';const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+const statusMap={pending:'待收货',received:'已收货',cancelled:'已取消'};
+const statusBadge={pending:'badge-pending',received:'badge-received',cancelled:'badge-cancelled'};
+
+let products=[],suppliers=[];
+
+async function loadData(){
+    try{
+        const [pr,sr]=await Promise.all([apiFetch('/products?limit=100&active=true'),apiFetch('/suppliers')]);
+        if(pr){const d=await pr.json();products=d.data||[];}
+        if(sr){suppliers=await sr.json();}
+    }catch(e){}
+}
+
+async function loadPOs(){
+    const status=document.getElementById('statusFilter').value;
+    let url='/purchases';if(status)url+='?status='+status;
+    try{
+        const r=await apiFetch(url);if(!r)return;
+        const list=await r.json();
+        const tb=document.getElementById('poTable');
+        if(!list.length){tb.innerHTML='<tr><td colspan="7" style="text-align:center;color:#86868b;padding:40px;">暂无采购单</td></tr>';return;}
+        // Clear existing content
+        tb.innerHTML = '';
+
+        // Build DOM elements safely
+        list.forEach(po => {
+            const tr = document.createElement('tr');
+
+            // Order number cell
+            const td1 = document.createElement('td');
+            td1.style.fontFamily = 'monospace';
+            td1.textContent = po.orderNumber;
+            tr.appendChild(td1);
+
+            // Supplier cell
+            const td2 = document.createElement('td');
+            td2.textContent = po.supplier ? (po.supplier.name || '') : '-';
+            tr.appendChild(td2);
+
+            // Items count cell
+            const td3 = document.createElement('td');
+            td3.textContent = po.items ? po.items.length : 0;
+            tr.appendChild(td3);
+
+            // Total amount cell
+            const td4 = document.createElement('td');
+            td4.textContent = '€' + Number(po.totalAmount).toFixed(2);
+            tr.appendChild(td4);
+
+            // Status cell
+            const td5 = document.createElement('td');
+            const statusSpan = document.createElement('span');
+            statusSpan.className = `badge ${statusBadge[po.status] || ''}`;
+            statusSpan.textContent = statusMap[po.status] || po.status;
+            td5.appendChild(statusSpan);
+            tr.appendChild(td5);
+
+            // Date cell
+            const td6 = document.createElement('td');
+            td6.textContent = new Date(po.purchaseDate || po.createdAt).toLocaleDateString('zh-CN');
+            tr.appendChild(td6);
+
+            // Actions cell
+            const td7 = document.createElement('td');
+            if (po.status === 'pending') {
+                const receiveBtn = document.createElement('button');
+                receiveBtn.className = 'btn btn-success btn-sm';
+                receiveBtn.textContent = '确认到货';
+                receiveBtn.onclick = () => receivePO(po._id);
+                td7.appendChild(receiveBtn);
+
+                td7.appendChild(document.createTextNode(' '));
+
+                const cancelBtn = document.createElement('button');
+                cancelBtn.className = 'btn btn-danger btn-sm';
+                cancelBtn.textContent = '取消';
+                cancelBtn.onclick = () => cancelPO(po._id);
+                td7.appendChild(cancelBtn);
+            }
+            tr.appendChild(td7);
+
+            tb.appendChild(tr);
+        });
+    }catch(e){showToast('加载失败','error');}
+}
+
+document.getElementById('statusFilter').addEventListener('change',loadPOs);
+
+function showCreateModal(){
+    // Populate supplier select (core first)
+    const sorted = [...suppliers].sort((a, b) => {
+        if (a.level === 'core' && b.level !== 'core') return -1;
+        if (b.level === 'core' && a.level !== 'core') return 1;
+        return 0;
+    });
+
+    const supplierSelect = document.getElementById('poSupplier');
+    supplierSelect.innerHTML = '';
+
+    // Add default option
+    const defaultOption = document.createElement('option');
+    defaultOption.value = '';
+    defaultOption.textContent = '请选择供应商';
+    supplierSelect.appendChild(defaultOption);
+
+    // Add supplier options
+    sorted.forEach(s => {
+        const option = document.createElement('option');
+        option.value = s._id;
+        option.textContent = s.name + (s.level === 'core' ? ' ⭐' : '');
+        supplierSelect.appendChild(option);
+    });
+    document.getElementById('poItems').innerHTML='';
+    document.getElementById('poTotal').textContent='0.00';
+    document.getElementById('poExpected').value='';
+    document.getElementById('poNote').value='';
+    addPoItem();
+    document.getElementById('poModal').classList.add('show');
+}
+window.showCreateModal=showCreateModal;
+function closeModal(){document.getElementById('poModal').classList.remove('show');}
+window.closeModal=closeModal;
+
+function addPoItem(){
+    const div=document.createElement('div');div.className='po-item-row';
+
+    // Create product select
+    const select = document.createElement('select');
+    select.className = 'po-product';
+    select.onchange = calcTotal;
+
+    // Add default option
+    const defaultOption = document.createElement('option');
+    defaultOption.value = '';
+    defaultOption.textContent = '选择商品';
+    select.appendChild(defaultOption);
+
+    // Add product options
+    products.forEach(p => {
+        const option = document.createElement('option');
+        option.value = p._id;
+        option.setAttribute('data-cost', p.costPrice);
+        option.textContent = p.name + ' (' + p.sku + ')';
+        select.appendChild(option);
+    });
+
+    div.appendChild(select);
+
+    // Create quantity input
+    const qtyInput = document.createElement('input');
+    qtyInput.type = 'number';
+    qtyInput.className = 'po-qty';
+    qtyInput.min = '1';
+    qtyInput.value = '1';
+    qtyInput.placeholder = '数量';
+    qtyInput.onchange = calcTotal;
+    qtyInput.oninput = calcTotal;
+    div.appendChild(qtyInput);
+        <input type="number" class="po-price" step="0.01" min="0" placeholder="单价" onchange="calcTotal()" oninput="calcTotal()">
+        <button type="button" class="btn-remove" onclick="this.parentElement.remove();calcTotal();">✕</button>`;
+    document.getElementById('poItems').appendChild(div);
+    // Auto-fill cost price
+    div.querySelector('.po-product').addEventListener('change',function(){
+        const opt=this.options[this.selectedIndex];
+        if(opt.dataset.cost)div.querySelector('.po-price').value=opt.dataset.cost;
+        calcTotal();
+    });
+}
+window.addPoItem=addPoItem;
+
+function calcTotal(){
+    let total=0;
+    document.querySelectorAll('.po-item-row').forEach(row=>{
+        const qty=parseFloat(row.querySelector('.po-qty').value)||0;
+        const price=parseFloat(row.querySelector('.po-price').value)||0;
+        total+=qty*price;
+    });
+    document.getElementById('poTotal').textContent=total.toFixed(2);
+}
+window.calcTotal=calcTotal;
+
+async function createPO(){
+    const supplier=document.getElementById('poSupplier').value;
+    if(!supplier){showToast('请选择供应商','error');return;}
+    const items=[];
+    let valid=true;
+    document.querySelectorAll('.po-item-row').forEach(row=>{
+        const product=row.querySelector('.po-product').value;
+        const quantity=parseInt(row.querySelector('.po-qty').value);
+        const unitPrice=parseFloat(row.querySelector('.po-price').value);
+        if(!product||!quantity||!unitPrice){valid=false;return;}
+        items.push({product,quantity,unitPrice});
+    });
+    if(!valid||items.length===0){showToast('请完整填写采购商品信息','error');return;}
+    const body={supplier,items,expectedArrival:document.getElementById('poExpected').value||undefined,note:document.getElementById('poNote').value.trim()||undefined};
+    try{
+        const r=await apiFetch('/purchases',{method:'POST',body:JSON.stringify(body)});
+        if(!r)return;if(!r.ok){const e=await r.json();showToast(e.error,'error');return;}
+        showToast('采购单已创建');closeModal();loadPOs();
+    }catch(e){showToast('创建失败','error');}
+}
+window.createPO=createPO;
+
+async function receivePO(id){
+    if(!confirm('确认到货？将自动入库所有商品。'))return;
+    try{const r=await apiFetch('/purchases/'+id+'/receive',{method:'PUT'});if(!r)return;if(!r.ok){const e=await r.json();showToast(e.error,'error');return;}showToast('已确认到货，商品已入库');loadPOs();}catch(e){showToast('操作失败','error');}
+}
+window.receivePO=receivePO;
+
+async function cancelPO(id){
+    if(!confirm('确定要取消该采购单吗？'))return;
+    try{const r=await apiFetch('/purchases/'+id+'/cancel',{method:'PUT'});if(!r)return;if(!r.ok){const e=await r.json();showToast(e.error,'error');return;}showToast('采购单已取消');loadPOs();}catch(e){showToast('操作失败','error');}
+}
+window.cancelPO=cancelPO;
+
+loadData().then(()=>loadPOs());
+})();
+</script>
+</body>
+</html>

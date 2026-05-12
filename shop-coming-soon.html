@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Tech Cross - Online Shop Coming Soon">
+    <link rel="canonical" href="https://techcross.ie/shop-coming-soon.html">
+    <title>Shop Coming Soon - Tech Cross</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .coming-soon-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 22px;
+        }
+        
+        .coming-soon-content {
+            max-width: 600px;
+            text-align: center;
+            background: #fff;
+            border-radius: 24px;
+            padding: 60px 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+        
+        .coming-soon-icon {
+            font-size: 120px;
+            margin-bottom: 32px;
+            animation: float 3s ease-in-out infinite;
+        }
+        
+        @keyframes float {
+            0%, 100% {
+                transform: translateY(0px);
+            }
+            50% {
+                transform: translateY(-20px);
+            }
+        }
+        
+        .coming-soon-content h1 {
+            font-size: clamp(32px, 5vw, 48px);
+            font-weight: 600;
+            color: #1d1d1f;
+            margin-bottom: 16px;
+            letter-spacing: -0.02em;
+        }
+        
+        .coming-soon-content h2 {
+            font-size: clamp(24px, 4vw, 32px);
+            font-weight: 600;
+            color: #667eea;
+            margin-bottom: 24px;
+        }
+        
+        .coming-soon-content p {
+            font-size: 18px;
+            line-height: 1.6;
+            color: #6e6e73;
+            margin-bottom: 16px;
+        }
+        
+        .coming-soon-content .highlight {
+            font-size: 21px;
+            font-weight: 600;
+            color: #1d1d1f;
+            margin: 32px 0 24px;
+        }
+        
+        .store-info {
+            background: #f5f5f7;
+            border-radius: 18px;
+            padding: 32px;
+            margin: 32px 0;
+            text-align: left;
+        }
+        
+        .store-info h3 {
+            font-size: 21px;
+            font-weight: 600;
+            color: #1d1d1f;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .info-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 16px;
+            font-size: 15px;
+            color: #1d1d1f;
+        }
+        
+        .info-item:last-child {
+            margin-bottom: 0;
+        }
+        
+        .info-icon {
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+        
+        .info-text {
+            flex: 1;
+        }
+        
+        .info-text strong {
+            display: block;
+            margin-bottom: 4px;
+            color: #1d1d1f;
+        }
+        
+        .info-text a {
+            color: #0071e3;
+            text-decoration: none;
+        }
+        
+        .info-text a:hover {
+            text-decoration: underline;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 32px;
+        }
+        
+        .btn-back {
+            display: inline-block;
+            padding: 12px 32px;
+            background: #0071e3;
+            color: #fff;
+            text-decoration: none;
+            border-radius: 980px;
+            font-size: 17px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+        
+        .btn-back:hover {
+            background: #0077ed;
+            transform: scale(1.05);
+        }
+        
+        .btn-contact {
+            display: inline-block;
+            padding: 12px 32px;
+            background: #fff;
+            color: #0071e3;
+            text-decoration: none;
+            border-radius: 980px;
+            font-size: 17px;
+            font-weight: 500;
+            border: 2px solid #0071e3;
+            transition: all 0.3s;
+        }
+        
+        .btn-contact:hover {
+            background: #f5f5f7;
+            transform: scale(1.05);
+        }
+        
+        @media (max-width: 768px) {
+            .coming-soon-content {
+                padding: 40px 24px;
+            }
+            
+            .coming-soon-icon {
+                font-size: 80px;
+            }
+            
+            .button-group {
+                flex-direction: column;
+            }
+            
+            .btn-back,
+            .btn-contact {
+                width: 100%;
+            }
+        }
+    </style>
+<!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-B76Y6PXQH7"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-B76Y6PXQH7');
+    </script>
+</head>
+<body>
+    <div class="coming-soon-container">
+        <div class="coming-soon-content">
+            <div class="coming-soon-icon">🛒</div>
+            <h1>Online Shop</h1>
+            <h2>Coming Soon</h2>
+            <p>We're working hard to bring you an amazing online shopping experience!</p>
+            <p>Our online store will feature a wide selection of devices, accessories, and tech products.</p>
+            
+            <p class="highlight">📍 Visit Our Physical Store Today!</p>
+            
+            <div class="store-info">
+                <h3>Tech Cross Repair Centre</h3>
+                
+                <div class="info-item">
+                    <span class="info-icon">📍</span>
+                    <div class="info-text">
+                        <strong>Address</strong>
+                        Unit 4, Navan Shopping Centre<br>
+                        Navan, Co. Meath, Ireland
+                    </div>
+                </div>
+                
+                <div class="info-item">
+                    <span class="info-icon">📞</span>
+                    <div class="info-text">
+                        <strong>Phone</strong>
+                        <a href="tel:0469059854">046 905 9854</a><br>
+                        <a href="tel:0894825300">089 482 5300</a> (Mobile)
+                    </div>
+                </div>
+                
+                <div class="info-item">
+                    <span class="info-icon">⏰</span>
+                    <div class="info-text">
+                        <strong>Opening Hours</strong>
+                        Mon-Wed: 9:30-18:00<br>
+                        Thu-Fri: 9:30-20:00<br>
+                        Sat: 9:30-18:00<br>
+                        Sun & Bank Holiday: 11:30-18:00
+                    </div>
+                </div>
+                
+                <div class="info-item">
+                    <span class="info-icon">✨</span>
+                    <div class="info-text">
+                        <strong>Walk-in Welcome</strong>
+                        No appointment needed!
+                    </div>
+                </div>
+            </div>
+            
+            <div class="button-group">
+                <a href="index.html" class="btn-back">Back to Home</a>
+                <a href="index.html#contact" class="btn-contact">Contact Us</a>
+            </div>
+        </div>
+    </div>
+    
+    <script src="script.js"></script>
+</body>
+</html>

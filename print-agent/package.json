@@ -1,0 +1,22 @@
+{
+  "name": "techcross-print-agent",
+  "version": "1.0.0",
+  "description": "Local Print Agent for Tech Cross POS — receives receipt data via HTTP and prints to 80mm thermal printer using ESC/POS commands",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "escpos": "^3.0.0-alpha.6",
+    "escpos-network": "^0.1.5",
+    "escpos-usb": "^0.1.3",
+    "express": "^5.0.1",
+    "sharp": "^0.33.5"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "private": true,
+  "license": "UNLICENSED"
+}

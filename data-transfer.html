@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Phone data transfer service in Navan, Co. Meath. Tech Cross transfers contacts, photos, apps, messages and settings from old phones to new devices.">
+    <link rel="canonical" href="https://techcross.ie/data-transfer.html">
+    <title>Phone Data Transfer Service in Navan | Tech Cross</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .service-container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 120px 22px 80px;
+        }
+        
+        .service-hero {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+        
+        .service-hero h1 {
+            font-size: clamp(40px, 6vw, 64px);
+            font-weight: 600;
+            letter-spacing: -0.015em;
+            margin-bottom: 16px;
+        }
+        
+        .service-hero p {
+            font-size: 21px;
+            color: #6e6e73;
+            line-height: 1.5;
+        }
+        
+        .service-icon-large {
+            font-size: 80px;
+            margin-bottom: 24px;
+        }
+        
+        .pricing-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 24px;
+            margin: 60px 0;
+        }
+        
+        .pricing-card {
+            background: #fff;
+            border-radius: 18px;
+            padding: 40px 32px;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+            text-align: center;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        
+        .pricing-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+        }
+        
+        .pricing-card h2 {
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: #1d1d1f;
+        }
+        
+        .pricing-card .price {
+            font-size: 56px;
+            font-weight: 600;
+            color: #0071e3;
+            margin: 24px 0;
+        }
+        
+        .pricing-card .price-note {
+            font-size: 14px;
+            color: #6e6e73;
+            margin-bottom: 24px;
+        }
+        
+        .pricing-card ul {
+            list-style: none;
+            padding: 0;
+            margin: 24px 0;
+            text-align: left;
+        }
+        
+        .pricing-card li {
+            padding: 12px 0;
+            font-size: 15px;
+            color: #1d1d1f;
+            border-bottom: 1px solid #f5f5f7;
+        }
+        
+        .pricing-card li:last-child {
+            border-bottom: none;
+        }
+        
+        .pricing-card li::before {
+            content: "✓";
+            color: #0071e3;
+            font-weight: bold;
+            margin-right: 12px;
+        }
+        
+        .disclaimer {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            border-radius: 18px;
+            padding: 32px;
+            margin: 60px 0;
+        }
+        
+        .disclaimer h3 {
+            font-size: 21px;
+            font-weight: 600;
+            color: #856404;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .disclaimer p {
+            font-size: 15px;
+            color: #856404;
+            line-height: 1.6;
+            margin: 0;
+        }
+        
+        .info-section {
+            background: #f5f5f7;
+            border-radius: 18px;
+            padding: 40px;
+            margin: 40px 0;
+        }
+        
+        .info-section h3 {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #1d1d1f;
+        }
+        
+        .info-section p {
+            font-size: 17px;
+            color: #1d1d1f;
+            line-height: 1.6;
+            margin-bottom: 16px;
+        }
+        
+        .info-section ul {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .info-section li {
+            padding: 8px 0;
+            font-size: 15px;
+            color: #1d1d1f;
+        }
+        
+        .info-section li::before {
+            content: "•";
+            color: #0071e3;
+            font-weight: bold;
+            margin-right: 12px;
+        }
+        
+        .cta-section {
+            text-align: center;
+            margin: 60px 0;
+        }
+        
+        .cta-section h3 {
+            font-size: 32px;
+            font-weight: 600;
+            margin-bottom: 24px;
+        }
+        
+        .cta-buttons {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+    </style>
+<!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-B76Y6PXQH7"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-B76Y6PXQH7');
+    </script>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="nav">
+        <div class="nav-content">
+            <div class="nav-logo">
+                <a href="index.html"><img src="logo-sm.png" alt="Tech Cross"></a>
+            </div>
+            <ul class="nav-list">
+                <li><a href="index.html#hero">Home</a></li>
+                <li><a href="index.html#services">Services</a></li>
+                <li><a href="pricing.html">Phone Pricing</a></li>
+                <li><a href="computer-pricing.html">Computer Pricing</a></li>
+                <li><a href="index.html#contact">Contact</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Service Content -->
+    <div class="service-container">
+        <div class="service-hero">
+            <div class="service-icon-large">📲</div>
+            <h1>Phone Data Transfer Service in Navan</h1>
+            <p>Transfer contacts, photos, apps, messages and settings from your old phone to your new device.<br>Quick, secure and handled in store.</p>
+        </div>
+
+        <!-- Pricing Cards -->
+        <div class="pricing-cards">
+            <div class="pricing-card">
+                <h2>Standard Transfer</h2>
+                <div class="price">€20</div>
+                <p class="price-note">Both phones working normally</p>
+                <ul>
+                    <li>Contacts & Phone Numbers</li>
+                    <li>Photos & Videos</li>
+                    <li>Apps & App Data</li>
+                    <li>Messages & Call History</li>
+                    <li>Settings & Preferences</li>
+                    <li>Music & Documents</li>
+                </ul>
+                <a href="index.html#contact" class="btn-primary" style="width: 100%; margin-top: 16px;">Walk In Anytime</a>
+            </div>
+
+            <div class="pricing-card">
+                <h2>Broken Screen Transfer</h2>
+                <div class="price">€40<span style="font-size: 24px;">+</span></div>
+                <p class="price-note">Old phone screen damaged</p>
+                <ul>
+                    <li>Temporary Screen Repair</li>
+                    <li>Full Data Transfer</li>
+                    <li>All Standard Features</li>
+                    <li>Screen Repair for Transfer Only</li>
+                    <li>Data Recovery Assistance</li>
+                    <li>Priority Service</li>
+                </ul>
+                <a href="index.html#contact" class="btn-primary" style="width: 100%; margin-top: 16px;">Walk In Anytime</a>
+            </div>
+        </div>
+
+        <!-- What We Transfer -->
+        <div class="info-section">
+            <h3>What We Transfer</h3>
+            <p>Our comprehensive data transfer service includes:</p>
+            <ul>
+                <li>All contacts with names, phone numbers, and email addresses</li>
+                <li>Photos and videos from your camera roll and albums</li>
+                <li>Apps and their associated data (where possible)</li>
+                <li>Text messages and iMessages</li>
+                <li>Call history and voicemail</li>
+                <li>Calendar events and reminders</li>
+                <li>Notes and documents</li>
+                <li>Music, podcasts, and audiobooks</li>
+                <li>Device settings and preferences</li>
+                <li>Wi-Fi passwords and network settings</li>
+            </ul>
+        </div>
+
+        <!-- Important Disclaimer -->
+        <div class="disclaimer">
+            <h3>
+                <span style="font-size: 28px;">⚠️</span>
+                Important Privacy Notice
+            </h3>
+            <p>
+                <strong>We prioritize your privacy and security.</strong> However, please note that we are <strong>not responsible</strong> for any information involving customer privacy, including but not limited to:
+            </p>
+            <ul style="margin-top: 16px; padding-left: 20px;">
+                <li style="margin-bottom: 8px;">Banking apps, credit card information, and financial data</li>
+                <li style="margin-bottom: 8px;">Password managers and stored passwords</li>
+                <li style="margin-bottom: 8px;">Government ID applications and documents</li>
+                <li style="margin-bottom: 8px;">Social media account credentials</li>
+                <li style="margin-bottom: 8px;">Email account passwords</li>
+                <li style="margin-bottom: 8px;">Two-factor authentication apps</li>
+            </ul>
+            <p style="margin-top: 16px;">
+                <strong>You will need to manually log in to these sensitive apps on your new device.</strong> We recommend having your passwords ready before the transfer.
+            </p>
+        </div>
+
+        <!-- How It Works -->
+        <div class="info-section">
+            <h3>How It Works</h3>
+            <p style="background: #e8f4fd; padding: 16px; border-radius: 12px; border-left: 4px solid #0071e3; margin-bottom: 24px;">
+                <strong>🚶 Walk-in Service Available:</strong> No appointment needed! Simply visit us during business hours with both phones.
+            </p>
+            <p><strong>Step 1:</strong> Bring both your old and new phones to our store.</p>
+            <p><strong>Step 2:</strong> Our technician will assess the condition of both devices.</p>
+            <p><strong>Step 3:</strong> If your old phone screen is broken, we'll perform a temporary repair to enable data access.</p>
+            <p><strong>Step 4:</strong> We'll transfer all your data using professional tools and methods.</p>
+            <p><strong>Step 5:</strong> Verify that all your important data has been successfully transferred.</p>
+            <p style="margin-top: 24px;"><strong>Estimated transfer time:</strong> Starting from 1 hour. The actual time varies depending on the age and brand of your phone. Some models may require longer processing time.</p>
+        </div>
+
+        <!-- Call to Action -->
+        <div class="cta-section">
+            <h3>Ready to Transfer Your Data?</h3>
+            <p style="font-size: 17px; color: #6e6e73; margin-bottom: 16px;">Walk-ins welcome! No appointment necessary.</p>
+            <p style="font-size: 17px; color: #6e6e73; margin-bottom: 32px;">Visit us during business hours or call for any questions.</p>
+            <div class="cta-buttons">
+                <a href="index.html#contact" class="btn-primary">Visit Us</a>
+                <a href="tel:0469059854" class="btn-primary" style="background: #fff; color: #0071e3; border: 2px solid #0071e3;">046 905 9854</a>
+                <a href="tel:0894825300" class="btn-primary" style="background: #fff; color: #0071e3; border: 2px solid #0071e3;">089 482 5300</a>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

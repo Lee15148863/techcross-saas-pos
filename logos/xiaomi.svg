@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 60">
+  <rect x="15" y="12" width="36" height="36" rx="8" fill="#FF6900"/>
+  <text x="35" y="38" font-family="Arial, sans-serif" font-size="20" font-weight="bold" fill="white" text-anchor="middle">Mi</text>
+  <text x="120" y="38" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="#FF6900" text-anchor="middle">Xiaomi</text>
+</svg>

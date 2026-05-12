@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>主网站管理（报价 滚轮 评价） - Tech Cross Admin</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .ar-container { max-width:960px; margin:0 auto; padding:120px 22px 80px; }
+        .ar-header { text-align:center; margin-bottom:32px; }
+        .ar-header h1 { font-size:28px; font-weight:700; }
+
+        /* Big action cards */
+        .action-cards { display:flex; gap:16px; margin-bottom:32px; justify-content:center; flex-wrap:wrap; }
+        .action-card { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; width:240px; padding:28px 20px; background:#fff; border:2px solid #e5e5ea; border-radius:20px; text-decoration:none; color:#1d1d1f; transition:all .2s; cursor:pointer; }
+        .action-card:hover { border-color:#0071e3; background:#f0f7ff; transform:translateY(-3px); box-shadow:0 8px 24px rgba(0,113,227,.12); }
+        .action-card.active { border-color:#0071e3; background:#e8f0fe; }
+        .action-card.disabled { opacity:0.5; pointer-events:none; }
+        .action-icon { font-size:36px; }
+        .action-title { font-size:22px; font-weight:700; }
+        .action-desc { font-size:14px; color:#86868b; font-weight:500; }
+
+        /* Review cards */
+        .ar-tabs { display:flex; gap:12px; margin-bottom:24px; justify-content:center; }
+        .ar-tab { padding:8px 20px; border-radius:980px; border:1.5px solid #e5e5ea; background:#fff; cursor:pointer; font-size:14px; font-weight:600; }
+        .ar-tab.active { background:#0071e3; color:#fff; border-color:#0071e3; }
+        .ar-card { background:#fff; border:1.5px solid #e5e5ea; border-radius:14px; padding:20px; margin-bottom:12px; }
+        .ar-card.pending { border-left:4px solid #ff9500; }
+        .ar-card.approved { border-left:4px solid #34c759; }
+        .ar-meta { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:8px; }
+        .ar-name { font-weight:700; font-size:15px; }
+        .ar-date { font-size:12px; color:#86868b; }
+        .ar-stars { color:#ff9500; font-size:16px; margin-bottom:8px; }
+        .ar-msg { font-size:14px; color:#1d1d1f; line-height:1.5; margin-bottom:12px; }
+        .ar-actions { display:flex; gap:8px; }
+        .ar-btn { padding:6px 16px; border-radius:8px; border:none; cursor:pointer; font-size:13px; font-weight:600; }
+        .ar-btn-approve { background:#34c759; color:#fff; }
+        .ar-btn-reject { background:#ff9500; color:#fff; }
+        .ar-btn-delete { background:#ff3b30; color:#fff; }
+        .ar-status { font-size:12px; padding:3px 10px; border-radius:980px; font-weight:600; }
+        .ar-status.approved { background:#d4edda; color:#155724; }
+        .ar-status.pending { background:#fff3cd; color:#856404; }
+        .ar-empty { text-align:center; color:#86868b; padding:40px; }
+        .ar-error { text-align:center; color:#dc2626; padding:20px; background:#fef2f2; border-radius:12px; margin:12px 0; font-size:14px; }
+
+        /* Banner editor */
+        .banner-editor { background:#fff; border-radius:18px; padding:28px; box-shadow:0 2px 16px rgba(0,0,0,.06); }
+        .banner-editor h3 { font-size:20px; font-weight:700; margin-bottom:20px; }
+        .banner-preview { padding:16px 20px; border-radius:12px; margin-bottom:24px; text-align:center; font-size:15px; font-weight:500; transition:all .3s; }
+        .form-group { margin-bottom:18px; }
+        .form-group label { display:block; font-size:13px; font-weight:600; color:#555; margin-bottom:4px; }
+        .form-group input[type="text"], .form-group input[type="number"] { width:100%; padding:10px 14px; border:1px solid #d2d2d7; border-radius:10px; font-size:14px; box-sizing:border-box; }
+        .form-group input[type="color"] { width:60px; height:40px; border:1px solid #d2d2d7; border-radius:8px; padding:2px; cursor:pointer; }
+        .form-row { display:flex; gap:16px; flex-wrap:wrap; }
+        .form-row .form-group { flex:1; min-width:160px; }
+        .toggle-wrap { display:flex; align-items:center; gap:12px; margin-bottom:18px; }
+        .toggle { position:relative; width:48px; height:26px; cursor:pointer; }
+        .toggle input { display:none; }
+        .toggle-slider { position:absolute; inset:0; background:#d2d2d7; border-radius:26px; transition:.3s; }
+        .toggle-slider::before { content:''; position:absolute; left:3px; top:3px; width:20px; height:20px; background:#fff; border-radius:50%; transition:.3s; }
+        .toggle input:checked + .toggle-slider { background:#34c759; }
+        .toggle input:checked + .toggle-slider::before { transform:translateX(22px); }
+        .btn-save-banner { background:#0071e3; color:#fff; padding:10px 28px; border:none; border-radius:980px; font-size:15px; font-weight:600; cursor:pointer; }
+        .btn-save-banner:hover { background:#0077ed; }
+
+        /* Section content panels */
+        .section-panel { display:none; }
+        .section-panel.active { display:block; }
+    </style>
+</head>
+<body>
+<nav class="nav">
+    <div class="nav-content">
+        <div class="nav-logo"><a href="index.html"><img src="logo-sm.png" alt="Tech Cross"></a></div>
+    </div>
+</nav>
+
+<div class="ar-container">
+    <div class="ar-header">
+        <h1>主网站管理（报价 滚轮 评价）</h1>
+    </div>
+
+    <!-- Big action cards -->
+    <div class="action-cards">
+        <a href="admin-brands.html" class="action-card">
+            <span class="action-icon">🔧</span>
+            <span class="action-title">Brands Admin</span>
+            <span class="action-desc">报价管理</span>
+        </a>
+        <div class="action-card active" data-section="reviews">
+            <span class="action-icon">⭐</span>
+            <span class="action-title">Reviews</span>
+            <span class="action-desc">评价管理</span>
+        </div>
+        <div class="action-card" data-section="banner">
+            <span class="action-icon">📢</span>
+            <span class="action-title">Banner</span>
+            <span class="action-desc">公告横幅</span>
+        </div>
+    </div>
+
+    <!-- === Reviews Section === -->
+    <div class="section-panel active" id="section-reviews">
+        <div class="ar-tabs">
+            <div class="ar-tab active" data-filter="all">All</div>
+            <div class="ar-tab" data-filter="pending">Pending</div>
+            <div class="ar-tab" data-filter="approved">Approved</div>
+        </div>
+        <div id="reviewList"></div>
+    </div>
+
+    <!-- === Banner Section === -->
+    <div class="section-panel" id="section-banner">
+        <div class="banner-editor">
+            <h3>📢 首页公告横幅 / Announcement Banner</h3>
+
+            <div class="banner-preview" id="bannerPreview">Preview — 预览</div>
+
+            <div class="toggle-wrap">
+                <label class="toggle">
+                    <input type="checkbox" id="bannerEnabled">
+                    <span class="toggle-slider"></span>
+                </label>
+                <span style="font-size:14px;font-weight:500;">Enable Banner / 启用横幅</span>
+            </div>
+
+            <div class="form-group">
+                <label>Text (English) / 英文文字</label>
+                <input type="text" id="bannerTextEn" placeholder="e.g. Summer Sale — 20% off all repairs!" oninput="updateBannerPreview()">
+            </div>
+
+            <div class="form-group">
+                <label>Text (Irish / Gaeilge)</label>
+                <input type="text" id="bannerTextGa" placeholder="e.g. Díolachán Samhraidh — 20% as gach deisiúchán!" oninput="updateBannerPreview()">
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Background Color / 背景色</label>
+                    <input type="color" id="bannerBgColor" value="#000000" oninput="updateBannerPreview()">
+                </div>
+                <div class="form-group">
+                    <label>Text Color / 文字色</label>
+                    <input type="color" id="bannerTextColor" value="#D4E157" oninput="updateBannerPreview()">
+                </div>
+                <div class="form-group">
+                    <label>Font Size / 字号</label>
+                    <input type="number" id="bannerFontSize" value="15" min="10" max="30" oninput="updateBannerPreview()">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Font Weight / 字重</label>
+                    <select id="bannerFontWeight" style="width:100%;padding:10px 14px;border:1px solid #d2d2d7;border-radius:10px;font-size:14px;background:#fff;" onchange="updateBannerPreview()">
+                        <option value="400">Normal (400)</option>
+                        <option value="500" selected>Medium (500)</option>
+                        <option value="600">Semi Bold (600)</option>
+                        <option value="700">Bold (700)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Scroll Speed / 滚动速度 (seconds)</label>
+                    <input type="number" id="bannerSpeed" value="20" min="5" max="60" oninput="updateBannerPreview()">
+                    <p style="font-size:11px;color:#86868b;margin:2px 0 0;">Lower = faster</p>
+                </div>
+            </div>
+
+            <div style="display:flex;gap:10px;margin-top:4px;">
+                <button class="btn-save-banner" onclick="saveBanner()">💾 Save Banner / 保存</button>
+                <button class="btn btn-secondary" onclick="resetBanner()" style="padding:10px 28px;border-radius:980px;font-size:15px;">Reset / 重置</button>
+            </div>
+            <div id="bannerSaveMsg" style="margin-top:12px;font-size:14px;color:#34c759;display:none;">✓ Saved! / 已保存！</div>
+        </div>
+    </div>
+</div>
+
+<script src="auth-guard.js"></script>
+<script>
+// Auth: root only.
+if (!Auth.isRoot()) { window.location.href = 'inv-login.html'; }
+(function() {
+  'use strict';
+
+  // ─── Action Card Panel Switching ──────────────────────────
+  document.querySelectorAll('.action-card[data-section]').forEach(function(card) {
+    card.addEventListener('click', function() {
+      document.querySelectorAll('.action-card').forEach(function(c) { c.classList.remove('active'); });
+      this.classList.add('active');
+      document.querySelectorAll('.section-panel').forEach(function(p) { p.classList.remove('active'); });
+      document.getElementById('section-' + this.dataset.section).classList.add('active');
+    });
+  });
+
+  // ─── Reviews ───────────────────────────────────────────────
+  function getReviewAuthHeaders() { return Auth.getHeaders(); }
+
+  var currentFilter = 'all';
+  var allReviews = [];
+
+  document.querySelectorAll('.ar-tab').forEach(function(tab) {
+    tab.addEventListener('click', function() {
+      document.querySelectorAll('.ar-tab').forEach(function(t) { t.classList.remove('active'); });
+      this.classList.add('active');
+      currentFilter = this.dataset.filter;
+      renderReviews();
+    });
+  });
+
+  async function loadReviews() {
+    var el = document.getElementById('reviewList');
+    el.innerHTML = '<div class="loading"><span class="spinner"></span> Loading reviews...</div>';
+    try {
+      var res = await fetch('/api/reviews/all', { headers: getReviewAuthHeaders() });
+      if (!res.ok) {
+        el.innerHTML = '<div class="ar-error">Failed to load reviews — please check you are logged in as root.</div>';
+        return;
+      }
+      allReviews = await res.json();
+      renderReviews();
+    } catch(e) {
+      el.innerHTML = '<div class="ar-error">Network error — could not load reviews. Server running?</div>';
+    }
+  }
+
+  function renderReviews() {
+    var el = document.getElementById('reviewList');
+    var filtered = allReviews;
+    if (currentFilter === 'pending') filtered = allReviews.filter(function(r) { return !r.approved; });
+    if (currentFilter === 'approved') filtered = allReviews.filter(function(r) { return r.approved; });
+
+    if (!filtered.length) { el.innerHTML = '<div class="ar-empty">No reviews found.</div>'; return; }
+
+    el.innerHTML = '';
+    filtered.forEach(function(r) {
+      var card = document.createElement('div');
+      card.className = 'ar-card ' + (r.approved ? 'approved' : 'pending');
+
+      var meta = document.createElement('div');
+      meta.className = 'ar-meta';
+
+      var nameSpan = document.createElement('span');
+      nameSpan.className = 'ar-name';
+      nameSpan.textContent = r.name || 'Anonymous';
+
+      var statusSpan = document.createElement('span');
+      var statusBadge = document.createElement('span');
+      statusBadge.className = 'ar-status ' + (r.approved ? 'approved' : 'pending');
+      statusBadge.textContent = r.approved ? 'Approved' : 'Pending';
+
+      var dateSpan = document.createElement('span');
+      dateSpan.className = 'ar-date';
+      try { dateSpan.textContent = new Date(r.createdAt).toLocaleDateString(); } catch(e) { dateSpan.textContent = ''; }
+
+      statusSpan.appendChild(statusBadge);
+      statusSpan.appendChild(dateSpan);
+      meta.appendChild(nameSpan);
+      meta.appendChild(statusSpan);
+
+      var stars = document.createElement('div');
+      stars.className = 'ar-stars';
+      var rating = Math.min(5, Math.max(1, Number(r.rating) || 5));
+      stars.textContent = '★'.repeat(rating) + '☆'.repeat(5 - rating);
+
+      var msg = document.createElement('div');
+      msg.className = 'ar-msg';
+      msg.textContent = r.message || '';
+
+      var actions = document.createElement('div');
+      actions.className = 'ar-actions';
+
+      if (!r.approved) {
+        var approveBtn = document.createElement('button');
+        approveBtn.className = 'ar-btn ar-btn-approve';
+        approveBtn.textContent = 'Approve';
+        approveBtn.onclick = function() { approveReview(r._id); };
+        actions.appendChild(approveBtn);
+      } else {
+        var rejectBtn = document.createElement('button');
+        rejectBtn.className = 'ar-btn ar-btn-reject';
+        rejectBtn.textContent = 'Hide';
+        rejectBtn.onclick = function() { rejectReview(r._id); };
+        actions.appendChild(rejectBtn);
+      }
+
+      var deleteBtn = document.createElement('button');
+      deleteBtn.className = 'ar-btn ar-btn-delete';
+      deleteBtn.textContent = 'Delete';
+      deleteBtn.onclick = function() { deleteReview(r._id); };
+      actions.appendChild(deleteBtn);
+
+      card.appendChild(meta);
+      card.appendChild(stars);
+      card.appendChild(msg);
+      card.appendChild(actions);
+      el.appendChild(card);
+    });
+  }
+
+  async function approveReview(id) {
+    try {
+      await fetch('/api/reviews/' + id + '/approve', { method: 'PUT', headers: getReviewAuthHeaders() });
+    } catch(e) {}
+    loadReviews();
+  }
+  async function rejectReview(id) {
+    try {
+      await fetch('/api/reviews/' + id + '/reject', { method: 'PUT', headers: getReviewAuthHeaders() });
+    } catch(e) {}
+    loadReviews();
+  }
+  async function deleteReview(id) {
+    if (!confirm('Delete this review permanently?')) return;
+    try {
+      await fetch('/api/reviews/' + id, { method: 'DELETE', headers: getReviewAuthHeaders() });
+    } catch(e) {}
+    loadReviews();
+  }
+
+  loadReviews();
+
+  // ─── Banner / 公告横幅 ─────────────────────────────────────
+  var BANNER_API = '/api/banner';
+
+  function fillBannerForm(data) {
+    if (!data) return;
+    document.getElementById('bannerEnabled').checked = data.enabled || false;
+    document.getElementById('bannerTextEn').value = data.textEn || '';
+    document.getElementById('bannerTextGa').value = data.textGa || '';
+    document.getElementById('bannerBgColor').value = data.bgColor || '#000000';
+    document.getElementById('bannerTextColor').value = data.textColor || '#D4E157';
+    document.getElementById('bannerFontSize').value = data.fontSize || 15;
+    document.getElementById('bannerFontWeight').value = data.fontWeight || '500';
+    document.getElementById('bannerSpeed').value = data.scrollSpeed || 20;
+    updateBannerPreview();
+  }
+
+  function getBannerData() {
+    return {
+      enabled: document.getElementById('bannerEnabled').checked,
+      textEn: document.getElementById('bannerTextEn').value,
+      textGa: document.getElementById('bannerTextGa').value,
+      bgColor: document.getElementById('bannerBgColor').value,
+      textColor: document.getElementById('bannerTextColor').value,
+      fontSize: parseInt(document.getElementById('bannerFontSize').value) || 15,
+      fontWeight: document.getElementById('bannerFontWeight').value,
+      scrollSpeed: parseInt(document.getElementById('bannerSpeed').value) || 20
+    };
+  }
+
+  window.updateBannerPreview = function() {
+    var data = getBannerData();
+    var preview = document.getElementById('bannerPreview');
+    if (data.enabled) {
+      preview.style.display = 'block';
+      preview.style.backgroundColor = data.bgColor;
+      preview.style.color = data.textColor;
+      preview.style.fontSize = data.fontSize + 'px';
+      preview.style.fontWeight = data.fontWeight;
+      preview.textContent = data.textEn || '(No text set / 未设置文字)';
+    } else {
+      preview.style.display = 'block';
+      preview.style.backgroundColor = '#f5f5f7';
+      preview.style.color = '#86868b';
+      preview.style.fontSize = '15px';
+      preview.style.fontWeight = '400';
+      preview.textContent = '⚠ Banner disabled / 横幅已禁用';
+    }
+  };
+
+  window.saveBanner = function() {
+    var data = getBannerData();
+    fetch(BANNER_API, {
+      method: 'PUT',
+      headers: Auth.getHeaders(),
+      body: JSON.stringify(data)
+    }).then(function(res) {
+      if (!res.ok) { alert('Failed to save banner'); return; }
+      // Also save to localStorage for same-origin fallback
+      try {
+        localStorage.setItem('techcross_announcement', JSON.stringify(data));
+        localStorage.setItem('banner_updated', Date.now());
+        window.dispatchEvent(new CustomEvent('announcementUpdated'));
+      } catch(e) {}
+      var msg = document.getElementById('bannerSaveMsg');
+      msg.style.display = 'block';
+      setTimeout(function() { msg.style.display = 'none'; }, 2500);
+    }).catch(function() {
+      alert('Network error saving banner');
+    });
+  };
+
+  window.resetBanner = function() {
+    if (!confirm('Reset banner to defaults?')) return;
+    fetch(BANNER_API, {
+      method: 'PUT',
+      headers: Auth.getHeaders(),
+      body: JSON.stringify({ enabled: false, textEn: '', textGa: '', bgColor: '#000000', textColor: '#D4E157', fontSize: 15, fontWeight: '500', scrollSpeed: 20 })
+    }).then(function() {
+      fillBannerForm({});
+      updateBannerPreview();
+      try {
+        localStorage.removeItem('techcross_announcement');
+        window.dispatchEvent(new CustomEvent('announcementUpdated'));
+      } catch(e) {}
+    }).catch(function() {
+      alert('Network error resetting banner');
+    });
+  };
+
+  // Load banner from API on page load
+  fetch(BANNER_API).then(function(res) { return res.json(); }).then(function(data) {
+    fillBannerForm(data);
+  }).catch(function() {
+    // Fallback to localStorage
+    try {
+      var stored = localStorage.getItem('techcross_announcement');
+      if (stored) fillBannerForm(JSON.parse(stored));
+    } catch(e) {}
+  });
+})();
+</script>
+</body>
+</html>

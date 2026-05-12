@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用户管理 - Tech Cross 进销存</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;}
+        html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:antialiased;background:#f5f5f7;color:#1d1d1f;}
+        .layout{display:flex;height:100vh;}
+        .sidebar{width:220px;background:#1d1d1f;color:#f5f5f7;display:flex;flex-direction:column;flex-shrink:0;}
+        .sidebar .logo{padding:20px;text-align:center;border-bottom:1px solid #333;}.sidebar .logo img{height:36px;}.sidebar .logo span{display:block;font-size:12px;color:#86868b;margin-top:4px;}
+        .sidebar nav{flex:1;overflow-y:auto;padding:12px 0;}
+        .sidebar nav a{display:flex;align-items:center;gap:10px;padding:10px 20px;color:#b0b0b5;text-decoration:none;font-size:14px;transition:all .15s;border-left:3px solid transparent;}
+        .sidebar nav a:hover{background:#2a2a2d;color:#f5f5f7;}.sidebar nav a.active{background:#2a2a2d;color:#D4E157;border-left-color:#D4E157;font-weight:600;}
+        .sidebar nav a .icon{width:20px;text-align:center;font-size:16px;}
+        .sidebar .nav-section{padding:16px 20px 6px;font-size:11px;color:#6e6e73;text-transform:uppercase;letter-spacing:1px;}
+        .main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+        .topbar{height:56px;background:#fff;border-bottom:1px solid #e5e5e7;display:flex;align-items:center;justify-content:space-between;padding:0 24px;flex-shrink:0;}
+        .topbar h2{font-size:18px;font-weight:600;}.topbar .user-info{display:flex;align-items:center;gap:12px;font-size:14px;color:#6e6e73;}.topbar .user-info strong{color:#1d1d1f;}
+        .btn-logout{padding:6px 14px;border-radius:980px;border:1px solid #d2d2d7;background:#fff;font-size:13px;cursor:pointer;transition:all .2s;}.btn-logout:hover{background:#ff3b30;color:#fff;border-color:#ff3b30;}
+        .content{flex:1;overflow-y:auto;padding:24px;}
+        .card{background:#fff;border-radius:14px;box-shadow:0 2px 12px rgba(0,0,0,.06);padding:24px;margin-bottom:20px;}
+        .toolbar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:16px;}
+        .btn{padding:8px 18px;border:none;border-radius:10px;font-size:14px;font-weight:500;cursor:pointer;transition:all .2s;}
+        .btn-primary{background:#D4E157;color:#000;}.btn-primary:hover{background:#c5d148;}
+        .btn-secondary{background:#f5f5f7;border:1px solid #d2d2d7;color:#1d1d1f;}.btn-secondary:hover{background:#e5e5e7;}
+        .btn-danger{background:#ff3b30;color:#fff;}.btn-danger:hover{background:#e0342d;}
+        .btn-success{background:#34c759;color:#fff;}.btn-success:hover{background:#2db84e;}
+        .btn-sm{padding:5px 12px;font-size:13px;}
+        table{width:100%;border-collapse:collapse;font-size:14px;}
+        thead th{background:#f5f5f7;padding:10px 12px;text-align:left;font-weight:600;font-size:12px;color:#6e6e73;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #e5e5e7;}
+        tbody td{padding:10px 12px;border-bottom:1px solid #f0f0f2;vertical-align:middle;}
+        tbody tr:hover{background:#fafafa;}
+        .badge{display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;}
+        .badge-active{background:#e8f5e9;color:#2e7d32;}.badge-inactive{background:#fef2f2;color:#991b1b;}
+        .badge-root{background:#e3f2fd;color:#1565c0;}.badge-manager{background:#fff3e0;color:#e65100;}.badge-staff{background:#f5f5f7;color:#6e6e73;}
+        .modal-overlay{display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.5);backdrop-filter:blur(4px);align-items:center;justify-content:center;}
+        .modal-overlay.show{display:flex;}
+        .modal{background:#fff;border-radius:18px;padding:32px;max-width:500px;width:90%;max-height:85vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.2);}
+        .modal h3{font-size:20px;margin-bottom:20px;}
+        .form-group{margin-bottom:16px;}.form-group label{display:block;font-size:14px;font-weight:500;margin-bottom:6px;}
+        .form-group input,.form-group select{width:100%;padding:10px 14px;border:1px solid #d2d2d7;border-radius:10px;font-size:14px;}
+        .form-group input:focus,.form-group select:focus{outline:none;border-color:#D4E157;box-shadow:0 0 0 3px rgba(212,225,87,.15);}
+        .form-group .hint{font-size:12px;color:#86868b;margin-top:4px;}
+        .form-row{display:flex;gap:16px;}.form-row .form-group{flex:1;}
+        .modal-actions{display:flex;gap:12px;justify-content:flex-end;margin-top:24px;}
+        .toast{position:fixed;top:20px;right:20px;z-index:10000;padding:14px 22px;border-radius:12px;font-size:14px;font-weight:500;box-shadow:0 8px 32px rgba(0,0,0,.15);transform:translateX(120%);transition:transform .3s ease;max-width:400px;}
+        .toast.show{transform:translateX(0);}.toast.success{background:#34c759;color:#fff;}.toast.error{background:#ff3b30;color:#fff;}
+    </style>
+</head>
+<body>
+<div class="toast" id="toast"></div>
+<div class="layout">
+    <aside class="sidebar">
+        <div class="logo"><img src="logo.png" alt="Tech Cross"><span>进销存管理系统</span></div>
+        <nav>
+            <div class="nav-section">业务管理 / Business</div>
+            <a href="inv-pos.html" data-perm="pos"><span class="icon">💰</span>POS 收银 / Checkout</a>
+            <a href="inv-products.html" data-perm="products"><span class="icon">📦</span>商品管理 / Products</a>
+            <a href="inv-stock.html" data-perm="stock"><span class="icon">🏭</span>库存管理 / Stock</a>
+            <a href="inv-suppliers.html" data-perm="suppliers"><span class="icon">🤝</span>供应商 / Suppliers</a>
+            <a href="inv-purchases.html" data-perm="purchases"><span class="icon">🛒</span>采购管理 / Purchases</a>
+            <a href="inv-transactions.html" data-perm="transactions"><span class="icon">📋</span>交易记录 / Transactions</a>
+            <div class="nav-section">报表与发票 / Reports</div>
+            <a href="inv-reports.html" data-perm="reports"><span class="icon">📊</span>报表中心 / Reports</a>
+            <a href="inv-invoices.html" data-perm="invoices"><span class="icon">🧾</span>发票管理 / VAT Invoice</a>
+            <a href="inv-expenses.html" data-perm="expenses"><span class="icon">💸</span>支出管理 / Expenses</a>
+            <div class="nav-section">系统管理 / System</div>
+            <a href="inv-settings.html" data-perm="settings"><span class="icon">⚙️</span>系统设置 / Settings</a>
+            <a href="inv-users.html" class="active" data-perm="users"><span class="icon">👥</span>用户管理 / Users</a>
+        </nav>
+    </aside>
+    <div class="main">
+        <div class="topbar">
+            <h2>用户管理 / Users</h2>
+            <div class="user-info"><span>欢迎, <strong id="displayName">-</strong></span><span class="badge badge-active" id="roleBadge">店主</span><button class="btn-logout" onclick="logout()">退出登录 / Logout</button></div>
+        </div>
+        <div class="content">
+            <div class="card">
+                <div class="toolbar">
+                    <div style="flex:1;"></div>
+                    <button class="btn btn-primary" onclick="showCreateModal()">+ 创建用户 / Create User</button>
+                </div>
+                <table>
+                    <thead><tr><th>用户名 / Username</th><th>显示名 / Display Name</th><th>角色 / Role</th><th>状态 / Status</th><th>创建时间 / Created</th><th>操作 / Actions</th></tr></thead>
+                    <tbody id="userTable"><tr><td colspan="6" style="text-align:center;color:#86868b;padding:40px;">加载中...</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create/Edit User Modal -->
+<div class="modal-overlay" id="userModal">
+    <div class="modal">
+        <h3 id="modalTitle">创建用户</h3>
+        <input type="hidden" id="editId">
+        <div class="form-group"><label>用户名 <span style="color:#ff3b30;">*</span></label><input type="text" id="fUsername" autocomplete="off"></div>
+        <div class="form-group"><label>显示名 <span style="color:#ff3b30;">*</span></label><input type="text" id="fDisplayName"></div>
+        <div class="form-group" id="passwordGroup"><label>密码 <span style="color:#ff3b30;">*</span></label><input type="password" id="fPassword" autocomplete="new-password"><div class="hint">至少 8 位，必须包含字母和数字</div></div>
+        <div class="form-group"><label>角色 Role</label><select id="fRole" onchange="togglePermissions()"><option value="staff">员工 Staff</option><option value="manager">经理 Manager</option><option value="root">店主 Root</option></select></div>
+        <div class="form-group" id="permissionsGroup">
+            <label>权限 Permissions</label>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px;" id="permCheckboxes">
+                <label style="font-size:13px;display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" data-perm="pos" checked> 💰 POS</label>
+                <label style="font-size:13px;display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" data-perm="products"> 📦 Products</label>
+                <label style="font-size:13px;display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" data-perm="stock"> 🏭 Stock</label>
+                <label style="font-size:13px;display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" data-perm="suppliers"> 🤝 Suppliers</label>
+                <label style="font-size:13px;display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" data-perm="purchases"> 🛒 Purchases</label>
+                <label style="font-size:13px;display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" data-perm="transactions"> 📋 Transactions</label>
+                <label style="font-size:13px;display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" data-perm="reports"> 📊 Reports</label>
+                <label style="font-size:13px;display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" data-perm="invoices"> 🧾 Invoices</label>
+                <label style="font-size:13px;display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" data-perm="refund" checked> ↩️ Refund</label>
+                <label style="font-size:13px;display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" data-perm="expenses"> 💸 Expenses</label>
+                <label style="font-size:13px;display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" data-perm="settings"> ⚙️ Settings</label>
+                <label style="font-size:13px;display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" data-perm="users"> 👥 Users</label>
+                <label style="font-size:13px;display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" data-perm="website"> 🌐 Website</label>
+            </div>
+            <div class="hint">Admin has all permissions automatically</div>
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-secondary" onclick="closeModal()">取消 / Cancel</button>
+            <button class="btn btn-primary" onclick="saveUser()">保存 / Save</button>
+        </div>
+    </div>
+</div>
+
+<!-- Reset Password Modal -->
+<div class="modal-overlay" id="resetModal">
+    <div class="modal" style="max-width:400px;">
+        <h3>重置密码</h3>
+        <input type="hidden" id="resetId">
+        <p style="color:#6e6e73;margin-bottom:16px;" id="resetUserInfo"></p>
+        <div class="form-group"><label>新密码</label><input type="password" id="resetPassword" autocomplete="new-password"><div class="hint">至少 8 位，必须包含字母和数字</div></div>
+        <div class="modal-actions">
+            <button class="btn btn-secondary" onclick="document.getElementById('resetModal').classList.remove('show')">取消 / Cancel</button>
+            <button class="btn btn-primary" onclick="confirmReset()">确认重置 / Confirm</button>
+        </div>
+    </div>
+</div>
+
+<script src="auth-guard.js"></script>
+<script>
+(function(){
+'use strict';
+const user = Auth.requireRole('root'); if (!user) return;
+document.getElementById('displayName').textContent = Auth.getDisplayName();
+
+// Hide sidebar items based on permissions (admin pages - admin sees all)
+document.querySelectorAll('nav a[data-perm]').forEach(function(a){a.style.display='';});
+
+const API='/api/inv';
+const headers=()=>Auth.getHeaders();
+function showToast(msg,type){const t=document.getElementById('toast');t.textContent=msg;t.className='toast '+(type||'success');setTimeout(()=>t.classList.add('show'),10);setTimeout(()=>t.classList.remove('show'),3000);}
+function logout(){Auth.logout();}
+window.logout=logout;
+async function apiFetch(url,opts){opts=opts||{};opts.headers=headers();const r=await fetch(API+url,opts);if(r.status===401){logout();return null;}return r;}
+function esc(s){if(!s)return'';const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+const roleMap={root:'店主',manager:'经理',staff:'员工'};
+const roleBadge={root:'badge-root',manager:'badge-manager',staff:'badge-staff'};
+
+async function loadUsers(){
+    try{
+        const r=await apiFetch('/auth/users');if(!r)return;
+        const users=await r.json();
+        const tb=document.getElementById('userTable');
+        if(!users.length){
+            tb.innerHTML='<tr><td colspan="6" style="text-align:center;color:#86868b;padding:40px;">暂无用户</td></tr>';
+            return;
+        }
+
+        // Clear existing content
+        tb.innerHTML = '';
+
+        // Build DOM elements safely
+        users.forEach(u => {
+            const tr = document.createElement('tr');
+            tr.setAttribute('data-uid', u._id);
+            tr.setAttribute('data-perms', JSON.stringify(u.permissions || {}));
+
+            // Username cell
+            const td1 = document.createElement('td');
+            const strong = document.createElement('strong');
+            strong.textContent = u.username;
+            td1.appendChild(strong);
+            tr.appendChild(td1);
+
+            // Display name cell
+            const td2 = document.createElement('td');
+            td2.textContent = u.displayName || '-';
+            tr.appendChild(td2);
+
+            // Role cell
+            const td3 = document.createElement('td');
+            const roleSpan = document.createElement('span');
+            roleSpan.className = `badge ${roleBadge[u.role] || 'badge-staff'}`;
+            roleSpan.textContent = roleMap[u.role] || u.role;
+            td3.appendChild(roleSpan);
+            tr.appendChild(td3);
+
+            // Status cell
+            const td4 = document.createElement('td');
+            const statusSpan = document.createElement('span');
+            statusSpan.className = `badge ${u.active !== false ? 'badge-active' : 'badge-inactive'}`;
+            statusSpan.textContent = u.active !== false ? '启用' : '停用';
+            td4.appendChild(statusSpan);
+            tr.appendChild(td4);
+
+            // Created date cell
+            const td5 = document.createElement('td');
+            td5.textContent = new Date(u.createdAt).toLocaleDateString('zh-CN');
+            tr.appendChild(td5);
+
+            // Actions cell
+            const td6 = document.createElement('td');
+
+            // Edit button
+            const editBtn = document.createElement('button');
+            editBtn.className = 'btn btn-secondary btn-sm';
+            editBtn.textContent = '编辑';
+            editBtn.onclick = () => editUser(u._id, u.username, u.displayName || '', u.role);
+            td6.appendChild(editBtn);
+
+            // Active/Deactivate button
+            if (u.active !== false) {
+                const disableBtn = document.createElement('button');
+                disableBtn.className = 'btn btn-danger btn-sm';
+                disableBtn.textContent = '停用';
+                disableBtn.onclick = () => disableUser(u._id);
+                td6.appendChild(disableBtn);
+            } else {
+                const enableBtn = document.createElement('button');
+                enableBtn.className = 'btn btn-success btn-sm';
+                enableBtn.textContent = '启用';
+                enableBtn.onclick = () => enableUser(u._id);
+                td6.appendChild(enableBtn);
+            }
+
+            // Reset password button
+            const resetBtn = document.createElement('button');
+            resetBtn.className = 'btn btn-secondary btn-sm';
+            resetBtn.textContent = '重置密码';
+            resetBtn.onclick = () => showResetModal(u._id, u.username);
+            td6.appendChild(resetBtn);
+
+            // Delete button
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'btn btn-sm';
+            deleteBtn.style.background = '#6e6e73';
+            deleteBtn.style.color = '#fff';
+            deleteBtn.textContent = '删除';
+            deleteBtn.onclick = () => deleteUser(u._id, u.username);
+            td6.appendChild(deleteBtn);
+
+            tr.appendChild(td6);
+            tb.appendChild(tr);
+        });
+    }catch(e){showToast('加载失败','error');}
+}
+
+function togglePermissions(){
+    var role=document.getElementById('fRole').value;
+    var pg=document.getElementById('permissionsGroup');
+    if(role === 'root'){pg.style.opacity='0.4';pg.style.pointerEvents='none';}
+    else{pg.style.opacity='1';pg.style.pointerEvents='auto';}
+}
+window.togglePermissions=togglePermissions;
+
+function getPermissions(){
+    var perms={};
+    document.querySelectorAll('#permCheckboxes input[data-perm]').forEach(function(cb){perms[cb.dataset.perm]=cb.checked;});
+    return perms;
+}
+function setPermissions(perms){
+    document.querySelectorAll('#permCheckboxes input[data-perm]').forEach(function(cb){cb.checked=!!(perms&&perms[cb.dataset.perm]);});
+}
+
+function showCreateModal(){
+    document.getElementById('modalTitle').textContent='创建用户 Create User';
+    document.getElementById('editId').value='';
+    document.getElementById('fUsername').value='';document.getElementById('fUsername').disabled=false;
+    document.getElementById('fDisplayName').value='';
+    document.getElementById('fPassword').value='';
+    document.getElementById('passwordGroup').style.display='';
+    document.getElementById('fRole').value='staff';
+    setPermissions({pos:true,refund:true});
+    togglePermissions();
+    document.getElementById('userModal').classList.add('show');
+}
+window.showCreateModal=showCreateModal;
+
+function editUser(id,username,displayName,role){
+    document.getElementById('modalTitle').textContent='编辑用户 Edit User';
+    document.getElementById('editId').value=id;
+    document.getElementById('fUsername').value=username;document.getElementById('fUsername').disabled=true;
+    document.getElementById('fDisplayName').value=displayName;
+    document.getElementById('fPassword').value='';
+    document.getElementById('passwordGroup').style.display='none';
+    document.getElementById('fRole').value=role;
+    // Load permissions from the user list
+    var userRow=document.querySelector('tr[data-uid="'+id+'"]');
+    if(userRow&&userRow.dataset.perms){try{setPermissions(JSON.parse(userRow.dataset.perms));}catch(e){}}
+    togglePermissions();
+    document.getElementById('userModal').classList.add('show');
+}
+window.editUser=editUser;
+
+function closeModal(){document.getElementById('userModal').classList.remove('show');}
+window.closeModal=closeModal;
+
+async function saveUser(){
+    const id=document.getElementById('editId').value;
+    const body={};
+    if(!id){
+        body.username=document.getElementById('fUsername').value.trim();
+        body.password=document.getElementById('fPassword').value;
+        if(!body.username){showToast('请输入用户名','error');return;}
+        if(!body.password){showToast('请输入密码','error');return;}
+    }
+    body.displayName=document.getElementById('fDisplayName').value.trim();
+    body.role=document.getElementById('fRole').value;
+    if(body.role !== 'root')body.permissions=getPermissions();
+    if(!body.displayName){showToast('请输入显示名','error');return;}
+    try{
+        const url=id?'/auth/users/'+id:'/auth/users';
+        const r=await apiFetch(url,{method:id?'PUT':'POST',body:JSON.stringify(body)});
+        if(!r)return;if(!r.ok){const e=await r.json();showToast(e.error||'保存失败','error');return;}
+        showToast(id?'用户已更新':'用户已创建');closeModal();loadUsers();
+    }catch(e){showToast('保存失败','error');}
+}
+window.saveUser=saveUser;
+
+async function disableUser(id){
+    if(!confirm('确定要停用该用户吗？'))return;
+    try{const r=await apiFetch('/auth/users/'+id+'/disable',{method:'PUT'});if(!r)return;if(!r.ok){const e=await r.json();showToast(e.error,'error');return;}showToast('用户已停用');loadUsers();}catch(e){showToast('操作失败','error');}
+}
+window.disableUser=disableUser;
+
+async function enableUser(id){
+    try{const r=await apiFetch('/auth/users/'+id,{method:'PUT',body:JSON.stringify({active:true})});if(!r)return;if(!r.ok){const e=await r.json();showToast(e.error,'error');return;}showToast('用户已启用');loadUsers();}catch(e){showToast('操作失败','error');}
+}
+window.enableUser=enableUser;
+
+async function deleteUser(id,username){
+    if(!confirm(`确定要永久删除用户「${username}」吗？\n\n⚠️ 此操作不可恢复！`))return;
+    if(!confirm('再次确认：删除后无法恢复，确定继续？'))return;
+    try{
+        const r=await apiFetch('/auth/users/'+id,{method:'DELETE'});
+        if(!r)return;
+        if(!r.ok){const e=await r.json();showToast(e.error||'删除失败','error');return;}
+        showToast('用户已永久删除');loadUsers();
+    }catch(e){showToast('删除失败','error');}
+}
+window.deleteUser=deleteUser;
+
+function showResetModal(id,username){
+    document.getElementById('resetId').value=id;
+    document.getElementById('resetUserInfo').textContent='用户: '+username;
+    document.getElementById('resetPassword').value='';
+    document.getElementById('resetModal').classList.add('show');
+}
+window.showResetModal=showResetModal;
+
+async function confirmReset(){
+    const id=document.getElementById('resetId').value;
+    const password=document.getElementById('resetPassword').value;
+    if(!password){showToast('请输入新密码','error');return;}
+    try{
+        const r=await apiFetch('/auth/users/'+id+'/reset-password',{method:'PUT',body:JSON.stringify({password})});
+        if(!r)return;if(!r.ok){const e=await r.json();showToast(e.error||'重置失败','error');return;}
+        showToast('密码已重置');document.getElementById('resetModal').classList.remove('show');
+    }catch(e){showToast('重置失败','error');}
+}
+window.confirmReset=confirmReset;
+
+loadUsers();
+})();
+</script>
+</body>
+</html>

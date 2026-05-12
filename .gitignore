@@ -1,0 +1,33 @@
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Temporary files
+*.tmp
+*.temp
+
+# PowerShell scripts (if not needed)
+start-server.ps1
+open-browser.bat
+
+# Node modules (if you add npm later)
+node_modules/
+
+# Environment variables (contains secrets)
+.env
+.env.local
+!.env.example

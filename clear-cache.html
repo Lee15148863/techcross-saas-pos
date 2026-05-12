@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clear Cache - Tech Cross</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 600px;
+            margin: 100px auto;
+            padding: 40px;
+            text-align: center;
+            background: #f5f5f7;
+        }
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 18px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #1d1d1f;
+            margin-bottom: 20px;
+        }
+        button {
+            background: #0071e3;
+            color: white;
+            border: none;
+            padding: 14px 24px;
+            border-radius: 12px;
+            font-size: 15px;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.3s;
+        }
+        button:hover {
+            background: #0077ed;
+            transform: translateY(-1px);
+        }
+        .danger {
+            background: #ff3b30;
+        }
+        .danger:hover {
+            background: #ff453a;
+        }
+        .success {
+            background: #34c759;
+        }
+        .success:hover {
+            background: #30d158;
+        }
+        #message {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            display: none;
+        }
+        #message.show {
+            display: block;
+        }
+        #message.success {
+            background: #d1f2dd;
+            color: #1e4620;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔄 Clear Cache</h1>
+        <p>Manage your browser's stored data for Tech Cross website.</p>
+        
+        <button onclick="clearPricingOnly()" class="danger">Clear Pricing Data Only</button>
+        <button onclick="clearCache()" class="danger">Clear All Data</button>
+        <br>
+        <button onclick="showAllData()">Show Stored Data</button>
+        <button onclick="window.location.href='pricing.html'" class="success">Go to Pricing</button>
+        <button onclick="window.location.href='admin.html'">Go to Admin</button>
+        
+        <div id="message"></div>
+    </div>
+
+    <script src="auth-guard.js"></script>
+    <script>
+        // Auth check - must be root
+        Auth.requireRole('root');
+
+        function clearCache() {
+            // Clear all pricing related data
+            localStorage.removeItem('techcross_pricing_data');
+            localStorage.removeItem('techcross_pricing_version');
+            
+            // Clear announcement data
+            localStorage.removeItem('announcement_enabled');
+            localStorage.removeItem('announcement_text_en');
+            localStorage.removeItem('announcement_text_ga');
+            localStorage.removeItem('announcement_font_size');
+            localStorage.removeItem('announcement_font_weight');
+            localStorage.removeItem('announcement_text_color');
+            localStorage.removeItem('announcement_bg_color');
+            localStorage.removeItem('announcement_speed');
+            
+            // Clear search history
+            localStorage.removeItem('searchHistory');
+            
+            const message = document.getElementById('message');
+            message.textContent = '✅ All cache cleared successfully! The page will reload in 2 seconds...';
+            message.className = 'message show success';
+            
+            setTimeout(() => {
+                window.location.reload();
+            }, 2000);
+        }
+        
+        function clearPricingOnly() {
+            // Clear only pricing data
+            localStorage.removeItem('techcross_pricing_data');
+            localStorage.removeItem('techcross_pricing_version');
+            
+            const message = document.getElementById('message');
+            message.textContent = '✅ Pricing cache cleared! The page will reload in 2 seconds...';
+            message.className = 'message show success';
+            
+            setTimeout(() => {
+                window.location.reload();
+            }, 2000);
+        }
+        
+        function showAllData() {
+            const allKeys = Object.keys(localStorage);
+            const techcrossKeys = allKeys.filter(key => 
+                key.includes('techcross') || 
+                key.includes('announcement') || 
+                key.includes('search') ||
+                key.includes('admin')
+            );
+            
+            let info = '<div style="text-align: left; margin-top: 20px; padding: 15px; background: #f5f5f7; border-radius: 8px; max-height: 300px; overflow-y: auto;">';
+            info += '<strong>Stored Data:</strong><br><br>';
+            
+            if (techcrossKeys.length === 0) {
+                info += '<em style="color: #86868b;">No Tech Cross data found in localStorage</em>';
+            } else {
+                techcrossKeys.forEach(key => {
+                    const value = localStorage.getItem(key);
+                    const preview = value.length > 50 ? value.substring(0, 50) + '...' : value;
+                    info += `<strong>${key}:</strong><br>`;
+                    info += `<span style="color: #666; font-size: 13px;">${preview}</span><br><br>`;
+                });
+            }
+            
+            info += '</div>';
+            
+            const message = document.getElementById('message');
+            message.innerHTML = info;
+            message.className = 'message show';
+            message.style.background = '#f5f5f7';
+            message.style.color = '#1d1d1f';
+        }
+        
+        // Show current status
+        window.addEventListener('DOMContentLoaded', function() {
+            const version = localStorage.getItem('techcross_pricing_version');
+            const hasData = localStorage.getItem('techcross_pricing_data');
+            const dataSize = hasData ? (hasData.length / 1024).toFixed(2) : 0;
+            
+            let statusHTML = '<br><br><div style="background: #f5f5f7; padding: 15px; border-radius: 8px; margin-top: 20px;">';
+            statusHTML += '<strong>Current Status:</strong><br><br>';
+            statusHTML += `<small style="color: #1d1d1f;">`;
+            statusHTML += `📦 Data Version: <strong>${version || 'Not set'}</strong><br>`;
+            statusHTML += `💾 Data Exists: <strong>${hasData ? 'Yes' : 'No'}</strong><br>`;
+            statusHTML += `📊 Data Size: <strong>${dataSize} KB</strong><br>`;
+            
+            // Count stored items
+            const allKeys = Object.keys(localStorage);
+            const techcrossKeys = allKeys.filter(key => 
+                key.includes('techcross') || 
+                key.includes('announcement') || 
+                key.includes('search')
+            );
+            statusHTML += `🔑 Stored Items: <strong>${techcrossKeys.length}</strong>`;
+            statusHTML += `</small></div>`;
+            
+            document.querySelector('p').innerHTML += statusHTML;
+        });
+    </script>
+</body>
+</html>
+20
