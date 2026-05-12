@@ -11,6 +11,7 @@ const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 8080;
+const DOMAIN = process.env.DOMAIN || 'techcross.ie';
 
 // ─── Security: Helmet (default security headers) ────────────────────────────
 app.use(helmet({
@@ -21,7 +22,7 @@ app.use(helmet({
       scriptSrcAttr: ["'unsafe-inline'"], // Allow onclick handlers in HTML
       styleSrc: ["'self'", "'unsafe-inline'"],
       imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'", "https://techcross.ie", "https://www.techcross.ie", "http://localhost:*", "https://www.google-analytics.com", "https://www.googletagmanager.com"],
+      connectSrc: ["'self'", `https://${DOMAIN}`, `https://www.${DOMAIN}`, "http://localhost:*", "https://www.google-analytics.com", "https://www.googletagmanager.com"],
       fontSrc: ["'self'"],
       objectSrc: ["'none'"],
       mediaSrc: ["'self'"],
@@ -34,9 +35,8 @@ app.use(helmet({
 // ─── CORS: allow production domain + local dev ──────────────────────────────
 app.use(cors({
   origin: [
-    'https://techcross.ie',
-    'https://www.techcross.ie',
-    'https://teschcross-git-1045728849939.europe-west1.run.app',
+    `https://${DOMAIN}`,
+    `https://www.${DOMAIN}`,
     'http://localhost:8080',
     'http://localhost:3000'
   ],
@@ -60,10 +60,24 @@ app.use((req, res, next) => {
   next();
 });
 
+// ─── Health endpoint (lightweight, no DB queries, always available) ─────────
+// Registered at app level, BEFORE all SPA/static/catch-all middleware,
+// so it always returns JSON regardless of MongoDB state.
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    mongo: mongoose.connection.readyState,
+    version: process.env.APP_VERSION || '',
+    revision: process.env.K_REVISION || '',
+    readonlyFrozen: process.env.STORE_FROZEN === 'true',
+    uptime: process.uptime()
+  });
+});
+
 // ─── SaaS SPA: route /saas/* → saas/*.html (BEFORE static to avoid fallthrough)
-const SAAS_PAGES = ['', 'login', 'register', 'dashboard', 'admin'];
+const SAAS_PAGES = ['', 'login', 'register', 'dashboard', 'admin', 'admin-deployments'];
 app.use((req, res, next) => {
-  const m = req.path.match(/^\/saas\/([a-z]*)$/);
+  const m = req.path.match(/^\/saas\/([a-z-]*)$/);
   if (m && SAAS_PAGES.includes(m[1])) {
     return res.sendFile(path.join(__dirname, 'saas', (m[1] || 'index') + '.html'));
   }
@@ -75,10 +89,33 @@ app.use(express.static(path.join(__dirname), {
   index: false
 }));
 
+// ─── HTML template variable injection ────────────────────────────────────
+app.use((req, res, next) => {
+  if (req.path.endsWith('.html')) {
+    const original = res.send.bind(res);
+    res.send = function(body) {
+      if (typeof body === 'string') {
+        body = body
+          .replace(/__DOMAIN__/g, DOMAIN)
+          .replace(/__GA_ID__/g, process.env.GOOGLE_ANALYTICS_ID || '')
+          .replace(/__PRINT_AGENT_URL__/g, process.env.PRINT_AGENT_URL || 'http://localhost:9100')
+          .replace(/__YEAR__/g, String(new Date().getFullYear()))
+          .replace(/__COMPANY_NAME__/g, process.env.COMPANY_NAME || 'TechCross Repair Centre')
+          .replace(/__COMPANY_LOCATION__/g, process.env.COMPANY_ADDRESS || 'Navan, Co. Meath, Ireland')
+          .replace(/__COMPANY_EMAIL__/g, process.env.COMPANY_EMAIL || 'info@example.com')
+          .replace(/__VAT_NUMBER__/g, process.env.VAT_NUMBER || 'IE3330982OH')
+          .replace(/__FB_PAGE__/g, process.env.FACEBOOK_PAGE || 'techcrossnavan');
+      }
+      return original(body);
+    };
+  }
+  next();
+});
+
 // ─── SaaS API routes & SPA fallback ─────────────────────────
 
 // Connect to MongoDB, then start listening
-mongoose.connect(process.env.DBCon, { dbName: 'techcross' })
+mongoose.connect(process.env.DBCon || process.env.MONGO_URI, { dbName: process.env.STORE_NAME || 'techcross' })
     .then(() => {
         console.log('✅ MongoDB connected');
 
@@ -89,6 +126,13 @@ mongoose.connect(process.env.DBCon, { dbName: 'techcross' })
         app.use('/api/banner', require('./api/banner'));
 
         // Inventory & Till system routes
+        // Read-only freeze gate — blocks writes when STORE_FROZEN env var is 'true'
+        app.use('/api/inv', function(req, res, next) {
+          if (process.env.STORE_FROZEN === 'true' && ['POST', 'PUT', 'PATCH', 'DELETE'].indexOf(req.method) !== -1) {
+            return res.status(403).json({ error: 'STORE_FROZEN_READONLY', message: 'System is in read-only mode.' });
+          }
+          next();
+        });
         app.use('/api/inv/auth', require('./api/inv/auth'));
         app.use('/api/inv/products', require('./api/inv/products'));
         app.use('/api/inv/stock', require('./api/inv/stock'));
@@ -111,6 +155,7 @@ mongoose.connect(process.env.DBCon, { dbName: 'techcross' })
         app.use('/api/saas/auth', require('./api/saas/auth'));
         app.use('/api/saas/signup', require('./api/saas/signup'));
         app.use('/api/saas/stores', require('./api/saas/stores'));
+	        app.use('/api/saas/deployments', require('./api/saas/deployments'));
 
         // ─── Public share routes (MUST be before the catch-all) ────────────────
         app.use('/share', require('./api/inv/share-public'));

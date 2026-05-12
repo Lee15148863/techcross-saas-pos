@@ -7,8 +7,10 @@ const StoreSignup = require('../../models/saas/StoreSignup');
 const SaaSUser = require('../../models/saas/SaaSUser');
 const { createTransporter } = require('../../utils/inv-crypto');
 
-const JWT_SECRET = process.env.INV_JWT_SECRET || 'saas-dev-secret';
+const JWT_SECRET = process.env.SAAS_JWT_SECRET;
 const BCRYPT_SALT_ROUNDS = 10;
+const COMPANY_NAME = process.env.COMPANY_NAME || 'TechCross';
+const DOMAIN = process.env.DOMAIN || 'techcross.ie';
 
 // Super admin auth middleware
 function superAdminAuth(req, res, next) {
@@ -320,17 +322,17 @@ router.post('/:storeId/users/:userId/email-credentials', superAdminAuth, async (
       await transporter.sendMail({
         from: process.env.SMTP_FROM || process.env.SMTP_USER,
         to: targetUser.email,
-        subject: 'Your TechCross SaaS Store Credentials',
+        subject: 'Your ' + COMPANY_NAME + ' SaaS Store Credentials',
         html: '<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="font-family:-apple-system,sans-serif;background:#f5f5f7;padding:40px 20px;">'
           + '<div style="max-width:480px;margin:0 auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.08);">'
           + '<div style="background:#0071e3;padding:24px;text-align:center;">'
-          + '<h1 style="color:#fff;margin:0;font-size:20px;">TechCross SaaS</h1>'
+          + '<h1 style="color:#fff;margin:0;font-size:20px;">' + COMPANY_NAME + ' SaaS</h1>'
           + '<p style="color:rgba(255,255,255,.8);margin:4px 0 0;font-size:13px;">Store Account Credentials</p></div>'
           + '<div style="padding:24px;">'
           + '<p style="font-size:14px;color:#1d1d1f;">Hello <strong>' + targetUser.displayName + '</strong>,</p>'
-          + '<p style="font-size:14px;color:#6e6e73;">Your TechCross SaaS store account has been set up. Use the credentials below to sign in.</p>'
+          + '<p style="font-size:14px;color:#6e6e73;">Your ' + COMPANY_NAME + ' SaaS store account has been set up. Use the credentials below to sign in.</p>'
           + '<div style="background:#f5f5f7;border-radius:12px;padding:16px;margin:16px 0;">'
-          + '<p style="margin:0 0 8px;font-size:13px;color:#6e6e73;"><strong>Login:</strong> <a href="https://techcross.ie/saas/login.html" style="color:#0071e3;">https://techcross.ie/saas/login.html</a></p>'
+          + '<p style="margin:0 0 8px;font-size:13px;color:#6e6e73;"><strong>Login:</strong> <a href="https://' + DOMAIN + '/saas/login.html" style="color:#0071e3;">https://' + DOMAIN + '/saas/login.html</a></p>'
           + '<p style="margin:0 0 8px;font-size:13px;color:#6e6e73;"><strong>Username:</strong> ' + targetUser.username + '</p>'
           + '<p style="margin:0;font-size:13px;color:#6e6e73;"><strong>Password:</strong> ' + newPw + '</p></div>'
           + '<p style="font-size:12px;color:#8e8e93;">For security, please change your password after signing in.</p></div></div></body></html>'

@@ -3,7 +3,7 @@ const router = express.Router();
 const jwt = require('jsonwebtoken');
 const StoreSignup = require('../../models/saas/StoreSignup');
 
-const JWT_SECRET = process.env.INV_JWT_SECRET || 'saas-dev-secret';
+const JWT_SECRET = process.env.SAAS_JWT_SECRET;
 
 function superAdminAuth(req, res, next) {
   const authHeader = req.headers['authorization'];

@@ -2,16 +2,29 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const rateLimit = require('express-rate-limit');
 const SaaSUser = require('../../models/saas/SaaSUser');
 
 const BCRYPT_SALT_ROUNDS = 10;
-const JWT_SECRET = process.env.INV_JWT_SECRET || 'saas-dev-secret';
+const JWT_SECRET = process.env.SAAS_JWT_SECRET;
 
 const MAX_LOGIN_ATTEMPTS = 5;
 const LOCK_DURATION_MINUTES = 30;
 
+// Rate limiter: 20 login attempts per hour
+const loginLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 20,
+  keyGenerator: function(req) {
+    return req.headers['x-forwarded-for'] ? req.headers['x-forwarded-for'].split(',')[0].trim() : (req.ip || req.socket.remoteAddress);
+  },
+  message: { error: 'Too many login attempts. Limit: 20/hour.' },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
 // POST /api/saas/auth/login
-router.post('/login', async (req, res) => {
+router.post('/login', loginLimiter, async (req, res) => {
   try {
     const { username, password } = req.body;
     if (!username || !password) {

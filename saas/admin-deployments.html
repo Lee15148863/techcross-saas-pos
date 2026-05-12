@@ -1,0 +1,1098 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Deployments — TechCross SaaS</title>
+  <link rel="icon" type="image/png" href="../logo-sm.png">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'SF Pro Display', sans-serif; font-size: 14px; -webkit-font-smoothing: antialiased; }
+    body { background: #f2f2f7; min-height: 100vh; padding: 24px; }
+
+    .header { max-width: 1200px; margin: 0 auto 24px; display: flex; justify-content: space-between; align-items: center; }
+    .header h1 { font-size: 22px; font-weight: 700; }
+    .header .user-badge { font-size: 13px; color: #8e8e93; }
+    .header .user-badge strong { color: #1d1d1f; }
+    .header-right { display: flex; align-items: center; gap: 8px; }
+    .btn { padding: 8px 16px; border: none; border-radius: 10px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all .2s; }
+    .btn-primary { background: #0071e3; color: #fff; }
+    .btn-primary:hover { background: #0077ed; }
+    .btn-danger { background: #ff3b30; color: #fff; }
+    .btn-danger:hover { background: #d32f2f; }
+    .btn-outline { background: transparent; border: 1.5px solid #d2d2d7; color: #1d1d1f; }
+    .btn-outline:hover { background: #f2f2f7; }
+    .btn-sm { padding: 5px 10px; font-size: 11px; border-radius: 8px; }
+    .btn-xs { padding: 3px 8px; font-size: 10px; border-radius: 6px; }
+    .btn-back { display: inline-flex; align-items: center; gap: 4px; color: #0071e3; font-size: 13px; font-weight: 500; cursor: pointer; border: none; background: none; padding: 4px 0; margin-bottom: 16px; }
+    .btn-back:hover { text-decoration: underline; }
+    .logout-btn { padding: 6px 16px; border: none; background: #ff3b30; color: #fff; border-radius: 8px; cursor: pointer; font-size: 13px; }
+
+    .card { background: #fff; border-radius: 16px; padding: 20px; box-shadow: 0 1px 10px rgba(0,0,0,.05); margin-bottom: 16px; }
+    .card h2 { font-size: 16px; font-weight: 600; margin-bottom: 16px; }
+
+    .toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 8px; }
+    .filter-group { display: flex; gap: 6px; }
+    .filter-btn { padding: 5px 12px; border: 1.5px solid #d2d2d7; border-radius: 20px; background: #fff; font-size: 12px; font-weight: 500; cursor: pointer; transition: all .2s; color: #555; }
+    .filter-btn:hover { border-color: #0071e3; color: #0071e3; }
+    .filter-btn.active { background: #0071e3; border-color: #0071e3; color: #fff; }
+
+    /* Deployment table */
+    .dep-table { width: 100%; border-collapse: collapse; }
+    .dep-table th, .dep-table td { text-align: left; padding: 12px 10px; border-bottom: 1px solid #e8e8ed; font-size: 13px; vertical-align: middle; }
+    .dep-table th { color: #8e8e93; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .5px; white-space: nowrap; }
+    .dep-table td { color: #1d1d1f; }
+    .dep-table tr:hover td { background: #fafafa; }
+
+    .badge { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+    .badge-running { background: #e8f5e9; color: #2e7d32; }
+    .badge-suspended { background: #fef2f2; color: #dc2626; }
+    .badge-deploying { background: #e3f2fd; color: #1565c0; }
+    .badge-pending { background: #fff8e1; color: #f57f17; }
+    .badge-failed { background: #fce4ec; color: #c62828; }
+    .badge-readonly_frozen { background: #f3e8ff; color: #7c3aed; }
+    .badge-trial { background: #fff8e1; color: #f57f17; }
+    .badge-active { background: #e8f5e9; color: #2e7d32; }
+    .badge-expired { background: #fce4ec; color: #c62828; }
+    .badge-deleted { background: #e8e8ed; color: #8e8e93; }
+    .sub-expiry { font-size: 11px; color: #8e8e93; white-space: nowrap; }
+    .sub-expiry.danger { color: #c62828; font-weight: 600; }
+    .sub-expiry.warning { color: #f57f17; }
+
+    .status-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 5px; vertical-align: middle; }
+    .status-dot.running { background: #2e7d32; }
+    .status-dot.suspended { background: #dc2626; }
+    .status-dot.deploying { background: #1565c0; animation: pulse 1.2s infinite; }
+    .status-dot.pending { background: #f57f17; }
+    .status-dot.failed { background: #c62828; }
+    .status-dot.readonly_frozen { background: #7c3aed; }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .3; } }
+
+    .actions-cell { display: flex; gap: 4px; flex-wrap: wrap; }
+    .service-name { font-family: 'SF Mono', 'Menlo', monospace; font-size: 12px; color: #555; word-break: break-all; }
+    .store-name-cell { font-weight: 600; }
+    .version-cell { font-family: 'SF Mono', 'Menlo', monospace; font-size: 11px; color: #8e8e93; }
+    .url-link { color: #0071e3; text-decoration: none; font-size: 12px; }
+    .url-link:hover { text-decoration: underline; }
+    .error-text { color: #c62828; font-size: 11px; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    /* Health summary cards */
+    .health-summary { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; margin-bottom: 16px; }
+    .health-card { display: flex; flex-direction: column; align-items: center; padding: 14px 10px; border-radius: 12px; background: #f9f9fb; }
+    .health-card .health-count { font-size: 24px; font-weight: 700; line-height: 1.2; }
+    .health-card .health-label { font-size: 11px; text-transform: uppercase; letter-spacing: .5px; color: #8e8e93; margin-top: 2px; }
+    .health-card-healthy .health-count { color: #2e7d32; }
+    .health-card-offline .health-count { color: #c62828; }
+    .health-card-frozen .health-count { color: #7c3aed; }
+    .health-card-deploying .health-count { color: #1565c0; }
+    @media (max-width:500px) { .health-summary { grid-template-columns: repeat(2,1fr); } }
+
+    /* Health dot in table */
+    .health-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; vertical-align: middle; }
+    .health-dot.healthy { background: #2e7d32; }
+    .health-dot.offline { background: #c62828; }
+    .health-dot.deploying { background: #1565c0; animation: pulse 1.2s infinite; }
+    .health-dot.readonly_frozen { background: #7c3aed; }
+    .health-dot.unknown { background: #8e8e93; }
+    .health-latency { font-size: 10px; color: #8e8e93; margin-left: 2px; }
+
+    /* Empty state */
+    .empty-state { text-align: center; padding: 60px 20px; color: #8e8e93; }
+    .empty-state h3 { font-size: 16px; font-weight: 600; margin-bottom: 6px; color: #555; }
+    .empty-state p { font-size: 13px; margin-bottom: 16px; }
+
+    /* New deployment modal */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 100; align-items: center; justify-content: center; }
+    .modal-overlay.open { display: flex; }
+    .modal { background: #fff; border-radius: 20px; padding: 28px; width: 90%; max-width: 520px; max-height: 90vh; overflow-y: auto; }
+    .modal h2 { font-size: 18px; font-weight: 700; margin-bottom: 6px; }
+    .modal p.desc { font-size: 13px; color: #8e8e93; margin-bottom: 20px; }
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 5px; color: #1d1d1f; }
+    .form-group input, .form-group textarea { width: 100%; padding: 10px 12px; border: 1.5px solid #d2d2d7; border-radius: 10px; font-size: 13px; outline: none; font-family: inherit; transition: border .2s; }
+    .form-group input:focus, .form-group textarea:focus { border-color: #0071e3; }
+    .form-group textarea { min-height: 60px; resize: vertical; font-family: 'SF Mono', 'Menlo', monospace; font-size: 12px; }
+    .form-group .hint { font-size: 11px; color: #8e8e93; margin-top: 4px; }
+    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+    .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,.3); border-top-color: #fff; border-radius: 50%; animation: spin .6s linear infinite; vertical-align: middle; margin-right: 4px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Detail panel */
+    .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .detail-item { }
+    .detail-item .label { font-size: 11px; color: #8e8e93; text-transform: uppercase; letter-spacing: .3px; margin-bottom: 2px; }
+    .detail-item .value { font-size: 14px; color: #1d1d1f; word-break: break-all; }
+    .detail-item .value.mono { font-family: 'SF Mono', 'Menlo', monospace; font-size: 12px; }
+    @media (max-width: 600px) { .detail-grid { grid-template-columns: 1fr; } }
+
+    /* Version timeline */
+    .version-timeline { margin-top: 16px; border-top: 1px solid #e8e8ed; padding-top: 16px; }
+    .version-timeline h3 { font-size: 14px; font-weight: 600; margin-bottom: 12px; }
+    .version-entry { position: relative; padding: 0 0 16px 24px; border-left: 2px solid #d2d2d7; margin-left: 8px; }
+    .version-entry:last-child { border-color: transparent; padding-bottom: 0; }
+    .version-entry .dot { position: absolute; left: -5px; top: 4px; width: 8px; height: 8px; border-radius: 50%; background: #d2d2d7; }
+    .version-entry .dot.success { background: #2e7d32; }
+    .version-entry .dot.failed { background: #c62828; }
+    .version-entry .dot.deploying { background: #1565c0; animation: pulse 1.2s infinite; }
+    .version-entry .v-header { font-size: 13px; font-weight: 600; color: #1d1d1f; }
+    .version-entry .v-meta { font-size: 11px; color: #8e8e93; margin-top: 2px; }
+    .version-entry .v-meta code { font-family: 'SF Mono', 'Menlo', monospace; background: #f2f2f7; padding: 1px 5px; border-radius: 4px; }
+    .version-entry .v-notes { font-size: 12px; color: #555; margin-top: 6px; padding: 8px 10px; background: #f9f9fb; border-radius: 8px; white-space: pre-wrap; }
+    .version-entry .v-notes-empty { font-size: 12px; color: #bbb; font-style: italic; margin-top: 6px; }
+    .version-badge { display: inline-block; padding: 1px 8px; border-radius: 12px; font-size: 10px; font-weight: 600; margin-left: 6px; }
+    .version-badge.success { background: #e8f5e9; color: #2e7d32; }
+    .version-badge.failed { background: #fce4ec; color: #c62828; }
+    .version-count { font-size: 11px; color: #8e8e93; margin-left: 4px; }
+
+    .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #1d1d1f; color: #fff; padding: 12px 24px; border-radius: 12px; font-size: 13px; opacity: 0; transition: opacity .3s; pointer-events: none; z-index: 200; }
+    .toast.show { opacity: 1; }
+
+    @media (max-width: 720px) {
+      body { padding: 12px; }
+      .header { flex-direction: column; gap: 12px; align-items: flex-start; }
+      .dep-table { font-size: 12px; }
+      .dep-table th, .dep-table td { padding: 8px 6px; }
+      .actions-cell { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>Deployment Management</h1>
+    <div class="user-badge"><strong id="displayName">-</strong> &middot; <span id="userRole">-</span></div>
+  </div>
+  <div class="header-right">
+    <button class="btn btn-outline" onclick="location.href='/saas/admin.html'">Admin Console</button>
+    <button class="logout-btn" onclick="logout()">Sign Out</button>
+  </div>
+</div>
+
+<!-- Main card -->
+<div class="card">
+  <div class="toolbar">
+    <h2>Store Deployments</h2>
+    <div style="display:flex; gap:8px;">
+      <button class="btn btn-primary" onclick="openNewModal()">+ New Deployment</button>
+      <button class="btn btn-outline btn-sm" onclick="loadDeployments()" title="Refresh">&#x21bb;</button>
+    </div>
+  </div>
+
+  <!-- Health summary -->
+  <div class="health-summary" id="healthSummary">
+    <div class="health-card health-card-healthy"><span class="health-count" id="totalHealthy">-</span><span class="health-label">Healthy</span></div>
+    <div class="health-card health-card-offline"><span class="health-count" id="totalOffline">-</span><span class="health-label">Offline</span></div>
+    <div class="health-card health-card-frozen"><span class="health-count" id="totalFrozen">-</span><span class="health-label">Frozen</span></div>
+    <div class="health-card health-card-deploying"><span class="health-count" id="totalDeploying">-</span><span class="health-label">Deploying</span></div>
+  </div>
+
+  <div class="filter-group" style="margin-bottom:16px;">
+    <button class="filter-btn active" data-filter="all" onclick="setFilter('all',this)">All</button>
+    <button class="filter-btn" data-filter="running" onclick="setFilter('running',this)">Running</button>
+    <button class="filter-btn" data-filter="deploying" onclick="setFilter('deploying',this)">Deploying</button>
+    <button class="filter-btn" data-filter="suspended" onclick="setFilter('suspended',this)">Suspended</button>
+    <button class="filter-btn" data-filter="failed" onclick="setFilter('failed',this)">Failed</button>
+    <button class="filter-btn" data-filter="readonly_frozen" onclick="setFilter('readonly_frozen',this)">Frozen</button>
+  </div>
+
+  <div style="overflow-x:auto;">
+    <table class="dep-table" id="depTable">
+      <thead>
+        <tr>
+          <th>Store</th>
+          <th>Service</th>
+          <th>Status</th>
+          <th>Health</th>
+          <th>Subscription</th>
+          <th>Version</th>
+          <th>URL</th>
+          <th>Deployed</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="depBody">
+      </tbody>
+    </table>
+  </div>
+  <div id="emptyState" class="empty-state" style="display:none;">
+    <h3>No deployments yet</h3>
+    <p>Create your first store deployment to get started.</p>
+    <button class="btn btn-primary" onclick="openNewModal()">+ New Deployment</button>
+  </div>
+</div>
+
+<!-- New Deployment Modal -->
+<div class="modal-overlay" id="newModal">
+  <div class="modal" onclick="event.stopPropagation()">
+    <h2>New Store Deployment</h2>
+    <p class="desc">Creates a Cloud Run service with a dedicated MongoDB instance.</p>
+    <div class="form-group">
+      <label>Store Name</label>
+      <input type="text" id="inputStoreName" placeholder="e.g. ACME Repair Centre" oninput="previewServiceName()">
+      <div class="hint">Display name shown on receipts and invoices.</div>
+    </div>
+    <div class="form-group">
+      <label>Subdomain / Service Name</label>
+      <input type="text" id="inputSubdomain" placeholder="e.g. acme-repair" oninput="previewServiceName()">
+      <div class="hint">URL-safe identifier. Used as Cloud Run service name. Preview: <span id="namePreview" style="font-family:monospace;color:#0071e3;">-</span></div>
+    </div>
+    <div class="form-group">
+      <label>MongoDB URI</label>
+      <input type="text" id="inputMongoUri" placeholder="mongodb+srv://user:pass@cluster.mongodb.net/store-db">
+      <div class="hint">Dedicated MongoDB connection string for this store.</div>
+    </div>
+    <div class="form-group">
+      <label>Deployment PIN <span style="font-weight:400;color:#8e8e93;">(4-20 digits)</span></label>
+      <input type="password" id="inputDeployPin" placeholder="e.g. 4825" maxlength="20" inputmode="numeric">
+      <div class="hint">Required for dangerous actions (suspend, activate, delete, rollback). Store this securely.</div>
+    </div>
+    <div class="form-group">
+      <label>Store Timezone</label>
+      <select id="inputTimezone" style="width:100%;padding:10px 12px;border:1.5px solid #d2d2d7;border-radius:10px;font-size:13px;outline:none;font-family:inherit;background:#fff;">
+        <option value="Europe/Dublin">Europe/Dublin (IST/GMT)</option>
+        <option value="Europe/London">Europe/London (BST/GMT)</option>
+        <option value="America/New_York">America/New_York (EST/EDT)</option>
+        <option value="Asia/Shanghai">Asia/Shanghai (CST)</option>
+      </select>
+      <div class="hint">Used for dynamic verification code generation.</div>
+    </div>
+    <div class="form-group">
+      <label>Extra Env Vars <span style="font-weight:400;color:#8e8e93;">(optional, one KEY=VALUE per line)</span></label>
+      <textarea id="inputEnv" placeholder="COMPANY_ADDRESS=123 Main St&#10;COMPANY_PHONE=+35346000000&#10;VAT_NUMBER=IE1234567OH"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeNewModal()">Cancel</button>
+      <button class="btn btn-primary" id="createBtn" onclick="createDeployment()">Create &amp; Deploy</button>
+    </div>
+  </div>
+</div>
+
+<!-- Detail Modal -->
+<div class="modal-overlay" id="detailModal">
+  <div class="modal" onclick="event.stopPropagation()" style="max-width:600px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+      <h2 id="detailTitle" style="font-size:18px;font-weight:700;"></h2>
+      <button class="btn btn-outline btn-sm" onclick="closeDetailModal()">&times;</button>
+    </div>
+    <div id="detailContent"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeDetailModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Version History Modal -->
+<div class="modal-overlay" id="versionsModal">
+  <div class="modal" onclick="event.stopPropagation()" style="max-width:640px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+      <h2 id="versionsTitle" style="font-size:18px;font-weight:700;">Deployment History</h2>
+      <button class="btn btn-outline btn-sm" onclick="closeVersionsModal()">&times;</button>
+    </div>
+    <div id="versionContent" style="min-height:100px;">
+      <div class="empty-state">Loading...</div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeVersionsModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Dangerous Action Verification Modal -->
+<div class="modal-overlay" id="actionModal">
+  <div class="modal" onclick="event.stopPropagation()" style="max-width:480px;">
+    <h2 id="actionModalTitle">Confirm Action</h2>
+    <p class="desc" id="actionModalDesc">Verification required for this dangerous action.</p>
+
+    <div id="actionModalInfo" style="background:#f9f9fb;border-radius:10px;padding:12px;margin-bottom:16px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:13px;">
+        <div><span style="color:#8e8e93;">Store:</span> <strong id="actionStoreName">-</strong></div>
+        <div><span style="color:#8e8e93;">Status:</span> <strong id="actionStatus">-</strong></div>
+        <div><span style="color:#8e8e93;">Current Version:</span> <strong id="actionCurrentVersion">-</strong></div>
+        <div><span style="color:#8e8e93;">Timezone:</span> <strong id="actionTimezone">-</strong></div>
+        <div><span style="color:#8e8e93;">Action:</span> <strong id="actionNameLabel">-</strong></div>
+      </div>
+      <div id="actionRollbackTarget" style="display:none;margin-top:8px;padding-top:8px;border-top:1px solid #e8e8ed;font-size:13px;">
+        <span style="color:#8e8e93;">Rollback Target:</span> <strong id="actionTargetVersion">-</strong>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Verification Code <span style="font-weight:400;color:#8e8e93;">(HHMM + PIN)</span></label>
+      <input type="text" id="actionCode" placeholder="e.g. 22414825" maxlength="24" autocomplete="off" style="font-family:'SF Mono','Menlo',monospace;font-size:16px;letter-spacing:2px;">
+      <div class="hint">Current store time: <span id="storeTimeDisplay" style="font-weight:600;">-</span>. Enter current HHMM + deployment PIN (no separator).</div>
+    </div>
+    <div class="form-group" id="actionExtraGroup" style="display:none;">
+      <label id="actionExtraLabel">New Expiry Date</label>
+      <input type="date" id="actionExtraDate">
+      <div class="hint" id="actionExtraHint">Set new subscription expiry date.</div>
+    </div>
+    <div class="form-group">
+      <label>Reason for this action</label>
+      <textarea id="actionReason" placeholder="Explain why this action is needed..." rows="2"></textarea>
+    </div>
+    <div class="modal-actions" id="actionModalActions">
+      <button class="btn btn-outline" onclick="closeActionModal()">Cancel</button>
+      <button class="btn btn-danger" id="actionConfirmBtn" onclick="confirmAction()">Confirm &amp; Execute</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+var token = localStorage.getItem('saas_token');
+var userData = JSON.parse(localStorage.getItem('saas_user') || '{}');
+var currentFilter = 'all';
+
+if (!token || userData.role !== 'super_admin') {
+  window.location.href = '/saas/login.html';
+}
+
+document.getElementById('displayName').textContent = userData.displayName || userData.username;
+document.getElementById('userRole').textContent = userData.role;
+
+function getAuthHeaders() {
+  return { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' };
+}
+
+function showToast(msg) {
+  var t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(function() { t.classList.remove('show'); }, 2500);
+}
+
+function logout() {
+  localStorage.removeItem('saas_token');
+  localStorage.removeItem('saas_user');
+  window.location.href = '/saas/login.html';
+}
+
+function escHtml(str) {
+  var d = document.createElement('div');
+  d.textContent = str || '';
+  return d.innerHTML;
+}
+
+function getSubscriptionCell(d) {
+  var status = d.subscriptionStatus || 'trial';
+  var badge = 'badge-' + status;
+  var label = status.charAt(0).toUpperCase() + status.slice(1);
+
+  // Calculate remaining days
+  var expiry = d.subscriptionExpiresAt ? new Date(d.subscriptionExpiresAt) : null;
+  var now = new Date();
+  var daysLeft = expiry ? Math.ceil((expiry.getTime() - now.getTime()) / 86400000) : null;
+
+  var expiryStr = '';
+  var extraClass = '';
+  if (daysLeft !== null) {
+    if (daysLeft < 0) {
+      expiryStr = 'Expired ' + Math.abs(daysLeft) + 'd ago';
+      extraClass = 'danger';
+    } else if (daysLeft === 0) {
+      expiryStr = 'Expires today';
+      extraClass = 'warning';
+    } else if (daysLeft <= 7) {
+      expiryStr = daysLeft + 'd remaining';
+      extraClass = 'warning';
+    } else {
+      expiryStr = daysLeft + 'd remaining';
+    }
+  }
+
+  var dateStr = expiry ? expiry.toLocaleDateString() : '-';
+  return '<span class="badge ' + badge + '" style="margin-right:4px;">' + label + '</span>' +
+    '<div class="sub-expiry ' + extraClass + '">' + expiryStr + '<br><span style="font-size:10px;">' + dateStr + '</span></div>';
+}
+
+function timeAgo(dateStr) {
+  if (!dateStr) return '-';
+  var ms = Date.now() - new Date(dateStr).getTime();
+  if (ms < 60000) return 'just now';
+  if (ms < 3600000) return Math.floor(ms/60000) + 'm ago';
+  if (ms < 86400000) return Math.floor(ms/3600000) + 'h ago';
+  return Math.floor(ms/86400000) + 'd ago';
+}
+
+// ─── Health ──────────────────────────────────────────────────────────────
+
+function getHealthCell(d) {
+  var h = d.lastHealthStatus || 'unknown';
+  var dotClass = h;
+  // Override health dot for non-running states
+  if (d.status === 'suspended') { dotClass = 'suspended'; h = 'suspended'; }
+  else if (d.status === 'deploying') { dotClass = 'deploying'; h = 'deploying'; }
+  else if (d.status === 'readonly_frozen') { dotClass = 'readonly_frozen'; h = 'frozen'; }
+  else if (d.status === 'failed' || d.status === 'pending') { dotClass = 'unknown'; h = '-'; }
+
+  var label = h.charAt(0).toUpperCase() + h.slice(1);
+  var lat = '';
+  if (d.healthLatency && d.healthLatency > 0 && h === 'healthy') {
+    lat = '<span class="health-latency">' + d.healthLatency + 'ms</span>';
+  }
+  return '<span class="health-dot ' + dotClass + '"></span><span style="font-size:12px;">' + label + '</span>' + lat;
+}
+
+function mongoStateLabel(state) {
+  var states = { 0: 'Disconnected', 1: 'Connected', 2: 'Connecting', 3: 'Disconnecting' };
+  return states[state] || (state === -1 ? '-' : 'Unknown');
+}
+
+function updateHealthSummary() {
+  var total = deployments.length;
+  var healthy = 0, offline = 0, frozen = 0, deploying = 0;
+  deployments.forEach(function(d) {
+    if (d.status === 'deploying') deploying++;
+    else if (d.status === 'readonly_frozen') frozen++;
+    else if (d.lastHealthStatus === 'offline') offline++;
+    else if (d.lastHealthStatus === 'healthy') healthy++;
+  });
+  // A frozen deployment that's healthy counts as frozen, not healthy
+  deployments.forEach(function(d) {
+    if (d.status === 'readonly_frozen' && d.lastHealthStatus === 'healthy') { healthy = Math.max(0, healthy - 1); }
+  });
+  // If no health data yet, healthy count should be 0
+  document.getElementById('totalHealthy').textContent = healthy || 0;
+  document.getElementById('totalOffline').textContent = offline || 0;
+  document.getElementById('totalFrozen').textContent = frozen || 0;
+  document.getElementById('totalDeploying').textContent = deploying || 0;
+}
+
+function checkAllHealth() {
+  fetch('/api/saas/deployments/check-all-health', {
+    method: 'POST',
+    headers: getAuthHeaders()
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data && data.results) {
+      // Reload deployments to get updated health data
+      return loadDeployments();
+    }
+  })
+  .catch(function() { /* silent — keep last known state */ });
+}
+
+// ─── Filter ────────────────────────────────────────────────────────────
+
+function setFilter(filter, btn) {
+  currentFilter = filter;
+  document.querySelectorAll('.filter-btn').forEach(function(b) { b.classList.remove('active'); });
+  if (btn) btn.classList.add('active');
+  renderTable();
+}
+
+// ─── Load & render ─────────────────────────────────────────────────────
+
+var deployments = [];
+
+function loadDeployments() {
+  fetch('/api/saas/deployments', { headers: getAuthHeaders() })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      deployments = data || [];
+      renderTable();
+    })
+    .catch(function() {
+      document.getElementById('depBody').innerHTML = '<tr><td colspan="9" style="text-align:center;padding:30px;color:#8e8e93;">Failed to load deployments</td></tr>';
+    });
+}
+
+function renderTable() {
+  var filtered = deployments;
+  if (currentFilter !== 'all') {
+    filtered = deployments.filter(function(d) { return d.status === currentFilter; });
+  }
+
+  var body = document.getElementById('depBody');
+  var empty = document.getElementById('emptyState');
+
+  if (!filtered.length) {
+    body.innerHTML = '';
+    empty.style.display = deployments.length === 0 ? 'block' : 'block';
+    empty.innerHTML = deployments.length === 0
+      ? '<h3>No deployments yet</h3><p>Create your first store deployment to get started.</p><button class="btn btn-primary" onclick="openNewModal()">+ New Deployment</button>'
+      : '<h3>No ' + currentFilter + ' deployments</h3><p>Try a different filter.</p>';
+    return;
+  }
+  empty.style.display = 'none';
+
+  body.innerHTML = filtered.map(function(d) {
+    var statusClass = d.status === 'running' ? 'running' : (d.status === 'suspended' ? 'suspended' : (d.status === 'deploying' ? 'deploying' : (d.status === 'failed' ? 'failed' : (d.status === 'readonly_frozen' ? 'readonly_frozen' : 'pending'))));
+    var badgeClass = 'badge-' + statusClass;
+    var statusLabel = d.status.charAt(0).toUpperCase() + d.status.slice(1);
+
+    var actions = '';
+    if (d.status === 'running') {
+      actions += '<button class="btn btn-outline btn-xs" onclick="restartDep(\'' + d._id + '\')">Restart</button>';
+      actions += '<button class="btn btn-primary btn-xs" onclick="openActionModal(\'freeze\',\'' + d._id + '\')">Freeze</button>';
+      actions += '<button class="btn btn-danger btn-xs" onclick="openActionModal(\'suspend\',\'' + d._id + '\')">Suspend</button>';
+      actions += '<button class="btn btn-outline btn-xs" onclick="openActionModal(\'redeploy\',\'' + d._id + '\')">Re-deploy</button>';
+      actions += '<button class="btn btn-outline btn-xs" onclick="openActionModal(\'rollback\',\'' + d._id + '\')">Rollback</button>';
+      actions += '<button class="btn btn-outline btn-xs" style="border-color:#7c3aed;color:#7c3aed;" onclick="openActionModal(\'extend\',\'' + d._id + '\')">Extend</button>';
+    } else if (d.status === 'suspended') {
+      actions += '<button class="btn btn-primary btn-xs" onclick="openActionModal(\'activate\',\'' + d._id + '\')">Activate</button>';
+      actions += '<button class="btn btn-outline btn-xs" onclick="openActionModal(\'redeploy\',\'' + d._id + '\')">Re-deploy</button>';
+    } else if (d.status === 'failed') {
+      actions += '<button class="btn btn-primary btn-xs" onclick="openActionModal(\'redeploy\',\'' + d._id + '\')">Re-deploy</button>';
+    } else if (d.status === 'pending') {
+      actions += '<button class="btn btn-primary btn-xs" onclick="deployDep(\'' + d._id + '\')">Deploy</button>';
+    } else if (d.status === 'readonly_frozen') {
+      actions += '<button class="btn btn-success btn-xs" onclick="openActionModal(\'unfreeze\',\'' + d._id + '\')">Unfreeze</button>';
+      actions += '<button class="btn btn-outline btn-xs" onclick="openActionModal(\'redeploy\',\'' + d._id + '\')">Re-deploy</button>';
+      actions += '<button class="btn btn-outline btn-xs" style="border-color:#7c3aed;color:#7c3aed;" onclick="openActionModal(\'extend\',\'' + d._id + '\')">Extend</button>';
+    }
+    actions += '<button class="btn btn-outline btn-xs" onclick="showDetail(\'' + d._id + '\')">Info</button>';
+    actions += '<button class="btn btn-outline btn-xs" onclick="showVersions(\'' + d._id + '\')">Versions</button>';
+    actions += '<button class="btn btn-outline btn-xs" onclick="viewLogs(\'' + d._id + '\')">Logs</button>';
+    actions += '<button class="btn btn-outline btn-xs" onclick="openActionModal(\'delete\',\'' + d._id + '\')" style="color:#c62828;">Delete</button>';
+
+    var depTime = timeAgo(d.deployedAt || d.createdAt);
+    var svcName = d.serviceName || '-';
+    var version = d.version || '-';
+
+    return '<tr>' +
+      '<td class="store-name-cell">' + escHtml(d.storeName) + '</td>' +
+      '<td><span class="service-name">' + escHtml(svcName) + '</span></td>' +
+      '<td><span class="status-dot ' + statusClass + '"></span><span class="badge ' + badgeClass + '">' + statusLabel + '</span></td>' +
+      '<td>' + getHealthCell(d) + '</td>' +
+      '<td>' + getSubscriptionCell(d) + '</td>' +
+      '<td class="version-cell">' + escHtml(version) + (d.versions && d.versions.length ? '<span class="version-count">(' + d.versions.length + ')</span>' : '') + '</td>' +
+      '<td>' + (d.cloudRunUrl ? '<a class="url-link" href="' + escHtml(d.cloudRunUrl) + '" target="_blank">Open</a>' : '<span style="color:#8e8e93;">-</span>') + '</td>' +
+      '<td style="white-space:nowrap;color:#8e8e93;font-size:12px;">' + depTime + '</td>' +
+      '<td><div class="actions-cell">' + actions + '</div></td>' +
+      '</tr>';
+  }).join('');
+
+  updateHealthSummary();
+}
+
+// ─── New deployment modal ──────────────────────────────────────────────
+
+function previewServiceName() {
+  var sub = document.getElementById('inputSubdomain').value.trim().toLowerCase();
+  var name = sub.replace(/[^a-z0-9-]/g, '-').replace(/--+/g, '-').replace(/^-|-$/g, '').slice(0, 63);
+  document.getElementById('namePreview').textContent = name || '-';
+}
+
+function openNewModal() {
+  document.getElementById('newModal').classList.add('open');
+  document.getElementById('inputStoreName').value = '';
+  document.getElementById('inputSubdomain').value = '';
+  document.getElementById('inputMongoUri').value = '';
+  document.getElementById('inputEnv').value = '';
+  document.getElementById('inputDeployPin').value = '';
+  document.getElementById('inputTimezone').value = 'Europe/Dublin';
+  document.getElementById('createBtn').disabled = false;
+  document.getElementById('createBtn').textContent = 'Create & Deploy';
+  previewServiceName();
+}
+
+function closeNewModal() {
+  document.getElementById('newModal').classList.remove('open');
+}
+
+function createDeployment() {
+  var storeName = document.getElementById('inputStoreName').value.trim();
+  var subdomain = document.getElementById('inputSubdomain').value.trim().toLowerCase();
+  var mongoUri = document.getElementById('inputMongoUri').value.trim();
+  var envText = document.getElementById('inputEnv').value.trim();
+
+  if (!storeName || !subdomain || !mongoUri) {
+    showToast('Store Name, Subdomain, and MongoDB URI are required'); return;
+  }
+
+  var deployPin = document.getElementById('inputDeployPin').value.trim();
+  var timezone = document.getElementById('inputTimezone').value;
+
+  var env = {};
+  if (envText) {
+    envText.split('\n').forEach(function(line) {
+      var idx = line.indexOf('=');
+      if (idx > 0) {
+        var k = line.slice(0, idx).trim();
+        var v = line.slice(idx + 1).trim();
+        if (k) env[k] = v;
+      }
+    });
+  }
+
+  var btn = document.getElementById('createBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Creating...';
+
+  fetch('/api/saas/deployments', {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ storeName, subdomain, mongoUri, env, deployPin, timezone })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(dep) {
+    if (dep.error) {
+      showToast(dep.error);
+      btn.disabled = false;
+      btn.textContent = 'Create & Deploy';
+      return;
+    }
+    showToast('Deployment record created');
+    deployments.unshift(dep);
+    renderTable();
+    closeNewModal();
+
+    // Auto-trigger deploy
+    deployDep(dep._id);
+  })
+  .catch(function(err) {
+    showToast('Failed to create deployment');
+    btn.disabled = false;
+    btn.textContent = 'Create & Deploy';
+  });
+}
+
+// ─── Actions ───────────────────────────────────────────────────────────
+
+function deployDep(id) {
+  var btn = event && event.target ? event.target : null;
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>'; }
+
+  fetch('/api/saas/deployments/' + id + '/deploy', {
+    method: 'POST',
+    headers: getAuthHeaders()
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.error) {
+      showToast('Deploy failed: ' + data.error);
+      if (btn) { btn.disabled = false; btn.textContent = 'Deploy'; }
+      return;
+    }
+    showToast('Deploy started — build #' + (data.buildId || '').slice(-8));
+    loadDeployments();
+    // Start polling for status
+    pollDeployment(id);
+  })
+  .catch(function() {
+    showToast('Network error');
+    if (btn) { btn.disabled = false; btn.textContent = 'Deploy'; }
+  });
+}
+
+function restartDep(id) {
+  if (!confirm('Restart this Cloud Run service? It will create a new revision.')) return;
+  fetch('/api/saas/deployments/' + id + '/restart', {
+    method: 'POST',
+    headers: getAuthHeaders()
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.error) { showToast('Error: ' + data.error); return; }
+    showToast('Restart triggered');
+    loadDeployments();
+  })
+  .catch(function() { showToast('Network error'); });
+}
+
+function viewLogs(id) {
+  fetch('/api/saas/deployments/' + id + '/logs', {
+    headers: getAuthHeaders()
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.error) { showToast('Error: ' + data.error); return; }
+    if (data.logsUrl) {
+      window.open(data.logsUrl, '_blank');
+    } else if (data.buildLogsUrl) {
+      window.open(data.buildLogsUrl, '_blank');
+    } else {
+      showToast('No logs URL available');
+    }
+  })
+  .catch(function() { showToast('Network error'); });
+}
+
+// ─── Dangerous action modal ────────────────────────────────────────────
+
+var pendingAction = null;
+var pendingDepId = null;
+var pendingTargetVersionId = null;
+var storeTimeInterval = null;
+
+function getLocalHHMM(d, tz) {
+  try {
+    var parts = new Intl.DateTimeFormat('en-GB', {
+      timeZone: tz, hour: '2-digit', minute: '2-digit', hour12: false
+    }).formatToParts(d);
+    var h = '', m = '';
+    for (var i = 0; i < parts.length; i++) {
+      if (parts[i].type === 'hour') h = parts[i].value;
+      if (parts[i].type === 'minute') m = parts[i].value;
+    }
+    return h + m;
+  } catch (e) { return '----'; }
+}
+
+function updateStoreTimeDisplay(tz) {
+  var el = document.getElementById('storeTimeDisplay');
+  if (!el) return;
+  if (!tz) { el.textContent = '-'; return; }
+  var hhmm = getLocalHHMM(new Date(), tz);
+  el.textContent = hhmm + ' (' + tz + ')';
+}
+
+function openActionModal(action, depId, targetVersionId) {
+  var dep = deployments.find(function(d) { return d._id === depId; });
+  if (!dep) { showToast('Deployment not found'); return; }
+
+  pendingAction = action;
+  pendingDepId = depId;
+  pendingTargetVersionId = targetVersionId || null;
+
+  var tz = dep.timezone || 'Europe/Dublin';
+  document.getElementById('actionStoreName').textContent = dep.storeName;
+  document.getElementById('actionStatus').textContent = dep.status;
+  document.getElementById('actionCurrentVersion').textContent = dep.version || '-';
+  document.getElementById('actionTimezone').textContent = tz;
+  document.getElementById('actionCode').value = '';
+  document.getElementById('actionReason').value = '';
+
+  // Set title/desc based on action
+  var actionLabels = {
+    suspend:     { title: 'Suspend Service', desc: 'Scale Cloud Run service to 0 instances. Service will be unavailable.', confirmClass: 'btn-danger', confirmText: 'Confirm Suspend' },
+    activate:    { title: 'Activate Service', desc: 'Restore Cloud Run service from suspension. Service will resume.', confirmClass: 'btn-primary', confirmText: 'Confirm Activate' },
+    delete:      { title: 'Delete Deployment', desc: 'Permanently delete this deployment record. Cloud Run service and data may still exist.', confirmClass: 'btn-danger', confirmText: 'Permanently Delete' },
+    redeploy:    { title: 'Force Re-deploy', desc: 'Trigger a new deployment to Cloud Run. The service will be rebuilt and deployed.', confirmClass: 'btn-primary', confirmText: 'Confirm Re-deploy' },
+    rollback:    { title: 'Rollback Deployment', desc: 'Revert to a previous version. A new build will be triggered using the previous git commit.', confirmClass: 'btn-primary', confirmText: 'Confirm Rollback' },
+    'restore-backup': { title: 'Restore Backup', desc: 'Restore from a database backup. This will overwrite current data.', confirmClass: 'btn-danger', confirmText: 'Confirm Restore' },
+    freeze:      { title: 'Freeze Service', desc: 'Switch to read-only mode. All write operations (sales, edits, deletes) will be blocked.', confirmClass: 'btn-primary', confirmText: 'Confirm Freeze' },
+    unfreeze:    { title: 'Unfreeze Service', desc: 'Restore full read-write access. Remove the read-only restriction.', confirmClass: 'btn-success', confirmText: 'Confirm Unfreeze' },
+    extend:      { title: 'Extend Subscription', desc: 'Update subscription expiry date and/or reactivate an expired subscription.', confirmClass: 'btn-primary', confirmText: 'Update Subscription' }
+  };
+  var info = actionLabels[action] || { title: 'Confirm Action', desc: 'Verification required.', confirmClass: 'btn-danger', confirmText: 'Confirm' };
+
+  document.getElementById('actionModalTitle').textContent = info.title;
+  document.getElementById('actionModalDesc').textContent = info.desc;
+  document.getElementById('actionNameLabel').textContent = action;
+
+  var confirmBtn = document.getElementById('actionConfirmBtn');
+  confirmBtn.textContent = info.confirmText;
+  confirmBtn.className = 'btn ' + info.confirmClass;
+
+  // Show extra field for extend action
+  var extraGroup = document.getElementById('actionExtraGroup');
+  if (action === 'extend') {
+    extraGroup.style.display = 'block';
+    document.getElementById('actionExtraLabel').textContent = 'New Expiry Date';
+    document.getElementById('actionExtraHint').textContent = 'Set new subscription expiry date. Leave empty to only change status/grace period.';
+    document.getElementById('actionExtraDate').value = dep.subscriptionExpiresAt
+      ? new Date(dep.subscriptionExpiresAt).toISOString().slice(0, 10) : '';
+  } else {
+    extraGroup.style.display = 'none';
+  }
+
+  // Show rollback target info if applicable
+  var rt = document.getElementById('actionRollbackTarget');
+  if (action === 'rollback') {
+    // Find previous successful version
+    var sorted = (dep.versions || []).slice().sort(function(a, b) {
+      return new Date(b.deployedAt).getTime() - new Date(a.deployedAt).getTime();
+    });
+    var target = null;
+    if (targetVersionId) {
+      target = dep.versions.id(targetVersionId);
+    } else {
+      for (var i = 1; i < sorted.length; i++) {
+        if (sorted[i].status === 'success') { target = sorted[i]; break; }
+      }
+    }
+    document.getElementById('actionTargetVersion').textContent = target
+      ? 'v' + target.version + ' (' + (target.gitCommit ? target.gitCommit.slice(0, 7) : 'no commit') + ')'
+      : 'No previous version found';
+    rt.style.display = 'block';
+  } else {
+    rt.style.display = 'none';
+  }
+
+  // Start local time ticker
+  if (storeTimeInterval) clearInterval(storeTimeInterval);
+  updateStoreTimeDisplay(tz);
+  storeTimeInterval = setInterval(function() { updateStoreTimeDisplay(tz); }, 10000);
+
+  document.getElementById('actionModal').classList.add('open');
+  setTimeout(function() { document.getElementById('actionCode').focus(); }, 100);
+}
+
+function closeActionModal() {
+  document.getElementById('actionModal').classList.remove('open');
+  if (storeTimeInterval) { clearInterval(storeTimeInterval); storeTimeInterval = null; }
+  pendingAction = null;
+  pendingDepId = null;
+  pendingTargetVersionId = null;
+}
+
+function confirmAction() {
+  var action = pendingAction;
+  var depId = pendingDepId;
+  var code = document.getElementById('actionCode').value.trim();
+  var reason = document.getElementById('actionReason').value.trim();
+
+  if (!code) { showToast('Verification code required'); return; }
+  if (!reason) { showToast('Reason required for this action'); return; }
+
+  var btn = document.getElementById('actionConfirmBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Executing...';
+
+  var url = '';
+  var method = 'POST';
+  var body = { actionCode: code, reason: reason };
+
+  switch (action) {
+    case 'suspend':
+      url = '/api/saas/deployments/' + depId + '/suspend';
+      break;
+    case 'activate':
+      url = '/api/saas/deployments/' + depId + '/activate';
+      break;
+    case 'delete':
+      url = '/api/saas/deployments/' + depId;
+      method = 'DELETE';
+      break;
+    case 'redeploy':
+      url = '/api/saas/deployments/' + depId + '/deploy';
+      break;
+    case 'rollback':
+      url = '/api/saas/deployments/' + depId + '/rollback';
+      if (pendingTargetVersionId) body.targetVersionId = pendingTargetVersionId;
+      break;
+    case 'restore-backup':
+      url = '/api/saas/deployments/' + depId + '/restore-backup';
+      break;
+    case 'freeze':
+      url = '/api/saas/deployments/' + depId + '/freeze';
+      break;
+    case 'unfreeze':
+      url = '/api/saas/deployments/' + depId + '/unfreeze';
+      break;
+    case 'extend':
+      url = '/api/saas/deployments/' + depId + '/subscription';
+      method = 'PUT';
+      body.subscriptionExpiresAt = document.getElementById('actionExtraDate').value || undefined;
+      body.subscriptionStatus = 'active';
+      break;
+    default:
+      showToast('Unknown action');
+      btn.disabled = false;
+      btn.textContent = 'Confirm';
+      return;
+  }
+
+  fetch(url, {
+    method: method,
+    headers: getAuthHeaders(),
+    body: JSON.stringify(body)
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.error) {
+      showToast('Action failed: ' + data.error);
+      btn.disabled = false;
+      btn.textContent = 'Confirm';
+      return;
+    }
+    showToast(action.charAt(0).toUpperCase() + action.slice(1) + ' completed');
+    closeActionModal();
+    loadDeployments();
+  })
+  .catch(function() {
+    showToast('Network error');
+    btn.disabled = false;
+    btn.textContent = 'Confirm';
+  });
+}
+
+// ─── Version history ─────────────────────────────────────────────────
+
+function showVersions(id) {
+  var dep = deployments.find(function(d) { return d._id === id; });
+  var name = dep ? dep.storeName : 'Deployment';
+
+  document.getElementById('versionsTitle').textContent = escHtml(name) + ' — Version History';
+  document.getElementById('versionsModal').classList.add('open');
+  document.getElementById('versionContent').innerHTML = '<div class="empty-state">Loading...</div>';
+
+  fetch('/api/saas/deployments/' + id + '/versions', {
+    headers: getAuthHeaders()
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.error) {
+      document.getElementById('versionContent').innerHTML = '<div class="empty-state">' + escHtml(data.error) + '</div>';
+      return;
+    }
+
+    if (!data.versions || !data.versions.length) {
+      document.getElementById('versionContent').innerHTML = '<div class="empty-state">No version history recorded yet.</div>';
+      return;
+    }
+
+    var html = '<div class="version-timeline"><h3>' + data.total + ' deployment' + (data.total !== 1 ? 's' : '') + '</h3>';
+    data.versions.forEach(function(v) {
+      var statusClass = v.status === 'success' ? 'success' : 'failed';
+      var deployedAt = v.deployedAt ? new Date(v.deployedAt).toLocaleString() : '-';
+      var commitShort = v.gitCommit ? v.gitCommit.slice(0, 7) : '';
+      var commitUrl = v.gitCommit && v.gitCommit.length === 40
+        ? '<a href="https://github.com/Lee15148863/techcross-saas-pos/commit/' + escHtml(v.gitCommit) + '" target="_blank" style="color:#0071e3;text-decoration:none;">' + escHtml(commitShort) + '</a>'
+        : (commitShort ? '<code>' + escHtml(commitShort) + '</code>' : '');
+
+      html += '<div class="version-entry">' +
+        '<div class="dot ' + statusClass + '"></div>' +
+        '<div class="v-header">' +
+          'v' + escHtml(v.version || '?') +
+          '<span class="version-badge ' + statusClass + '">' + (v.status || '?') + '</span>' +
+        '</div>' +
+        '<div class="v-meta">' +
+          deployedAt +
+          (v.imageTag ? ' &middot; <code>' + escHtml(v.imageTag.split('/').pop()) + '</code>' : '') +
+          (commitUrl ? ' &middot; ' + commitUrl : '') +
+        '</div>' +
+        (v.buildId ? '<div class="v-meta">Build: <code>' + escHtml(v.buildId) + '</code></div>' : '') +
+        (v.revisionName ? '<div class="v-meta">Revision: <code>' + escHtml(v.revisionName.split('-').pop()) + '</code></div>' : '') +
+        (v.releaseNotes
+          ? '<div class="v-notes">' + escHtml(v.releaseNotes) + '</div>'
+          : '<div class="v-notes-empty">No release notes</div>') +
+        '<div style="margin-top:4px;">' +
+          '<button class="btn btn-outline btn-xs" onclick="editReleaseNotes(\'' + id + '\',\'' + v._id + '\')">Edit Notes</button>' +
+          (v.status === 'success' && v.revisionName
+            ? '<button class="btn btn-outline btn-xs" onclick="openActionModal(\'rollback\',\'' + id + '\',\'' + v._id + '\')" style="margin-left:4px;color:#d32f2f;">Rollback</button>'
+            : '') +
+        '</div>' +
+      '</div>';
+    });
+    html += '</div>';
+    document.getElementById('versionContent').innerHTML = html;
+  })
+  .catch(function() {
+    document.getElementById('versionContent').innerHTML = '<div class="empty-state">Failed to load version history.</div>';
+  });
+}
+
+function editReleaseNotes(depId, versionId) {
+  var notes = prompt('Release notes for this deployment:', '');
+  if (notes === null) return;
+
+  fetch('/api/saas/deployments/' + depId + '/versions/' + versionId + '/notes', {
+    method: 'PUT',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ releaseNotes: notes })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.success) {
+      showToast('Release notes updated');
+      showVersions(depId);  // Refresh
+    } else {
+      showToast('Error: ' + (data.error || 'Update failed'));
+    }
+  })
+  .catch(function() { showToast('Network error'); });
+}
+
+function closeVersionsModal() {
+  document.getElementById('versionsModal').classList.remove('open');
+}
+
+// ─── Detail modal ──────────────────────────────────────────────────────
+
+function showDetail(id) {
+  var dep = deployments.find(function(d) { return d._id === id; });
+  if (!dep) return;
+
+  document.getElementById('detailTitle').textContent = escHtml(dep.storeName);
+  document.getElementById('detailContent').innerHTML =
+    '<div class="detail-grid">' +
+      '<div class="detail-item"><div class="label">Status</div><div class="value"><span class="badge badge-' + dep.status + '">' + dep.status + '</span></div></div>' +
+      '<div class="detail-item"><div class="label">Service Name</div><div class="value mono">' + escHtml(dep.serviceName) + '</div></div>' +
+      '<div class="detail-item"><div class="label">Subdomain</div><div class="value">' + escHtml(dep.subdomain) + '</div></div>' +
+      '<div class="detail-item"><div class="label">Version / Build</div><div class="value mono">' + escHtml(dep.version) + '</div></div>' +
+      '<div class="detail-item"><div class="label">Cloud Run URL</div><div class="value">' + (dep.cloudRunUrl ? '<a href="' + escHtml(dep.cloudRunUrl) + '" target="_blank">' + escHtml(dep.cloudRunUrl) + '</a>' : '-') + '</div></div>' +
+      '<div class="detail-item"><div class="label">Image Tag</div><div class="value mono">' + escHtml(dep.imageTag || '-') + '</div></div>' +
+      '<div class="detail-item"><div class="label">Build ID</div><div class="value mono">' + escHtml(dep.buildId || '-') + '</div></div>' +
+      '<div class="detail-item"><div class="label">Revision</div><div class="value mono">' + escHtml(dep.versions && dep.versions.length ? (dep.versions[dep.versions.length-1].revisionName || '-') : '-') + '</div></div>' +
+      '<div class="detail-item"><div class="label">Created</div><div class="value">' + (dep.createdAt ? new Date(dep.createdAt).toLocaleString() : '-') + '</div></div>' +
+      '<div class="detail-item"><div class="label">Deployed At</div><div class="value">' + (dep.deployedAt ? new Date(dep.deployedAt).toLocaleString() : '-') + '</div></div>' +
+      '<div class="detail-item"><div class="label">Last Restart</div><div class="value">' + (dep.lastRestartAt ? new Date(dep.lastRestartAt).toLocaleString() : '-') + '</div></div>' +
+      '<div class="detail-item"><div class="label">Health</div><div class="value">' + getHealthCell(dep) + '</div></div>' +
+      '<div class="detail-item"><div class="label">Mongo State</div><div class="value mono">' + mongoStateLabel(dep.lastMongoStatus) + '</div></div>' +
+      '<div class="detail-item"><div class="label">Health Check</div><div class="value">' + (dep.lastHealthCheck ? timeAgo(dep.lastHealthCheck) + ' ago' : '-') + '</div></div>' +
+      '<div class="detail-item" style="grid-column:1/-1;border-top:1px solid #e8e8ed;padding-top:8px;margin-top:4px;"><div class="label" style="font-weight:700;">Subscription</div></div>' +
+      '<div class="detail-item"><div class="label">Status</div><div class="value">' + getSubscriptionCell(dep) + '</div></div>' +
+      '<div class="detail-item"><div class="label">Grace Period</div><div class="value">' + (dep.gracePeriodDays != null ? dep.gracePeriodDays + ' days' : '7 days') + '</div></div>' +
+      '<div class="detail-item"><div class="label">Subscription Start</div><div class="value">' + (dep.subscriptionStart ? new Date(dep.subscriptionStart).toLocaleString() : '-') + '</div></div>' +
+      '<div class="detail-item"><div class="label">Subscription Expires</div><div class="value">' + (dep.subscriptionExpiresAt ? new Date(dep.subscriptionExpiresAt).toLocaleString() : '-') + '</div></div>' +
+      (dep.error ? '<div class="detail-item" style="grid-column:1/-1;"><div class="label">Error</div><div class="value" style="color:#c62828;font-size:12px;">' + escHtml(dep.error) + '</div></div>' : '') +
+      (dep.env && Object.keys(dep.env).length ? '<div class="detail-item" style="grid-column:1/-1;"><div class="label">Extra Env Vars</div><div class="value mono" style="font-size:11px;">' + JSON.stringify(Object.fromEntries(Object.entries(dep.env)), null, 2) + '</div></div>' : '') +
+    '</div>';
+  document.getElementById('detailModal').classList.add('open');
+}
+
+function closeDetailModal() {
+  document.getElementById('detailModal').classList.remove('open');
+}
+
+// Close modals on overlay click
+document.getElementById('actionModal').addEventListener('click', closeActionModal);
+document.getElementById('newModal').addEventListener('click', closeNewModal);
+document.getElementById('detailModal').addEventListener('click', closeDetailModal);
+document.getElementById('versionsModal').addEventListener('click', closeVersionsModal);
+
+// ─── Polling ───────────────────────────────────────────────────────────
+
+var polling = {};
+
+function pollDeployment(id) {
+  if (polling[id]) return;
+  polling[id] = true;
+
+  var maxPolls = 30;
+  var count = 0;
+  var interval = setInterval(function() {
+    count++;
+    fetch('/api/saas/deployments/' + id + '/refresh-status', {
+      method: 'POST',
+      headers: getAuthHeaders()
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(dep) {
+      if (dep && dep.status) {
+        // Update in-memory array
+        var idx = deployments.findIndex(function(d) { return d._id === id; });
+        if (idx >= 0) deployments[idx] = dep;
+        renderTable();
+
+        if (dep.status === 'running' || dep.status === 'failed' || dep.status === 'suspended') {
+          clearInterval(interval);
+          delete polling[id];
+          if (dep.status === 'running') showToast('Deployment completed');
+          else if (dep.status === 'failed') showToast('Deployment failed: ' + (dep.error || 'unknown'));
+        }
+      }
+    })
+    .catch(function() { /* keep polling */ });
+
+    if (count >= maxPolls) {
+      clearInterval(interval);
+      delete polling[id];
+    }
+  }, 5000);
+}
+
+// ─── Init ──────────────────────────────────────────────────────────────
+
+loadDeployments();
+// Check health on load, then every 60s
+checkAllHealth();
+setInterval(checkAllHealth, 60000);
+</script>
+</body>
+</html>
