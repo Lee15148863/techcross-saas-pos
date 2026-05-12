@@ -35,6 +35,8 @@ node_modules/
 # Local MongoDB data
 Data/db/
 mongodb/
+WiredTiger*
+*.lock
 
 # Test artifacts
 pos-e2e-test.js
