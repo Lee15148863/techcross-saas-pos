@@ -2,12 +2,12 @@ const fs = require('fs');
 const path = require('path');
 
 const GA_TAG = `<!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-B76Y6PXQH7"><\/script>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=__GA_ID__"><\/script>
     <script>
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
       gtag('js', new Date());
-      gtag('config', 'G-B76Y6PXQH7');
+      gtag('config', '__GA_ID__');
     <\/script>`;
 
 const dir = path.join(__dirname, '..');
@@ -17,7 +17,7 @@ let count = 0;
 for (const f of files) {
     const fp = path.join(dir, f);
     let html = fs.readFileSync(fp, 'utf8');
-    if (html.includes('G-B76Y6PXQH7')) continue;
+    if (html.includes('__GA_ID__')) continue;
     // Insert after <head> or after first <meta charset>
     if (html.includes('</head>')) {
         html = html.replace('</head>', GA_TAG + '\n</head>');

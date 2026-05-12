@@ -500,7 +500,7 @@ const LANG = {
     'saas.landing.cta.title': 'Ready to Take Control?',
     'saas.landing.cta.subtitle': 'Join shop owners who trust TechCross to run their business.',
     'saas.landing.cta.btn': "Create Your Store — It's Free to Start",
-    'saas.landing.footer': '© 2026 TechCross. All rights reserved.',
+    'saas.landing.footer': '© ' + new Date().getFullYear() + ' TechCross. All rights reserved.',
 
     'saas.dash.greeting.super': 'Super Admin Panel',
     'saas.dash.greeting.owner': 'Store Owner Dashboard',
@@ -1038,7 +1038,7 @@ const LANG = {
     'saas.landing.cta.title': '准备好了吗？',
     'saas.landing.cta.subtitle': '加入信赖 TechCross 管理业务的店主行列。',
     'saas.landing.cta.btn': '创建店铺 — 免费开始',
-    'saas.landing.footer': '© 2026 TechCross。保留所有权利。',
+    'saas.landing.footer': '© ' + new Date().getFullYear() + ' TechCross。保留所有权利。',
 
     'saas.dash.greeting.super': '超管面板',
     'saas.dash.greeting.owner': '店主面板',

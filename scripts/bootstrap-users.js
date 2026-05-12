@@ -16,7 +16,7 @@ const SYSTEM_ROOTS = ['Lee087'];
 const BCRYPT_SALT_ROUNDS = 10;
 
 async function bootstrap() {
-  await mongoose.connect(process.env.DBCon, { dbName: 'techcross' });
+  await mongoose.connect(process.env.DBCon || process.env.MONGO_URI, { dbName: process.env.STORE_NAME || 'techcross' });
   const db = mongoose.connection.db;
   const AuditLog = require('../models/inv/AuditLog');
 
@@ -35,7 +35,7 @@ async function bootstrap() {
         }
       } else {
         // Create missing system root
-        const hashedPw = await bcrypt.hash(rootName + '_admin_2026', BCRYPT_SALT_ROUNDS);
+        const hashedPw = await bcrypt.hash(process.env.ADMIN_PASSWORD || 'admin123456', BCRYPT_SALT_ROUNDS);
         await db.collection('invusers').insertOne({
           username: rootName,
           password: hashedPw,
@@ -55,7 +55,7 @@ async function bootstrap() {
     console.log(`\n✓ Users already exist (${existingCount}). SYSTEM_ROOTS verified.`);
   } else {
     // ─── Bootstrap initial users ──────────────────────────────────────────────
-    const hashedRootPw = await bcrypt.hash('Lee087_admin_2026', BCRYPT_SALT_ROUNDS);
+    const hashedRootPw = await bcrypt.hash(process.env.ADMIN_PASSWORD || 'admin123456', BCRYPT_SALT_ROUNDS);
 
     const createdUsers = [];
 

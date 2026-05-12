@@ -11,12 +11,12 @@ const path = require('path');
 
 // ─── Company Info ──────────────────────────────────────────────────────
 const COMPANY = {
-  name: 'TechCross Repair Centre',
-  vatNumber: 'IE3330982OH',
-  address: 'UNIT M.4, Navan Town Centre',
-  address2: 'Kennedy Road, Navan, Co. Meath, C15 F658',
-  phone: '046 905 9854',
-  mobile: '089 482 5300',
+  name: process.env.COMPANY_NAME || 'TechCross Repair Centre',
+  vatNumber: process.env.VAT_NUMBER || 'IE3330982OH',
+  address: process.env.COMPANY_ADDRESS || 'UNIT M.4, Navan Town Centre',
+  address2: process.env.COMPANY_ADDRESS2 || 'Kennedy Road, Navan, Co. Meath, C15 F658',
+  phone: process.env.COMPANY_PHONE || '046 905 9854',
+  mobile: process.env.COMPANY_MOBILE || '089 482 5300',
   logoPath: path.join(__dirname, '..', 'logo.png'),
   logoWidth: 175,
 };
@@ -299,7 +299,7 @@ function drawFooter(doc) {
   y += 16;
 
   doc.font('Helvetica-Bold').fontSize(10).fillColor(DARK);
-  doc.text('Thank you for choosing TechCross Repair Centre.', MARGIN, y, { align: 'center', width: USABLE_WIDTH });
+  doc.text('Thank you for choosing ' + COMPANY.name + '.', MARGIN, y, { align: 'center', width: USABLE_WIDTH });
   y += 14;
 
   doc.font('Helvetica').fontSize(9).fillColor(GRAY);

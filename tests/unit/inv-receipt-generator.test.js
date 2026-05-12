@@ -161,6 +161,7 @@ describe('generateReceipt', () => {
   it('should include QR code URL', () => {
     const receipt = generateReceipt(baseTransaction);
     expect(receipt.qrCodeUrl).toBe('https://techcross.ie/receipt-terms.html');
+    // Note: DOMAIN env var changes this — default fallback is 'techcross.ie'
   });
 
   it('should set hasSecondHandItems to false when no second-hand items', () => {

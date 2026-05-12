@@ -14,6 +14,10 @@ const AuditLog = require('../models/inv/AuditLog');
 const { generateReceipt } = require('../utils/inv-receipt-generator');
 const shareService = require('./inv-share-service');
 
+// ─── Configurable company info ──────────────────────────────────────────
+const COMPANY_NAME = process.env.COMPANY_NAME || 'TechCross Repair Centre';
+const COMPANY_LOCATION = process.env.COMPANY_ADDRESS || 'Navan, Co. Meath';
+
 // ─── Helpers ─────────────────────────────────────────────────────────────
 
 /**
@@ -32,7 +36,7 @@ function buildReceiptEmailHtml(transaction, receiptData) {
   return '<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="font-family:-apple-system,BlinkMacSystemFont,sans-serif;margin:0;padding:24px;background:#f5f5f7;">'
     + '<div style="max-width:480px;margin:0 auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.08);">'
     + '<div style="background:#1E7F5C;padding:24px;text-align:center;">'
-    + '<h1 style="color:#fff;margin:0;font-size:20px;">TechCross Repair Centre</h1>'
+    + '<h1 style="color:#fff;margin:0;font-size:20px;">' + COMPANY_NAME + '</h1>'
     + '<p style="color:rgba(255,255,255,.8);margin:4px 0 0;font-size:13px;">Receipt #' + escHtml(receiptData.receiptNumber || '') + '</p>'
     + '</div>'
     + '<div style="padding:24px;">'
@@ -48,7 +52,7 @@ function buildReceiptEmailHtml(transaction, receiptData) {
     + '</div></div>'
     + '<div style="background:#f5f5f7;padding:16px 24px;text-align:center;font-size:12px;color:#6e6e73;">'
     + '<p style="margin:0;">Thank you for your business!</p>'
-    + '<p style="margin:4px 0 0;">TechCross Repair Centre — Navan, Co. Meath</p>'
+    + '<p style="margin:4px 0 0;">' + COMPANY_NAME + ' — ' + COMPANY_LOCATION + '</p>'
     + '</div></div></body></html>';
 }
 
@@ -87,7 +91,7 @@ async function emailReceipt(transactionId, recipientEmail, operatorId) {
   const info = await transporter.sendMail({
     from: process.env.SMTP_FROM || process.env.SMTP_USER,
     to: recipientEmail,
-    subject: 'Receipt #' + (transaction.receiptNumber || '') + ' — TechCross Repair Centre',
+    subject: 'Receipt #' + (transaction.receiptNumber || '') + ' — ' + COMPANY_NAME,
     html: htmlBody,
   });
 

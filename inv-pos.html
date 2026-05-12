@@ -730,7 +730,7 @@
         <!-- LEFT: Product Search -->
         <div class="left-panel">
             <div class="left-header">
-                <img src="logo.png" alt="Tech Cross" class="logo">
+                <img src="logo.png" alt="__COMPANY_NAME__" class="logo">
                 <h1 id="posTitle">POS 收银</h1>
                 <button class="lang-toggle" id="langToggle" title="Switch Language">中/EN</button>
             </div>
@@ -1684,7 +1684,7 @@
                 '<div class="cs-total">€' + Number(totalAmt).toFixed(2) + '</div>' +
               '</div>' +
               '<div class="cs-receipt-card">' +
-                '<div class="rc-header">Tech Cross</div>' +
+                '<div class="rc-header">__COMPANY_NAME__</div>' +
                 '<div class="rc-divider">——————————————————————</div>' +
                 rxItems +
                 '<div class="rc-divider">——————————————————————</div>' +
@@ -1731,7 +1731,7 @@
       var receiptData = window._lastReceiptData;
       if (!receiptData) { showToast('No receipt data', 'error'); return; }
       try {
-        var res = await fetch('http://localhost:9100/print', {
+        var res = await fetch('__PRINT_AGENT_URL__/print', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(receiptData),
           signal: AbortSignal.timeout(5000)
@@ -1779,7 +1779,7 @@
     window.doPrintFromPreview = async function() {
       if (!_pendingReceiptData) return;
       try {
-        var res = await fetch('http://localhost:9100/print', {
+        var res = await fetch('__PRINT_AGENT_URL__/print', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(_pendingReceiptData),
           signal: AbortSignal.timeout(5000)
@@ -1959,7 +1959,7 @@
     // ─── Print Agent Status Check ───────────────────────────────
     // Check on page load if Print Agent is running
     (function checkPrintAgent() {
-      fetch('http://localhost:9100/status', { signal: AbortSignal.timeout(3000) })
+      fetch('__PRINT_AGENT_URL__/status', { signal: AbortSignal.timeout(3000) })
         .then(function(r) { return r.json(); })
         .then(function(data) {
           if (data.connected) {
@@ -1998,7 +1998,7 @@
       // ═══ LOGO ═══
       if (_logoDataUri) {
         h += '<div style="text-align:center;margin-bottom:10px;">';
-        h += '<img src="' + _logoDataUri + '" alt="Tech Cross" style="max-width:200px;max-height:55px;margin:0 auto;">';
+        h += '<img src="' + _logoDataUri + '" alt="__COMPANY_NAME__" style="max-width:200px;max-height:55px;margin:0 auto;">';
         h += '</div>';
       }
 
@@ -2105,7 +2105,7 @@
         h += '<div style="text-align:center;margin-bottom:10px;">';
         h += '<div style="font-size:15px;margin-bottom:4px;">Terms & Conditions</div>';
         h += '<img src="' + _qrTermsDataUri + '" style="width:180px;height:180px;display:block;margin:0 auto;">';
-        h += '<div style="font-size:14px;margin-top:4px;">techcross.ie/terms</div>';
+        h += '<div style="font-size:14px;margin-top:4px;">__DOMAIN__/terms</div>';
         h += '</div>';
       }
 
@@ -2310,7 +2310,7 @@
 
         // Build receipt data and show preview
         var receiptData = {
-          companyName: 'Tech Cross Repair Centre',
+          companyName: '__COMPANY_NAME__',
           companyAddress: 'Unit 4, Navan Shopping Centre, Navan, Co. Meath, C15 F658',
           companyPhone: '046 905 9854',
           receiptNumber: txn.receiptNumber,
@@ -2509,7 +2509,7 @@
       h += '<div style="text-align:center;font-size:14px;font-weight:900;padding:8px 0;border-top:2px solid #000;">Thank you!</div>';
 
       // Try Print Agent, fallback to browser print
-      fetch('http://localhost:9100/print', {
+      fetch('__PRINT_AGENT_URL__/print', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(receiptData),
         signal: AbortSignal.timeout(5000)

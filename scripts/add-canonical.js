@@ -16,7 +16,7 @@ for (const f of pricingPages) {
   if (!fs.existsSync(fp)) continue;
   let html = fs.readFileSync(fp, 'utf8');
   if (html.includes('canonical')) continue;
-  html = html.replace(/<title>/i, '<link rel="canonical" href="https://techcross.ie/pricing.html">\n    <title>');
+  html = html.replace(/<title>/i, '<link rel="canonical" href="https://__DOMAIN__/pricing.html">\n    <title>');
   fs.writeFileSync(fp, html);
   count++;
 }
@@ -33,7 +33,7 @@ for (const [f, canon] of Object.entries(others)) {
   if (!fs.existsSync(fp)) continue;
   let html = fs.readFileSync(fp, 'utf8');
   if (html.includes('canonical')) continue;
-  html = html.replace(/<title>/i, `<link rel="canonical" href="https://techcross.ie/${canon}">\n    <title>`);
+  html = html.replace(/<title>/i, `<link rel="canonical" href="https://__DOMAIN__/${canon}">\n    <title>`);
   fs.writeFileSync(fp, html);
   count++;
 }

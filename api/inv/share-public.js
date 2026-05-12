@@ -161,7 +161,9 @@ router.get('/invoice/:token/pdf', async (req, res) => {
 });
 
 function expiredPage() {
-  return '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Expired</title><style>body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#f5f5f7;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;}.card{background:#fff;border-radius:20px;padding:48px 32px;max-width:400px;width:88%;text-align:center;}.icon{font-size:56px;margin-bottom:20px;}h1{font-size:22px;margin-bottom:12px;}p{color:#6e6e73;line-height:1.6;}.brand{color:#1E7F5C;font-weight:600;}</style></head><body><div class="card"><div class="icon">⏰</div><h1>This link has expired.</h1><p>Please contact TechCross for a new link or visit us in store.</p><p style="margin-top:16px;font-size:13px;"><span class="brand">TechCross Repair Centre</span><br>Navan, Co. Meath, Ireland</p></div></body></html>';
+  var cName = process.env.COMPANY_NAME || 'TechCross Repair Centre';
+  var cLoc = process.env.COMPANY_ADDRESS || 'Navan, Co. Meath, Ireland';
+  return '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Expired</title><style>body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#f5f5f7;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;}.card{background:#fff;border-radius:20px;padding:48px 32px;max-width:400px;width:88%;text-align:center;}.icon{font-size:56px;margin-bottom:20px;}h1{font-size:22px;margin-bottom:12px;}p{color:#6e6e73;line-height:1.6;}.brand{color:#1E7F5C;font-weight:600;}</style></head><body><div class="card"><div class="icon">⏰</div><h1>This link has expired.</h1><p>Please contact ' + cName + ' for a new link or visit us in store.</p><p style="margin-top:16px;font-size:13px;"><span class="brand">' + cName + '</span><br>' + cLoc + '</p></div></body></html>';
 }
 
 module.exports = router;

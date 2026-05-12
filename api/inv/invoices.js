@@ -58,11 +58,11 @@ router.use(jwtAuth, requireRole('root', 'manager', 'staff'));
 // ─── Helper: Get company info snapshot ──────────────────────────────────
 async function getCompanySnapshot() {
   const defaults = {
-    businessName: 'TechCross Repair Centre',
-    vatNumber: 'IE3330982OH',
-    address: 'UNIT M.4, Navan Town Centre, Kennedy Road, Navan, Co. Meath, C15 F658',
-    phone: '046 905 9854',
-    email: ''
+    businessName: process.env.COMPANY_NAME || 'TechCross Repair Centre',
+    vatNumber: process.env.VAT_NUMBER || 'IE3330982OH',
+    address: process.env.COMPANY_ADDRESS || 'UNIT M.4, Navan Town Centre, Kennedy Road, Navan, Co. Meath, C15 F658',
+    phone: process.env.COMPANY_PHONE || '046 905 9854',
+    email: process.env.COMPANY_EMAIL || ''
   };
   try {
     const setting = await SystemSetting.findOne({ key: 'companyInfo' });

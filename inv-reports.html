@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>报表中心 - Tech Cross 进销存</title>
+    <title>报表中心  — __COMPANY_NAME__</title>
     <style>
         *{margin:0;padding:0;box-sizing:border-box;}
         html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:antialiased;background:#f5f5f7;color:#1d1d1f;}
@@ -72,7 +72,7 @@
 <div class="detail-overlay" id="detailModal"><div class="detail-box"><h3 style="font-size:20px;margin-bottom:20px;">交易详情</h3><div id="detailContent"></div><div style="text-align:right;margin-top:20px;"><button class="btn btn-secondary" id="btnCloseDetail">关闭</button></div></div></div>
 <div class="layout">
     <aside class="sidebar">
-        <div class="logo"><img src="logo.png" alt="Tech Cross"><span>进销存管理系统</span></div>
+        <div class="logo"><img src="logo.png" alt="__COMPANY_NAME__"><span>进销存管理系统</span></div>
         <nav>
             <div class="nav-section">业务管理 / Business</div>
             <a href="inv-pos.html" data-perm="pos"><span class="icon">💰</span>POS 收银 / Checkout</a>
@@ -648,7 +648,7 @@ document.getElementById('btnCloseDetail').addEventListener('click',function(){do
 // ═══ 重打印 ═══
 async function reprintReceipt(id){
     try{var r=await apiFetch('/transactions/'+id);if(!r)return;var tx=await r.json();
-    try{var pr=await fetch('http://localhost:9100/print',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({transaction:tx}),signal:AbortSignal.timeout(5000)});
+    try{var pr=await fetch('__PRINT_AGENT_URL__/print',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({transaction:tx}),signal:AbortSignal.timeout(5000)});
     if(pr.ok){toast('已发送到打印机');return;}}catch(e){}
     toast('Print Agent 未运行','error');}catch(e){toast('打印失败','error');}
 }
@@ -690,7 +690,7 @@ document.getElementById('btnExportMonthly').addEventListener('click',function(){
 
 // ═══ 静默打印 ═══
 function silentPrint(el){var content=el.closest('.card').innerText;
-fetch('http://localhost:9100/print',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({content:content}),signal:AbortSignal.timeout(5000)})
+fetch('__PRINT_AGENT_URL__/print',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({content:content}),signal:AbortSignal.timeout(5000)})
 .then(function(r){if(r.ok)toast('已发送到打印机');else throw 0;}).catch(function(){window.print();});}
 document.getElementById('btnPrintDaily').addEventListener('click',function(){silentPrint(this);});
 document.getElementById('btnPrintWeekly').addEventListener('click',function(){silentPrint(this);});

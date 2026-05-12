@@ -42,13 +42,13 @@ function formatReceiptDate(date) {
 
 // Default company info (pulled from existing site data)
 const DEFAULT_COMPANY_INFO = {
-  name: 'Tech Cross Repair Centre',
+  name: process.env.COMPANY_NAME || 'Tech Cross Repair Centre',
   logo: 'logo.png',
-  address: 'Unit 4, Navan Shopping Centre, Navan, Co. Meath, C15 F658, Ireland',
-  phone: '046 905 9854',
+  address: process.env.COMPANY_ADDRESS || 'Unit 4, Navan Shopping Centre, Navan, Co. Meath, C15 F658, Ireland',
+  phone: process.env.COMPANY_PHONE || '046 905 9854',
   mobile: '089 482 5300',
-  email: 'navantechcross@gmail.com',
-  website: 'https://techcross.ie',
+  email: process.env.COMPANY_EMAIL || 'navantechcross@gmail.com',
+  website: 'https://' + (process.env.DOMAIN || 'techcross.ie'),
 };
 
 // Fixed receipt terms text (English only)
@@ -61,8 +61,9 @@ const TERMS_TEXT =
 const SECOND_HAND_TERMS_TEXT =
   'IMPORTANT - Pre-owned Devices - 7 Days: No physical/liquid damage. Must be fully erased with no Apple ID, Google ID, or passcode. Locked devices are non-refundable. Warranty covers hardware defects only. Refund after inspection via original payment method.';
 
-const QR_CODE_URL = 'https://techcross.ie/receipt-terms.html';
-const REPAIR_TC_URL = 'https://techcross.ie/terms.html';
+const DOMAIN = process.env.DOMAIN || 'techcross.ie';
+const QR_CODE_URL = 'https://' + DOMAIN + '/receipt-terms.html';
+const REPAIR_TC_URL = 'https://' + DOMAIN + '/terms.html';
 
 /**
  * Generate structured receipt content from a transaction record.

@@ -1,0 +1,29 @@
+services:
+  app:
+    build: .
+    container_name: techcross-saas-pos
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    environment:
+      # Override DB connection to use the MongoDB container
+      DBCon: mongodb://mongodb:27017
+      MONGO_URI: mongodb://mongodb:27017
+      DOMAIN: ${DOMAIN:-localhost}
+    depends_on:
+      mongodb:
+        condition: service_started
+    restart: unless-stopped
+
+  mongodb:
+    image: mongo:7
+    container_name: techcross-mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    restart: unless-stopped
+
+volumes:
+  mongodb_data:

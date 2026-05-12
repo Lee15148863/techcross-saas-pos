@@ -6,7 +6,7 @@
 require('dotenv').config();
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
-mongoose.connect(process.env.DBCon, { dbName: 'techcross' }).then(async () => {
+mongoose.connect(process.env.DBCon || process.env.MONGO_URI, { dbName: process.env.STORE_NAME || 'techcross' }).then(async () => {
   const SaaSUser = require('../models/saas/SaaSUser');
   const existing = await SaaSUser.findOne({ username: 'Lee087' });
   if (existing) {
@@ -15,10 +15,10 @@ mongoose.connect(process.env.DBCon, { dbName: 'techcross' }).then(async () => {
     await existing.save();
     console.log('✓ Lee087 upgraded to super_admin');
   } else {
-    const hashed = await bcrypt.hash('O87o9o8555HL', 10);
+    const hashed = await bcrypt.hash(process.env.ADMIN_PASSWORD || 'admin123456', 10);
     await SaaSUser.create({
       username: 'Lee087', password: hashed, displayName: 'Super Admin',
-      email: 'lee@techcross.ie', role: 'super_admin', active: true
+      email: process.env.ADMIN_EMAIL || 'admin@example.com', role: 'super_admin', active: true
     });
     console.log('✓ Lee087 created as super_admin');
   }

@@ -50,9 +50,9 @@ async function emailInvoice(invoiceId, recipientEmail, operatorId) {
   // ─── Build professional email ─────────────────────────────────────
   const customerName = invoice.customerName || 'Valued Customer';
   const company = invoice.companyInfo || {};
-  const storeName = company.businessName || 'TechCross Repair Centre';
-  const storeAddress = company.address || 'Navan, Co. Meath, Ireland';
-  const storePhone = company.phone || '046 905 9854';
+  const storeName = company.businessName || process.env.COMPANY_NAME || 'TechCross Repair Centre';
+  const storeAddress = company.address || process.env.COMPANY_ADDRESS || 'Navan, Co. Meath, Ireland';
+  const storePhone = company.phone || process.env.COMPANY_PHONE || '046 905 9854';
 
   const totalFormatted = '€' + (invoice.grossTotal || 0).toFixed(2);
 
