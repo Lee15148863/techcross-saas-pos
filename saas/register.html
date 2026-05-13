@@ -139,7 +139,7 @@
 
 <script src="../lang.js"></script>
 <script>
-const API_BASE = localStorage.getItem('saas_api_base') || 'https://teschcross-git-1045728849939.europe-west1.run.app';
+const API_BASE = localStorage.getItem('saas_api_base') || '';
 document.getElementById('registerForm').addEventListener('submit', async function(e) {
   e.preventDefault();
   var btn = document.getElementById('submitBtn');
@@ -175,14 +175,16 @@ document.getElementById('registerForm').addEventListener('submit', async functio
       });
       try { var data = await res.json(); } catch(_) { var data = {}; }
       if (data.success) {
-        document.getElementById('successEmail').textContent = email.value;
+        var se = document.getElementById('successEmail');
+        if (se) se.textContent = email.value;
         document.getElementById('formCard').style.display = 'none';
         document.getElementById('successCard').style.display = 'block';
         return;
       }
       // 2xx but not success (idempotent match): treat as success
       if (res.ok && data.id) {
-        document.getElementById('successEmail').textContent = email.value;
+        var se = document.getElementById('successEmail');
+        if (se) se.textContent = email.value;
         document.getElementById('formCard').style.display = 'none';
         document.getElementById('successCard').style.display = 'block';
         return;

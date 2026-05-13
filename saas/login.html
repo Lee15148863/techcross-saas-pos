@@ -90,7 +90,7 @@
 
 <script src="../lang.js"></script>
 <script>
-const API_BASE = localStorage.getItem('saas_api_base') || 'https://teschcross-git-1045728849939.europe-west1.run.app';
+const API_BASE = localStorage.getItem('saas_api_base') || '';
 async function loadCaptcha() {
   try {
     var r = await fetch(API_BASE + '/api/saas/auth/captcha');
