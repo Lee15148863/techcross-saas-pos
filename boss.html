@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Boss Control </title>
+<title>Boss Control — Tech Cross</title>
 <style>
   /* ─── Reset & Base ──────────────────────────────────────────── */
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -219,8 +219,9 @@
       <button class="filter-chip" data-filter="refund" onclick="filterLedger('refund')" data-i18n="ledger.refunds">Refunds</button>
       <button class="filter-chip" data-filter="expense" onclick="filterLedger('expense')" data-i18n="ledger.expenses">Expenses</button>
     </div>
-    <div class="input-group">
-      <input type="date" id="ledgerDate" onchange="loadLedger()">
+    <div class="input-group" style="display:flex;gap:8px">
+      <input type="date" id="ledgerDate" onchange="loadLedger()" style="flex:1">
+      <button class="btn btn-danger btn-sm" onclick="deleteOrphanedLedger()" style="white-space:nowrap" data-i18n="ledger.deleteOrphaned">🗑 清理孤立</button>
     </div>
     <div class="card-row" style="font-weight:600"><span data-i18n="ledger.netFlow">Net Flow</span><span id="ledgerNet">—</span></div>
   </div>

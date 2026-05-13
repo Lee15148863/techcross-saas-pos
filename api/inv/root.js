@@ -1154,4 +1154,89 @@ router.delete('/devices/trusted/:id', async (req, res) => {
   }
 });
 
+// ─── POST /api/inv/root/ledger/delete ──────────────────────────────────────────
+// Force-delete CashLedger entries (bypasses immutable hooks — root only)
+// BOSS ORDER: user explicitly required this, overriding immutability.
+// Warning: breaks financial audit trail.
+// modes: ids[], dateRange, or orphaned=true (auto-finds entries with deleted transactions)
+router.post('/ledger/delete', requireRole('root'), async (req, res) => {
+  try {
+    const { ids, fromDate, toDate, orphaned, confirm } = req.body;
+    if (!confirm) {
+      return res.status(400).json({ error: '需要确认删除操作（confirm: true）', code: 'VALIDATION_ERROR' });
+    }
+
+    const collection = mongoose.connection.collection('cashledgers');
+    let filter = {};
+
+    if (ids && Array.isArray(ids) && ids.length > 0) {
+      filter._id = { $in: ids.map(id => new mongoose.Types.ObjectId(id)) };
+    } else if (orphaned) {
+      // Find all ledger entries referencing deleted transactions
+      const dateFilter = {};
+      if (fromDate) dateFilter.$gte = new Date(fromDate);
+      if (toDate) dateFilter.$lte = new Date(toDate);
+
+      const orphanFilter = { referenceType: 'transaction' };
+      if (fromDate || toDate) orphanFilter.createdAt = dateFilter;
+
+      const orphanCandidates = await collection.find(orphanFilter).toArray();
+      const txIds = orphanCandidates.map(e => e.referenceId);
+      if (txIds.length === 0) {
+        return res.status(404).json({ error: '未找到匹配的孤立流水' });
+      }
+
+      // Find which transactions still exist
+      const existingTxns = await mongoose.connection.collection('transactions')
+        .find({ _id: { $in: txIds } }, { projection: { _id: 1 } }).toArray();
+      const existingIds = new Set(existingTxns.map(t => t._id.toString()));
+
+      const toDelete = orphanCandidates.filter(e => !existingIds.has(e.referenceId.toString()));
+      if (toDelete.length === 0) {
+        return res.status(404).json({ error: '没有孤立的流水记录（所有交易都存在对应的流水）' });
+      }
+
+      filter._id = { $in: toDelete.map(e => e._id) };
+    } else if (fromDate || toDate) {
+      filter.createdAt = {};
+      if (fromDate) filter.createdAt.$gte = new Date(fromDate);
+      if (toDate) filter.createdAt.$lte = new Date(toDate);
+    } else {
+      return res.status(400).json({ error: '请提供ID列表、日期范围或启用孤立模式', code: 'VALIDATION_ERROR' });
+    }
+
+    // Use raw collection to bypass Mongoose immutable hooks
+    const entries = await collection.find(filter).toArray();
+
+    if (entries.length === 0) {
+      return res.status(404).json({ error: '未找到匹配的流水记录' });
+    }
+
+    const result = await collection.deleteMany(filter);
+
+    // Audit log
+    await AuditLog.create({
+      action: 'root.ledger.bulkDelete',
+      performedBy: req.user._id,
+      targetType: 'CashLedger',
+      details: encryptData({
+        count: result.deletedCount,
+        ids: entries.map(e => e._id.toString()),
+        dateRange: { from: fromDate || null, to: toDate || null },
+        reason: req.body.reason || ''
+      }),
+      ip: req.ip
+    });
+
+    res.json({
+      message: `已删除 ${result.deletedCount} 条流水记录`,
+      deletedCount: result.deletedCount,
+      deletedIds: entries.map(e => e._id.toString())
+    });
+  } catch (err) {
+    console.error('Ledger delete error:', err.message);
+    res.status(500).json({ error: '服务器错误', code: 'DELETE_ERROR' });
+  }
+});
+
 module.exports = router;

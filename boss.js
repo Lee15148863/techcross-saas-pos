@@ -366,6 +366,25 @@ async function loadLedger() {
   }
 }
 
+async function deleteOrphanedLedger() {
+  const date = document.getElementById('ledgerDate').value;
+  const msg = date
+    ? '确认删除 ' + date + ' 之前所有已删除交易对应的流水记录？'
+    : '确认删除所有已删除交易对应的孤立流水记录？';
+  if (!confirm(msg)) return;
+  if (!confirm('此操作不可撤销。再次确认？')) return;
+
+  try {
+    const body = { orphaned: true, confirm: true };
+    if (date) body.toDate = date;
+    const res = await api('/api/inv/root/ledger/delete', 'POST', body);
+    alert('已删除 ' + res.deletedCount + ' 条孤立流水');
+    loadLedger();
+  } catch (err) {
+    alert('删除失败: ' + err.message);
+  }
+}
+
 // ═══════════════════════════════════════════════════════════════
 // REFUND
 // ═══════════════════════════════════════════════════════════════
