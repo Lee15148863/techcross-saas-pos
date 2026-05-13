@@ -90,9 +90,10 @@
 
 <script src="../lang.js"></script>
 <script>
+const API_BASE = localStorage.getItem('saas_api_base') || 'https://teschcross-git-1045728849939.europe-west1.run.app';
 async function loadCaptcha() {
   try {
-    var r = await fetch('/api/saas/auth/captcha');
+    var r = await fetch(API_BASE + '/api/saas/auth/captcha');
     var d = await r.json();
     document.getElementById('captchaQuestion').textContent = d.question;
     document.getElementById('captchaToken').value = d.token;
@@ -109,7 +110,7 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
   btn.disabled = true; btn.textContent = __('saas.login.signingIn');
   err.classList.remove('show');
   try {
-    var res = await fetch('/api/saas/auth/login', {
+    var res = await fetch(API_BASE + '/api/saas/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
