@@ -47,13 +47,24 @@ router.post('/approve/:signupId', superAdminAuth, async (req, res) => {
     });
 
     // Create store_root user
-    const defaultPw = 'store_' + Math.random().toString(36).slice(2, 8);
-    const hashed = await bcrypt.hash(defaultPw, BCRYPT_SALT_ROUNDS);
-    const rootUser = await SaaSUser.create({
-      username: 'admin_' + store.name.toLowerCase().replace(/[^a-z0-9]/g, ''),
-      password: hashed, displayName: signup.ownerName, email: signup.email,
-      role: 'store_root', storeId: store._id, active: true
-    });
+    let credentials;
+    if (signup.password) {
+      const rootUser = await SaaSUser.create({
+        username: 'admin_' + store.name.toLowerCase().replace(/[^a-z0-9]/g, ''),
+        password: signup.password, displayName: signup.ownerName, email: signup.email,
+        role: 'store_root', storeId: store._id, active: true
+      });
+      credentials = { username: rootUser.username, message: 'Use the password you set during registration to sign in.' };
+    } else {
+      const defaultPw = require('crypto').randomBytes(4).toString('hex') + 'X1!';
+      const hashed = await bcrypt.hash(defaultPw, BCRYPT_SALT_ROUNDS);
+      const rootUser = await SaaSUser.create({
+        username: 'admin_' + store.name.toLowerCase().replace(/[^a-z0-9]/g, ''),
+        password: hashed, displayName: signup.ownerName, email: signup.email,
+        role: 'store_root', storeId: store._id, active: true
+      });
+      credentials = { username: rootUser.username, password: defaultPw };
+    }
 
     // Mark signup as approved
     signup.status = 'approved';
@@ -61,7 +72,7 @@ router.post('/approve/:signupId', superAdminAuth, async (req, res) => {
     signup.reviewedAt = new Date();
     await signup.save();
 
-    res.json({ success: true, store: { id: store._id, name: store.name }, credentials: { username: rootUser.username, password: defaultPw } });
+    res.json({ success: true, store: { id: store._id, name: store.name }, credentials });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -284,7 +295,7 @@ router.post('/:storeId/users/:userId/reset-password', superAdminAuth, async (req
       return res.status(403).json({ error: 'Cannot reset super admin password' });
     }
 
-    const newPw = 'store_' + Math.random().toString(36).slice(2, 8) + '!';
+    const newPw = require('crypto').randomBytes(4).toString('hex') + 'X1!';
     const hashed = await bcrypt.hash(newPw, BCRYPT_SALT_ROUNDS);
     targetUser.password = hashed;
     targetUser.loginAttempts = 0;
@@ -308,7 +319,7 @@ router.post('/:storeId/users/:userId/email-credentials', superAdminAuth, async (
       return res.status(400).json({ error: 'User has no email address' });
     }
 
-    const newPw = 'store_' + Math.random().toString(36).slice(2, 8) + '!';
+    const newPw = require('crypto').randomBytes(4).toString('hex') + 'X1!';
     const hashed = await bcrypt.hash(newPw, BCRYPT_SALT_ROUNDS);
     targetUser.password = hashed;
     targetUser.loginAttempts = 0;
@@ -340,8 +351,7 @@ router.post('/:storeId/users/:userId/email-credentials', superAdminAuth, async (
       res.json({ success: true, message: 'Credentials emailed to ' + targetUser.email, username: targetUser.username });
     } catch (emailErr) {
       console.error('Failed to email credentials:', emailErr.message);
-      res.json({ success: true, username: targetUser.username, newPassword: newPw,
-        warning: 'Password reset but email failed (' + emailErr.message + '). Password: ' + newPw });
+      res.json({ success: true, message: 'Password reset. Email delivery failed (' + emailErr.message + '). Contact the user directly to share credentials.' });
     }
   } catch (e) { res.status(500).json({ error: e.message }); }
 });

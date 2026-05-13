@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(gcloud --version)",
+      "Bash(gcloud config get-value project *)",
+      "PowerShell(\\(New-Object Net.WebClient\\).DownloadFile\\(\"https://dl.google.com/dl/cloudsdk/channels/rapid/GoogleCloudSDKInstaller.exe\", \"$env:Temp\\\\GoogleCloudSDKInstaller.exe\"\\))",
+      "PowerShell(& $env:Temp\\\\GoogleCloudSDKInstaller.exe)",
+      "PowerShell(gcloud --version 2>&1 | Select-Object -First 3)",
+      "PowerShell(Test-Path *)",
+      "PowerShell($env:Path += \";$env:LOCALAPPDATA\\\\Google\\\\Cloud SDK\\\\google-cloud-sdk\\\\bin\"; gcloud --version 2>&1 | Select-Object -First 3)",
+      "PowerShell(gcloud auth list *)",
+      "PowerShell(gcloud config get-value project *)",
+      "Bash(gcloud run deploy tc-saas-staging *)",
+      "PowerShell(gcloud run deploy tc-saas-staging *)",
+      "PowerShell(gcloud billing accounts list *)",
+      "PowerShell(gcloud billing projects describe *)",
+      "PowerShell(gcloud billing projects link *)",
+      "PowerShell(gcloud logging read *)",
+      "Bash(curl *)"
+    ]
+  }
+}

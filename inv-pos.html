@@ -156,6 +156,15 @@
         .cart-table tbody td { padding: 10px 12px; vertical-align: middle; }
         .cart-item-name { font-weight: 500; font-size: 14px; }
         .cart-item-sku { font-size: 11px; color: #86868b; }
+        .cart-name-edit-btn { background:none; border:none; cursor:pointer; color:#86868b; font-size:12px; padding:0 4px; vertical-align:middle; }
+        .cart-name-edit-btn:hover { color:#1d1d1f; }
+        .cart-name-input-wrap { display:flex; flex-direction:column; gap:3px; }
+        .cart-name-input-wrap input { padding:4px 8px; border:1.5px solid #D4E157; border-radius:6px; font-size:13px; outline:none; background:#fff; width:100%; }
+        .cart-name-input-wrap input:focus { box-shadow:0 0 0 3px rgba(212,225,87,0.2); }
+        .cart-name-input-wrap .save-row { display:flex; gap:4px; }
+        .cart-name-input-wrap .save-row button { padding:2px 10px; border:none; border-radius:4px; font-size:11px; cursor:pointer; font-weight:600; }
+        .cart-name-save { background:#075E54; color:#fff; }
+        .cart-name-cancel { background:#f0f0f5; color:#86868b; }
         .cart-item-serial { font-size: 11px; color: #0071e3; }
         .cart-item-tax {
             font-size: 11px; padding: 2px 6px; border-radius: 4px;
@@ -1332,8 +1341,18 @@
           (item.discount && item.discount.type && item.discount.value > 0 ? '<div class="disc-active">' + (item.discount.type === 'percentage' ? '-' + item.discount.value + '%' : '-€' + Number(item.discount.value).toFixed(2)) + '</div>' : '') +
           '</div>';
 
+        var nameCell = item._editing
+          ? '<div class="cart-name-input-wrap">' +
+            '<input id="edit-name-' + idx + '" class="cart-name-editor" value="' + escHtml(item.name) + '" placeholder="Name">' +
+            '<input id="edit-sku-' + idx + '" class="cart-sku-editor" value="' + escHtml(item.sku) + '" placeholder="SKU">' +
+            '<div class="save-row">' +
+            '<button class="cart-name-save" onclick="window._saveCartItem(' + idx + ')">Save</button>' +
+            '<button class="cart-name-cancel" onclick="window._cancelEditCartItem(' + idx + ')">Cancel</button>' +
+            '</div></div>'
+          : '<div class="cart-item-name">' + escHtml(item.name) + ' <button class="cart-name-edit-btn" onclick="window._editCartItem(' + idx + ')" title="Edit name/SKU">&#9998;</button></div>' +
+            '<div class="cart-item-sku">' + escHtml(item.sku) + '</div>';
         html += '<tr class="' + selected + '" data-idx="' + idx + '">' +
-          '<td><div class="cart-item-name">' + escHtml(item.name) + '</div><div class="cart-item-sku">' + escHtml(item.sku) + '</div>' + serial + '</td>' +
+          '<td>' + nameCell + serial + '</td>' +
           '<td>' + discountInfo + '€' + displayPrice.toFixed(2) + '</td>' +
           '<td>' + discCell + '</td>' +
           '<td><div class="qty-controls"><button class="qty-btn" data-delta="-1">−</button>' +
@@ -1387,7 +1406,23 @@
       };
       // Stop keyboard shortcuts from firing when typing in cart inputs
       cartBody.onkeydown = function(e) {
-        if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') e.stopPropagation();
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') {
+          // Enter on edit inputs → save
+          if (e.key === 'Enter' && (e.target.classList.contains('cart-name-editor') || e.target.classList.contains('cart-sku-editor'))) {
+            e.stopPropagation();
+            var tr = e.target.closest('tr[data-idx]');
+            if (tr) window._saveCartItem(parseInt(tr.dataset.idx));
+            return;
+          }
+          // Escape on edit inputs → cancel
+          if (e.key === 'Escape' && (e.target.classList.contains('cart-name-editor') || e.target.classList.contains('cart-sku-editor'))) {
+            e.stopPropagation();
+            var tr = e.target.closest('tr[data-idx]');
+            if (tr) window._cancelEditCartItem(parseInt(tr.dataset.idx));
+            return;
+          }
+          e.stopPropagation();
+        }
       };
       // Trigger async totals refresh via backend API (no frontend VAT/discount calc)
       refreshTotals();
@@ -1401,6 +1436,32 @@
     window._removeItem = function(idx) {
       cart.splice(idx, 1);
       if (selectedCartIndex >= cart.length) selectedCartIndex = cart.length - 1;
+      renderCart();
+    };
+
+    // ─── Inline name/SKU editing ─────────────────────────────────
+    window._editCartItem = function(idx) {
+      if (!cart[idx]) return;
+      cart[idx]._editing = true;
+      renderCart();
+      setTimeout(function() {
+        var inp = document.getElementById('edit-name-' + idx);
+        if (inp) inp.focus();
+      }, 50);
+    };
+    window._saveCartItem = function(idx) {
+      if (!cart[idx]) return;
+      var nameInp = document.getElementById('edit-name-' + idx);
+      var skuInp = document.getElementById('edit-sku-' + idx);
+      if (nameInp) cart[idx].name = nameInp.value;
+      if (skuInp) cart[idx].sku = skuInp.value;
+      cart[idx]._editing = false;
+      renderCart();
+      refreshTotals(); // refresh totals in case name used in backend receipt
+    };
+    window._cancelEditCartItem = function(idx) {
+      if (!cart[idx]) return;
+      cart[idx]._editing = false;
       renderCart();
     };
 

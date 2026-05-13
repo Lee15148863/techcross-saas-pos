@@ -8,6 +8,7 @@ const StoreSignupSchema = new mongoose.Schema({
   country:      { type: String, trim: true },
   businessType: { type: String, trim: true },
   notes:        { type: String, trim: true },
+  password:     { type: String }, // hashed — set by applicant during registration
   status:       { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
   reviewedBy:   { type: mongoose.Schema.Types.ObjectId, ref: 'SaaSUser', default: null },
   reviewedAt:   { type: Date },

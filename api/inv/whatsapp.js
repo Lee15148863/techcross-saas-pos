@@ -89,6 +89,148 @@ router.get('/customers', async (req, res) => {
   }
 });
 
+// ─── All Customers (paginated, no search required) ─────────────────────────
+router.get('/customers/all', async (req, res) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(10, parseInt(req.query.limit) || 50));
+    const skip = (page - 1) * limit;
+
+    // Gather unique customers from Invoice records
+    const invoiceCustomers = await Invoice.aggregate([
+      { $match: { customerContact: { $ne: '', $exists: true } } },
+      { $group: {
+          _id: '$customerContact',
+          name: { $first: '$customerName' },
+          contact: { $first: '$customerContact' },
+          lastSeen: { $max: '$createdAt' },
+          invoiceCount: { $sum: 1 },
+        }
+      },
+      { $sort: { lastSeen: -1 } },
+    ]);
+
+    // Gather from CustomerNote records
+    const noteCustomers = await CustomerNote.find({ phone: { $ne: '' } })
+      .select('phone name lastContacted')
+      .sort({ lastContacted: -1 })
+      .lean();
+
+    // Merge & deduplicate by phone
+    const customerMap = new Map();
+    invoiceCustomers.forEach(c => {
+      const phone = c.contact || '';
+      if (!phone) return;
+      customerMap.set(phone, {
+        name: c.name || '',
+        contact: phone,
+        source: 'invoice',
+        lastSeen: c.lastSeen,
+        invoiceCount: c.invoiceCount || 0,
+      });
+    });
+    noteCustomers.forEach(n => {
+      const phone = n.phone || '';
+      if (!phone) return;
+      if (customerMap.has(phone)) {
+        const existing = customerMap.get(phone);
+        if (!existing.name && n.name) existing.name = n.name;
+        if (n.lastContacted && (!existing.lastSeen || new Date(n.lastContacted) > new Date(existing.lastSeen))) {
+          existing.lastSeen = n.lastContacted;
+        }
+      } else {
+        customerMap.set(phone, {
+          name: n.name || '',
+          contact: phone,
+          source: 'manual',
+          lastSeen: n.lastContacted,
+          invoiceCount: 0,
+        });
+      }
+    });
+
+    // Convert to array and sort
+    let allCustomers = Array.from(customerMap.values());
+    allCustomers.sort((a, b) => {
+      const da = a.lastSeen ? new Date(a.lastSeen).getTime() : 0;
+      const db = b.lastSeen ? new Date(b.lastSeen).getTime() : 0;
+      return db - da;
+    });
+
+    const total = allCustomers.length;
+    const totalPages = Math.ceil(total / limit);
+    const pageCustomers = allCustomers.slice(skip, skip + limit);
+
+    res.json({
+      customers: pageCustomers,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+        hasMore: page < totalPages,
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to list customers: ' + (err.message || 'Unknown') });
+  }
+});
+
+// ─── Customer Profile ─────────────────────────────────────────────────────
+router.get('/profile/:phone', async (req, res) => {
+  try {
+    const phone = req.params.phone;
+    if (!phone) return res.status(400).json({ error: 'Phone is required' });
+
+    // Basic info from CustomerNote or first Invoice
+    let basic = await CustomerNote.findOne({ phone }).select('phone name lastContacted').lean();
+    let invoiceCount = 0;
+    if (!basic) {
+      const firstInv = await Invoice.findOne({ customerContact: phone })
+        .select('customerName customerContact createdAt')
+        .sort({ createdAt: -1 })
+        .lean();
+      if (firstInv) {
+        basic = {
+          phone: firstInv.customerContact,
+          name: firstInv.customerName || '',
+          lastContacted: firstInv.createdAt,
+        };
+      }
+    }
+
+    // Invoice history
+    const invoices = await Invoice.find({ customerContact: phone })
+      .select('invoiceNumber createdAt grossTotal paymentMethod items operatorName')
+      .sort({ createdAt: -1 })
+      .limit(30)
+      .lean();
+    invoiceCount = invoices.length;
+
+    // Count total invoices for this customer
+    const totalInvoices = await Invoice.countDocuments({ customerContact: phone });
+
+    res.json({
+      customer: {
+        name: basic?.name || '',
+        contact: phone,
+        lastSeen: basic?.lastContacted || null,
+        invoiceCount: totalInvoices,
+      },
+      invoices: invoices.map(inv => ({
+        invoiceNumber: inv.invoiceNumber,
+        date: inv.createdAt,
+        total: inv.grossTotal,
+        paymentMethod: inv.paymentMethod,
+        items: (inv.items || []).map(i => ({ name: i.name, quantity: i.quantity })),
+        operatorName: inv.operatorName || '',
+      })),
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to get profile: ' + (err.message || 'Unknown') });
+  }
+});
+
 // ─── Get Notes for a Phone Number ─────────────────────────────────────────
 router.get('/notes/:phone', async (req, res) => {
   try {

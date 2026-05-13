@@ -140,6 +140,23 @@
     });
   }
 
+  function fetchCustomers(page) {
+    var url = '/api/inv/whatsapp/customers/all?page=' + (page || 1) + '&limit=50';
+    return fetch(url, { headers: apiHeaders() }).then(function (r) {
+      if (!r.ok) throw new Error('Failed to load customers');
+      return r.json();
+    });
+  }
+
+  function fetchProfile(phone) {
+    return fetch('/api/inv/whatsapp/profile/' + encodeURIComponent(phone), {
+      headers: apiHeaders(),
+    }).then(function (r) {
+      if (!r.ok) throw new Error('Failed to load profile');
+      return r.json();
+    });
+  }
+
   // ─── WhatsApp Link Generator ───────────────────────────────────────────
   function openWhatsApp(phone, message) {
     var normalized = normalizePhone(phone);
@@ -173,13 +190,20 @@
   var state = {
     currentCustomer: null,   // { name, contact, source }
     currentNotes: null,      // CustomerNote document
+    profileData: null,       // { customer, invoices } from profile API
     searchResults: [],
     templates: getTemplates(),
     selectedTemplateId: null,
     recents: getRecentNumbers(),
     isLoading: false,
-    activeTab: 'search',     // 'search' | 'templates' | 'settings'
+    activeTab: 'search',     // 'search' | 'customers' | 'templates' | 'settings'
     noCustomerMatch: false,   // true when search found no matching customer
+    // Customers tab
+    customers: [],
+    customersPage: 1,
+    customersTotalPages: 0,
+    customersTotal: 0,
+    customersLoading: false,
   };
 
   // ─── Main Render ───────────────────────────────────────────────────────
@@ -196,17 +220,20 @@
         '<h1 class="wc-title">WhatsApp Center</h1>' +
         '<div class="wc-header-tabs">' +
           '<button class="wc-tab ' + (state.activeTab === 'search' ? 'active' : '') + '" onclick="window.WC.switchTab(\'search\')">💬 Send</button>' +
+          '<button class="wc-tab ' + (state.activeTab === 'customers' ? 'active' : '') + '" onclick="window.WC.switchTab(\'customers\')">👥 Customers</button>' +
           '<button class="wc-tab ' + (state.activeTab === 'templates' ? 'active' : '') + '" onclick="window.WC.switchTab(\'templates\')">📝 Templates</button>' +
           (isRoot ? '<button class="wc-tab ' + (state.activeTab === 'settings' ? 'active' : '') + '" onclick="window.WC.switchTab(\'settings\')">⚙ Settings</button>' : '') +
         '</div>' +
       '</div>' +
       '<div class="wc-body">' +
         '<div id="wcSearchView" class="wc-view' + (state.activeTab === 'search' ? ' active' : '') + '"></div>' +
+        '<div id="wcCustomersView" class="wc-view' + (state.activeTab === 'customers' ? ' active' : '') + '"></div>' +
         '<div id="wcTemplatesView" class="wc-view' + (state.activeTab === 'templates' ? ' active' : '') + '"></div>' +
         '<div id="wcSettingsView" class="wc-view' + (state.activeTab === 'settings' ? ' active' : '') + '"></div>' +
       '</div>';
 
     renderSearchView();
+    renderCustomersView();
     renderTemplatesView();
     if (isRoot) renderSettingsView();
   }
@@ -243,6 +270,7 @@
             '<button class="wc-btn wc-btn-sm" onclick="window.WC.addNote()">+ Add</button>' +
           '</div>' +
         '</div>' +
+        '<div class="wc-invoice-section" id="wcInvoiceSection"></div>' +
         (state.noCustomerMatch ? '<div class="wc-no-customer-notice">ℹ️ No saved customer found. You can still send a WhatsApp message. / 未找到客户记录，仍可发送消息。</div>' : '') +
         '<div class="wc-compose-section">' +
           '<div class="wc-section-label">💬 Message / 消息</div>' +
@@ -259,9 +287,10 @@
     // Render recents
     renderRecents();
 
-    // If we have a customer, show their notes and templates
+    // If we have a customer, show their notes, invoices, and templates
     if (hasCustomer) {
       renderNotes();
+      renderProfileInvoices();
       renderTemplateBar();
 
       // Show phone hint
@@ -346,6 +375,123 @@
         (r.lastSeen ? '<div class="wc-result-meta">Last seen: ' + formatDate(r.lastSeen) + '</div>' : '') +
         '</button>';
     });
+    el.innerHTML = html;
+  }
+
+  // ─── Customers Tab ────────────────────────────────────────────────────
+  function renderCustomersView() {
+    var el = document.getElementById('wcCustomersView');
+    if (!el) return;
+
+    if (state.customers.length === 0 && !state.customersLoading) {
+      // First load — fetch
+      state.customersPage = 1;
+      loadCustomers(1);
+      el.innerHTML = '<div class="wc-empty">Loading... / 加载中...</div>';
+      return;
+    }
+
+    var html = '<div class="wc-section-label">👥 All Customers / 所有客户 <span style="color:#aeaeb2;font-weight:400;">(' + state.customersTotal + ')</span></div>';
+
+    if (state.customersLoading) {
+      html += '<div class="wc-empty">Loading... / 加载中...</div>';
+      el.innerHTML = html;
+      return;
+    }
+
+    if (state.customers.length === 0) {
+      html += '<div class="wc-empty">No customers found / 没有客户</div>';
+      el.innerHTML = html;
+      return;
+    }
+
+    state.customers.forEach(function (c) {
+      var initial = (c.name || '?').charAt(0).toUpperCase();
+      var srcLabel = c.source === 'invoice' ? '🧾' : '📝';
+      html += '<div class="wc-customer-list-item" onclick="window.WC.selectCustomerFromList(\'' + esc(c.contact) + '\', \'' + esc(c.name) + '\')">' +
+        '<div class="cli-avatar">' + esc(initial) + '</div>' +
+        '<div class="cli-info">' +
+          '<div class="cli-name">' + esc(c.name || 'Unknown') + '</div>' +
+          '<div class="cli-phone">' + esc(c.contact) + ' <span style="font-size:11px;">' + srcLabel + '</span></div>' +
+        '</div>' +
+        '<div class="cli-meta">' +
+          (c.lastSeen ? formatDate(c.lastSeen) : '') +
+          (c.invoiceCount ? ' · ' + c.invoiceCount + ' inv' : '') +
+        '</div>' +
+      '</div>';
+    });
+
+    // Pagination
+    html += '<div class="wc-pagination">' +
+      '<button onclick="window.WC.loadCustomers(' + (state.customersPage - 1) + ')" ' + (state.customersPage <= 1 ? 'disabled' : '') + '>‹ Prev</button>' +
+      '<span>' + state.customersPage + ' / ' + (state.customersTotalPages || 1) + '</span>' +
+      '<button onclick="window.WC.loadCustomers(' + (state.customersPage + 1) + ')" ' + (state.customersPage >= state.customersTotalPages ? 'disabled' : '') + '>Next ›</button>' +
+      '</div>';
+
+    el.innerHTML = html;
+  }
+
+  function loadCustomers(page) {
+    if (state.customersLoading) return;
+    state.customersLoading = true;
+    state.customersPage = page;
+    renderCustomersView();
+
+    fetchCustomers(page).then(function (data) {
+      state.customers = data.customers || [];
+      state.customersPage = data.pagination.page;
+      state.customersTotalPages = data.pagination.totalPages;
+      state.customersTotal = data.pagination.total;
+      state.customersLoading = false;
+      renderCustomersView();
+    }).catch(function () {
+      state.customersLoading = false;
+      var el = document.getElementById('wcCustomersView');
+      if (el) el.innerHTML = '<div class="wc-empty wc-error">Failed to load / 加载失败</div>';
+    });
+  }
+
+  // ─── Profile: Invoice History ─────────────────────────────────────────
+  function renderProfileInvoices() {
+    var el = document.getElementById('wcInvoiceSection');
+    if (!el) return;
+
+    var profile = state.profileData;
+    if (!profile || !profile.invoices) {
+      el.innerHTML = '';
+      return;
+    }
+
+    var invoices = profile.invoices;
+    var customerInfo = profile.customer || {};
+
+    if (!invoices.length) {
+      el.innerHTML = '<div class="wc-section-label" style="margin-top:8px;">🧾 Invoice History / 发票记录</div>' +
+        '<div class="wc-empty wc-empty-notes">No invoices / 暂无发票</div>';
+      return;
+    }
+
+    var html = '<div class="wc-section-label" style="margin-top:8px;">🧾 Invoice History / 发票记录 <span style="color:#aeaeb2;font-weight:400;">(' + (customerInfo.invoiceCount || invoices.length) + ')</span></div>' +
+      '<div class="wc-invoice-list">';
+
+    invoices.forEach(function (inv) {
+      var itemsSummary = (inv.items || []).map(function (i) { return i.name + ' x' + i.quantity; }).join(', ');
+      if (itemsSummary.length > 80) itemsSummary = itemsSummary.slice(0, 77) + '...';
+      html += '<div class="wc-invoice-item">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;">' +
+          '<span class="wc-invoice-ref">' + esc(inv.invoiceNumber) + '</span>' +
+          '<span class="wc-invoice-total">€' + (inv.total ? inv.total.toFixed(2) : '0.00') + '</span>' +
+        '</div>' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:2px;">' +
+          '<span class="wc-invoice-date">' + formatDate(inv.date) + '</span>' +
+          '<span class="wc-invoice-method">' + esc(inv.paymentMethod || '') + '</span>' +
+        '</div>' +
+        (itemsSummary ? '<div class="wc-invoice-items">' + esc(itemsSummary) + '</div>' : '') +
+        (inv.operatorName ? '<div class="wc-invoice-op">by ' + esc(inv.operatorName) + '</div>' : '') +
+      '</div>';
+    });
+
+    html += '</div>';
     el.innerHTML = html;
   }
 
@@ -473,9 +619,16 @@
   function switchTab(tab) {
     state.activeTab = tab;
     // Clear customer when switching away from search
-    if (tab !== 'search') state.currentCustomer = null;
+    if (tab !== 'search') {
+      state.currentCustomer = null;
+      state.profileData = null;
+    }
     state.noCustomerMatch = false;
     render();
+    // Load customers when switching to customers tab
+    if (tab === 'customers' && state.customers.length === 0) {
+      loadCustomers(1);
+    }
   }
 
   function doSearch() {
@@ -565,7 +718,6 @@
     getNotes(contact).then(function (notes) {
       state.currentNotes = notes;
       render();
-      // Focus message textarea after render
       setTimeout(function () {
         var ta = document.getElementById('wcMessageText');
         if (ta) ta.focus();
@@ -574,6 +726,19 @@
       state.currentNotes = { phone: contact, name: name || '', notes: [] };
       render();
     });
+
+    // Load profile (invoice history)
+    fetchProfile(contact).then(function (profile) {
+      state.profileData = profile;
+      renderProfileInvoices();
+    }).catch(function () {
+      // silently fail — profile is additive
+    });
+  }
+
+  function selectCustomerFromList(contact, name) {
+    state.activeTab = 'search';
+    selectCustomer(contact, name, 'invoice');
   }
 
   function selectRecent(phone, name) {
@@ -583,6 +748,7 @@
   function clearCustomer() {
     state.currentCustomer = null;
     state.currentNotes = null;
+    state.profileData = null;
     state.selectedTemplateId = null;
     state.noCustomerMatch = false;
     render();
@@ -742,6 +908,8 @@
     switchTab: switchTab,
     doSearch: doSearch,
     selectCustomer: selectCustomer,
+    selectCustomerFromList: selectCustomerFromList,
+    loadCustomers: loadCustomers,
     selectRecent: selectRecent,
     clearCustomer: clearCustomer,
     selectTemplate: selectTemplate,

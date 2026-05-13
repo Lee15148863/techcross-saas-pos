@@ -67,6 +67,16 @@
       <label data-i18n="saas.login.password">Password</label>
       <input type="password" id="password" data-i18n-placeholder="saas.login.passwordPlaceholder" placeholder="Enter your password" autocomplete="current-password" required>
     </div>
+    <div class="form-group" id="captchaGroup">
+      <label>Verify / 验证</label>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <span id="captchaQuestion" style="font-size:18px;font-weight:700;background:#f2f2f7;padding:8px 16px;border-radius:10px;min-width:80px;text-align:center;user-select:none;"></span>
+        <span style="font-size:16px;color:#8e8e93;">=</span>
+        <input type="text" id="captchaAnswer" inputmode="numeric" pattern="[0-9\-]*" style="width:100px;text-align:center;font-size:18px;font-weight:600;padding:12px;border:1.5px solid #d2d2d7;border-radius:12px;outline:none;" placeholder="?" autocomplete="off" required>
+        <button type="button" id="captchaRefresh" style="background:none;border:1.5px solid #d2d2d7;border-radius:10px;padding:10px;cursor:pointer;font-size:18px;line-height:1;" title="Refresh">🔄</button>
+      </div>
+      <input type="hidden" id="captchaToken">
+    </div>
     <button type="submit" class="btn-login" id="loginBtn" data-i18n="saas.login.btn">Sign In</button>
   </form>
 
@@ -80,6 +90,18 @@
 
 <script src="../lang.js"></script>
 <script>
+async function loadCaptcha() {
+  try {
+    var r = await fetch('/api/saas/auth/captcha');
+    var d = await r.json();
+    document.getElementById('captchaQuestion').textContent = d.question;
+    document.getElementById('captchaToken').value = d.token;
+    document.getElementById('captchaAnswer').value = '';
+  } catch(e) {
+    document.getElementById('captchaQuestion').textContent = '? + ?';
+  }
+}
+document.getElementById('captchaRefresh').addEventListener('click', loadCaptcha);
 document.getElementById('loginForm').addEventListener('submit', async function(e) {
   e.preventDefault();
   var btn = document.getElementById('loginBtn');
@@ -90,16 +112,33 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
     var res = await fetch('/api/saas/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: document.getElementById('username').value, password: document.getElementById('password').value })
+      body: JSON.stringify({
+        username: document.getElementById('username').value,
+        password: document.getElementById('password').value,
+        captchaAnswer: document.getElementById('captchaAnswer').value,
+        captchaToken: document.getElementById('captchaToken').value
+      })
     });
     var data = await res.json();
-    if (!res.ok) { err.textContent = data.error || __('saas.login.error.invalid'); err.classList.add('show'); btn.disabled = false; btn.textContent = __('saas.login.btn'); return; }
+    if (!res.ok) {
+      err.textContent = data.error || __('saas.login.error.invalid');
+      err.classList.add('show');
+      btn.disabled = false; btn.textContent = __('saas.login.btn');
+      loadCaptcha();
+      return;
+    }
     localStorage.setItem('saas_token', data.token);
     localStorage.setItem('saas_user', JSON.stringify(data.user));
     window.location.href = data.user && data.user.role === 'super_admin' ? '/saas/admin.html' : '/saas/dashboard.html';
-  } catch(e) { err.textContent = __('saas.login.error.network'); err.classList.add('show'); btn.disabled = false; btn.textContent = __('saas.login.btn'); }
+  } catch(e) {
+    err.textContent = __('saas.login.error.network');
+    err.classList.add('show');
+    btn.disabled = false; btn.textContent = __('saas.login.btn');
+    loadCaptcha();
+  }
 });
 
+loadCaptcha();
 applyLang();
 </script>
 

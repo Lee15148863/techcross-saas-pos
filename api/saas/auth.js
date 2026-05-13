@@ -5,31 +5,48 @@ const jwt = require('jsonwebtoken');
 const rateLimit = require('express-rate-limit');
 const { defaultKeyGenerator } = rateLimit;
 const SaaSUser = require('../../models/saas/SaaSUser');
+const captcha = require('../../utils/captcha');
 
-const BCRYPT_SALT_ROUNDS = 10;
+const BCRYPT_SALT_ROUNDS = 12;
 const JWT_SECRET = process.env.SAAS_JWT_SECRET;
 
 const MAX_LOGIN_ATTEMPTS = 5;
 const LOCK_DURATION_MINUTES = 30;
 
-// Rate limiter: 20 login attempts per hour
+// Rate limiter: 10 login attempts per hour (tighter + CAPTCHA now)
 const loginLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
-  max: 20,
+  max: 10,
   keyGenerator: defaultKeyGenerator,
-  message: { error: 'Too many login attempts. Limit: 20/hour.' },
+  message: { error: 'Too many login attempts. Limit: 10/hour.' },
   standardHeaders: true,
   legacyHeaders: false,
   validate: { xForwardedForHeader: false }
 });
 
+// GET /api/saas/auth/captcha — get a math CAPTCHA challenge
+router.get('/captcha', (req, res) => {
+  const challenge = captcha.generate();
+  res.json({ question: challenge.question, token: challenge.token });
+});
+
 // POST /api/saas/auth/login
 router.post('/login', loginLimiter, async (req, res) => {
   try {
-    const { username, password } = req.body;
+    const { username, password, captchaAnswer, captchaToken } = req.body;
     if (!username || !password) {
       return res.status(400).json({ error: 'Username and password required' });
     }
+
+    // Verify CAPTCHA
+    if (!captchaAnswer || !captchaToken) {
+      return res.status(400).json({ error: 'CAPTCHA is required' });
+    }
+    if (!captcha.verify(captchaToken, String(captchaAnswer).trim())) {
+      return res.status(400).json({ error: 'CAPTCHA incorrect or expired. Please refresh and try again.' });
+    }
+
+    // Generic timing-safe-ish check — prevents user enumeration
     const user = await SaaSUser.findOne({ username, active: true });
     if (!user) {
       return res.status(401).json({ error: 'Invalid credentials' });
@@ -37,15 +54,12 @@ router.post('/login', loginLimiter, async (req, res) => {
 
     // Check if account is locked
     if (user.lockUntil && user.lockUntil > new Date()) {
-      const minsLeft = Math.ceil((user.lockUntil - new Date()) / 60000);
-      return res.status(423).json({
-        error: 'Account temporarily locked due to too many failed attempts. Try again in ' + minsLeft + ' min.'
-      });
+      // Generic message — don't reveal account exists vs locked
+      return res.status(401).json({ error: 'Invalid credentials' });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      // Increment failed attempts
       const attempts = (user.loginAttempts || 0) + 1;
       if (attempts >= MAX_LOGIN_ATTEMPTS) {
         await SaaSUser.findByIdAndUpdate(user._id, {
@@ -53,14 +67,12 @@ router.post('/login', loginLimiter, async (req, res) => {
           lockUntil: new Date(Date.now() + LOCK_DURATION_MINUTES * 60 * 1000),
           updatedAt: new Date()
         });
-        return res.status(423).json({
-          error: 'Account locked due to too many failed attempts. Try again in ' + LOCK_DURATION_MINUTES + ' min.'
+      } else {
+        await SaaSUser.findByIdAndUpdate(user._id, {
+          loginAttempts: attempts,
+          updatedAt: new Date()
         });
       }
-      await SaaSUser.findByIdAndUpdate(user._id, {
-        loginAttempts: attempts,
-        updatedAt: new Date()
-      });
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
