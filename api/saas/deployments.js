@@ -2,50 +2,54 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const rateLimit = require('express-rate-limit');
+const { defaultKeyGenerator } = rateLimit;
 const Deployment = require('../../models/saas/Deployment');
 const DeploymentAudit = require('../../models/saas/DeploymentAudit');
 const { getLocalHHMM, getLocalHHMMRange, isTimezoneSupported, SUPPORTED_TIMEZONES, verifyActionCode, recordAudit } = require('../../utils/deployment-security');
 
 // ─── Rate limiters ─────────────────────────────────────────────────────────
 
-function keyGen(req) {
-  return req.headers['x-forwarded-for'] ? req.headers['x-forwarded-for'].split(',')[0].trim() : (req.ip || req.socket.remoteAddress);
-}
+const keyGen = defaultKeyGenerator;
 
 var deployLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
   max: 5,
   keyGenerator: keyGen,
   message: { error: 'Too many deploy requests. Limit: 5/hour.' },
-  standardHeaders: true, legacyHeaders: false
+  standardHeaders: true, legacyHeaders: false,
+  validate: { xForwardedForHeader: false }
 });
 
 var rollbackLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, max: 5,
   keyGenerator: keyGen,
   message: { error: 'Too many rollback requests. Limit: 5/hour.' },
-  standardHeaders: true, legacyHeaders: false
+  standardHeaders: true, legacyHeaders: false,
+  validate: { xForwardedForHeader: false }
 });
 
 var suspendLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, max: 10,
   keyGenerator: keyGen,
   message: { error: 'Too many suspend requests. Limit: 10/hour.' },
-  standardHeaders: true, legacyHeaders: false
+  standardHeaders: true, legacyHeaders: false,
+  validate: { xForwardedForHeader: false }
 });
 
 var activateLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, max: 10,
   keyGenerator: keyGen,
   message: { error: 'Too many activate requests. Limit: 10/hour.' },
-  standardHeaders: true, legacyHeaders: false
+  standardHeaders: true, legacyHeaders: false,
+  validate: { xForwardedForHeader: false }
 });
 
 var dangerousActionLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, max: 20,
   keyGenerator: keyGen,
   message: { error: 'Too many dangerous action attempts. Limit: 20/hour.' },
-  standardHeaders: true, legacyHeaders: false
+  standardHeaders: true, legacyHeaders: false,
+  validate: { xForwardedForHeader: false }
 });
 
 var healthLimiter = rateLimit({
@@ -53,7 +57,8 @@ var healthLimiter = rateLimit({
   max: 60,
   keyGenerator: keyGen,
   message: { error: 'Too many health check requests. Limit: 60/minute.' },
-  standardHeaders: true, legacyHeaders: false
+  standardHeaders: true, legacyHeaders: false,
+  validate: { xForwardedForHeader: false }
 });
 
 // Active polling tracker — prevents duplicate polling loops per deployment
