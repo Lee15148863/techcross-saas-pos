@@ -22,11 +22,11 @@ app.use(helmet({
       scriptSrcAttr: ["'unsafe-inline'"], // Allow onclick handlers in HTML
       styleSrc: ["'self'", "'unsafe-inline'"],
       imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'", `https://${DOMAIN}`, `https://www.${DOMAIN}`, "http://localhost:*", "https://teschcross-git-1045728849939.europe-west1.run.app", "https://www.google-analytics.com", "https://www.googletagmanager.com"],
+      connectSrc: ["'self'", `https://${DOMAIN}`, `https://www.${DOMAIN}`, "http://localhost:*", "https://teschcross-git-1045728849939.europe-west1.run.app", "https://www.google-analytics.com", "https://www.googletagmanager.com", "https://www.facebook.com", "https://facebook.com"],
       fontSrc: ["'self'"],
       objectSrc: ["'none'"],
       mediaSrc: ["'self'"],
-      frameSrc: ["'none'"]
+      frameSrc: ["https://www.facebook.com", "https://facebook.com"]
     }
   },
   crossOriginEmbedderPolicy: false
@@ -37,6 +37,7 @@ app.use(cors({
   origin: [
     `https://${DOMAIN}`,
     `https://www.${DOMAIN}`,
+    'https://teschcross-git-1045728849939.europe-west1.run.app',
     'http://localhost:8080',
     'http://localhost:3000'
   ],
@@ -61,8 +62,6 @@ app.use((req, res, next) => {
 });
 
 // ─── Health endpoint (lightweight, no DB queries, always available) ─────────
-// Registered at app level, BEFORE all SPA/static/catch-all middleware,
-// so it always returns JSON regardless of MongoDB state.
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
@@ -112,69 +111,73 @@ app.use((req, res, next) => {
   next();
 });
 
-// ─── SaaS API routes & SPA fallback ─────────────────────────
+// ─── Register all routes synchronously (before DB) ────────────
+// Routes that hit MongoDB will fail gracefully if DB is not ready.
 
-// Connect to MongoDB, then start listening
-mongoose.connect(process.env.DBCon || process.env.MONGO_URI, { dbName: process.env.STORE_NAME || 'techcross' })
-    .then(() => {
-        console.log('✅ MongoDB connected');
+app.use('/api/pricing', require('./api/pricing'));
+app.use('/api/brands', require('./api/brands'));
+app.use('/api/reviews', require('./api/reviews'));
+app.use('/api/banner', require('./api/banner'));
 
-        // Routes
-        app.use('/api/pricing', require('./api/pricing'));
-        app.use('/api/brands', require('./api/brands'));
-        app.use('/api/reviews', require('./api/reviews'));
-        app.use('/api/banner', require('./api/banner'));
+// Inventory & Till system routes
+// Read-only freeze gate — blocks writes when STORE_FROZEN env var is 'true'
+app.use('/api/inv', function(req, res, next) {
+  if (process.env.STORE_FROZEN === 'true' && ['POST', 'PUT', 'PATCH', 'DELETE'].indexOf(req.method) !== -1) {
+    return res.status(403).json({ error: 'STORE_FROZEN_READONLY', message: 'System is in read-only mode.' });
+  }
+  next();
+});
+app.use('/api/inv/auth', require('./api/inv/auth'));
+app.use('/api/inv/products', require('./api/inv/products'));
+app.use('/api/inv/stock', require('./api/inv/stock'));
+app.use('/api/inv/suppliers', require('./api/inv/suppliers'));
+app.use('/api/inv/purchases', require('./api/inv/purchases'));
+app.use('/api/inv/transactions', require('./api/inv/transactions'));
+app.use('/api/inv/reports', require('./api/inv/reports'));
+app.use('/api/inv/settings', require('./api/inv/settings'));
+app.use('/api/inv/invoices', require('./api/inv/invoices'));
+app.use('/api/inv/expenses', require('./api/inv/expenses'));
+app.use('/api/inv/close', require('./api/inv/close'));
+app.use('/api/inv/pos-shortcuts', require('./api/inv/pos-shortcuts'));
+app.use('/api/inv/root', require('./api/inv/root'));
+app.use('/api/inv/export', require('./api/inv/export'));
+app.use('/api/inv/root/export', require('./api/inv/root-export'));
+app.use('/api/inv/delivery', require('./api/inv/delivery'));
+app.use('/api/inv/whatsapp', require('./api/inv/whatsapp'));
 
-        // Inventory & Till system routes
-        // Read-only freeze gate — blocks writes when STORE_FROZEN env var is 'true'
-        app.use('/api/inv', function(req, res, next) {
-          if (process.env.STORE_FROZEN === 'true' && ['POST', 'PUT', 'PATCH', 'DELETE'].indexOf(req.method) !== -1) {
-            return res.status(403).json({ error: 'STORE_FROZEN_READONLY', message: 'System is in read-only mode.' });
-          }
-          next();
-        });
-        app.use('/api/inv/auth', require('./api/inv/auth'));
-        app.use('/api/inv/products', require('./api/inv/products'));
-        app.use('/api/inv/stock', require('./api/inv/stock'));
-        app.use('/api/inv/suppliers', require('./api/inv/suppliers'));
-        app.use('/api/inv/purchases', require('./api/inv/purchases'));
-        app.use('/api/inv/transactions', require('./api/inv/transactions'));
-        app.use('/api/inv/reports', require('./api/inv/reports'));
-        app.use('/api/inv/settings', require('./api/inv/settings'));
-        app.use('/api/inv/invoices', require('./api/inv/invoices'));
-        app.use('/api/inv/expenses', require('./api/inv/expenses'));
-        app.use('/api/inv/close', require('./api/inv/close'));
-        app.use('/api/inv/pos-shortcuts', require('./api/inv/pos-shortcuts'));
-        app.use('/api/inv/root', require('./api/inv/root'));
-        app.use('/api/inv/export', require('./api/inv/export'));
-        app.use('/api/inv/root/export', require('./api/inv/root-export'));
-        app.use('/api/inv/delivery', require('./api/inv/delivery'));
-        app.use('/api/inv/whatsapp', require('./api/inv/whatsapp'));
+// ─── SaaS routes (separate from TechCross POS) ───────────────────────────
+app.use('/api/saas/auth', require('./api/saas/auth'));
+app.use('/api/saas/signup', require('./api/saas/signup'));
+app.use('/api/saas/stores', require('./api/saas/stores'));
+app.use('/api/saas/deployments', require('./api/saas/deployments'));
 
-        // ─── SaaS routes (separate from TechCross POS) ───────────────────────────
-        app.use('/api/saas/auth', require('./api/saas/auth'));
-        app.use('/api/saas/signup', require('./api/saas/signup'));
-        app.use('/api/saas/stores', require('./api/saas/stores'));
-	        app.use('/api/saas/deployments', require('./api/saas/deployments'));
+// ─── Public share routes (MUST be before the catch-all) ────────────────
+app.use('/share', require('./api/inv/share-public'));
+app.use('/api/share', require('./api/inv/share-public'));
 
-        // ─── Public share routes (MUST be before the catch-all) ────────────────
-        app.use('/share', require('./api/inv/share-public'));
-        app.use('/api/share', require('./api/inv/share-public'));
+// ─── Global error handler ────────────────────────────────────────────
+app.use((err, req, res, next) => {
+    console.error('Unhandled error:', err.message);
+    const status = err.status || err.statusCode || 500;
+    res.status(status).json({ error: err.message || 'Internal server error' });
+});
 
-        // ─── Global error handler ────────────────────────────────────────────
-        app.use((err, req, res, next) => {
-            console.error('Unhandled error:', err.message);
-            const status = err.status || err.statusCode || 500;
-            res.status(status).json({ error: err.message || 'Internal server error' });
-        });
+// Fallback: serve index.html for all remaining non-API routes
+app.use((req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
 
-        // Fallback: serve index.html for all remaining non-API routes
-        app.use((req, res) => {
-            res.sendFile(path.join(__dirname, 'index.html'));
-        });
+// ─── Start HTTP server first (Cloud Run needs port open ASAP) ──────
+app.listen(PORT, () => {
+    console.log(`🚀 Server listening on port ${PORT}`);
+});
 
-        app.listen(PORT, () => {
-            console.log(`🚀 Server running on port ${PORT}`);
-        });
-    })
-    .catch(err => console.error('❌ MongoDB error:', err.message));
+// ─── Connect to MongoDB asynchronously ────────────────────────────
+console.log('⏳ Connecting to MongoDB...');
+mongoose.connect(process.env.DBCon || process.env.MONGO_URI, {
+    dbName: process.env.STORE_NAME || 'techcross',
+    serverSelectionTimeoutMS: 15000,  // timeout after 15s
+    connectTimeoutMS: 15000
+  })
+  .then(() => console.log('✅ MongoDB connected'))
+  .catch(err => console.error('❌ MongoDB connection failed:', err.message));
