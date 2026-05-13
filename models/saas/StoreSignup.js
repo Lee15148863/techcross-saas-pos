@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const StoreSignupSchema = new mongoose.Schema({
   storeName:    { type: String, required: true, trim: true },
   ownerName:    { type: String, required: true, trim: true },
+  username:     { type: String, trim: true }, // custom username set by applicant
   email:        { type: String, required: true, trim: true, lowercase: true },
   phone:        { type: String, trim: true },
   country:      { type: String, trim: true },
